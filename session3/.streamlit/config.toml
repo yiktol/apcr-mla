@@ -1,0 +1,13 @@
+[theme]
+base = "light"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+
+
+[server]
+enableCORS = false
+enableXsrfProtection = false

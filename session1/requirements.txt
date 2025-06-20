@@ -1,0 +1,13 @@
+streamlit
+boto3
+pandas
+plotly 
+pillow
+requests
+streamlit_option_menu
+imblearn
+matplotlib
+nltk
+scikit-learn
+seaborn
+altair
