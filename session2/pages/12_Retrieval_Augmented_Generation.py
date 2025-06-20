@@ -25,6 +25,8 @@ from langchain.document_loaders import (
 from langchain.chains import RetrievalQA
 from langchain_core.documents import Document
 from langchain.llms.bedrock import Bedrock
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -38,6 +40,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+common.initialize_session_state()
+
+
 # Initialize session state
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
@@ -47,8 +52,6 @@ if "vectorstore" not in st.session_state:
     st.session_state.vectorstore = None
 if "document_processed" not in st.session_state:
     st.session_state.document_processed = False
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
 
 # Apply custom CSS for modern appearance with AWS color scheme
 st.markdown("""
@@ -475,11 +478,7 @@ def parameter_sidebar():
 
     with st.sidebar:        
         
-        st.markdown("<div class='sub-header'>Session Management</div>", unsafe_allow_html=True)
-        st.markdown(f"**Session ID:** `{st.session_state.session_id[:8]}`")
-        
-        if st.button("Reset Session", key="reset_session", help="Clear conversation history and uploaded documents"):
-            reset_session()
+        common.render_sidebar()
         
         with st.expander("About this App", expanded=False):
             st.markdown("""
@@ -492,8 +491,6 @@ def parameter_sidebar():
             
             For more information, visit the [Amazon Bedrock documentation](https://docs.aws.amazon.com/bedrock/).
             """)
-        
-        
         
         
     return model_id, params,k_results

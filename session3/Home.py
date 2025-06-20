@@ -7,6 +7,8 @@ import seaborn as sns
 from PIL import Image
 import base64
 import io
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Set page config
 st.set_page_config(
@@ -229,46 +231,7 @@ with st.sidebar:
     st.markdown("### ML Engineer - Associate")
     st.markdown("#### Domain 2: ML Model Development")
     
-    # If user has provided their name, greet them
-    if st.session_state['name']:
-        st.success(f"Welcome, {st.session_state['name']}! 👋")
-    else:
-        name = st.text_input("Enter your name:")
-        if name:
-            st.session_state['name'] = name
-            st.rerun()
-    
-    # Reset button
-    if st.button("🔄 Reset Session"):
-        reset_session()
-    
-    # Progress tracking
-    if st.session_state['name']:
-        st.markdown("---")
-        st.markdown("### Your Progress")
-        
-        # Track visited pages
-        visited_pages = [page for page in ["Model_Generalization", "Model_Evaluation", "Classification_Metrics", "Regression_Metrics", "Model_Optimization"] 
-                         if st.session_state.get(f"visited_{page}", False)]
-        
-        progress = len(visited_pages) / 5
-        st.progress(progress)
-        st.markdown(f"**{len(visited_pages)}/5 sections completed**")
-        
-        # Track quiz score if attempted
-        if st.session_state['quiz_attempted']:
-            st.markdown(f"**Quiz Score: {st.session_state['quiz_score']}/5**")
-        
-        # Learning outcomes reminder
-        st.markdown("---")
-        st.markdown("### Learning Outcomes")
-        st.markdown("""
-        - Understand model generalization concepts
-        - Learn about regularization techniques
-        - Evaluate model performance with metrics
-        - Compare classification and regression metrics
-        - Apply model optimization techniques
-        """)
+    common.render_sidebar()
 
 # Main content with tabs
 tabs = st.tabs([
@@ -2089,24 +2052,3 @@ with col1:
     st.image("images/aws_logo.png", width=70)
 with col2:
     st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
-# ```
-
-# To use this application, you would need to create the following directory structure:
-
-# ```
-# - app.py (the main file with the code above)
-# - images/
-#   - mla_badge.png
-#   - mla_badge_big.png
-#   - aws_logo.png
-#   - underfitting.png
-#   - overfitting.png
-#   - good_fit.png
-#   - dropout.png
-#   - l1_l2.png
-#   - confusion_matrix.png
-#   - cross_validation.png
-#   - learning_curves.png
-# ```
-
-# The application follows the same UI/UX styling as the Domain 1 code, with consistent components like custom headers, info boxes, definition boxes, and expandable sections. It organizes the content into tabs covering Model Generalization, Model Evaluation, Classification Metrics, Regression Metrics, and Model Optimization Techniques, plus a quiz to test knowledge and a resources section for further learning.

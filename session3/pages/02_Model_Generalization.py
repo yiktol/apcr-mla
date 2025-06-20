@@ -21,6 +21,9 @@ import io
 import base64
 import time
 import random
+import utils.common as common
+import utils.authenticate as authenticate
+
 
 # Set page config
 st.set_page_config(
@@ -122,32 +125,20 @@ def init_session_state():
 
 init_session_state()
 
-# Sidebar for session management
-st.sidebar.markdown("### Session Management")
+with st.sidebar:
+    common.render_sidebar()
 
-# Reset session button
-if st.sidebar.button("🔄 Reset Session"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    init_session_state()
-    st.sidebar.success("Session has been reset!")
-    time.sleep(1)
-    st.rerun()
+    with st.expander(label='About this application' ,expanded=False):
+        st.markdown("""
 
+        This application explores model generalization in machine learning, focusing on four key areas:
 
-st.sidebar.divider()
+        - **Underfitting & Overfitting**: Visualize the balance between model simplicity and complexity
+        - **Regularization Techniques**: Learn how constraints improve model performance on unseen data
+        - **Dropout**: Explore how randomly disabling neurons enhances neural network generalization
+        - **L1/L2 Regularization**: Compare different penalty approaches for controlling model complexity
 
-with st.sidebar.expander(label='About this application' ,expanded=False):
-    st.markdown("""
-
-    This application explores model generalization in machine learning, focusing on four key areas:
-
-    - **Underfitting & Overfitting**: Visualize the balance between model simplicity and complexity
-    - **Regularization Techniques**: Learn how constraints improve model performance on unseen data
-    - **Dropout**: Explore how randomly disabling neurons enhances neural network generalization
-    - **L1/L2 Regularization**: Compare different penalty approaches for controlling model complexity
-
-    """)
+        """)
 
 
 
