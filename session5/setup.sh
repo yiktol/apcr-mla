@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 # Default values for parameters
-DEFAULT_DIRECTORY="/home/ubuntu/environment/apcr/mla/session5"
+DEFAULT_DIRECTORY="/home/ubuntu/environment/apcr-mla/session5"
 DEFAULT_PORT=8075
 DEFAULT_APP_FILE="Home.py"
 DEFAULT_REQUIREMENTS_FILE="requirements.txt"
