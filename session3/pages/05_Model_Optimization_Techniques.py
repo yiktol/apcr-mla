@@ -1,10 +1,9 @@
-
 import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression, SGDRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import make_regression, make_classification
 from sklearn.model_selection import train_test_split
@@ -17,82 +16,13 @@ import io
 from PIL import Image
 import base64
 import math
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page config
-st.set_page_config(
-    page_title="Model Optimization Techniques | AWS Learning",
-    page_icon="🔧",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
-# Custom CSS for AWS themed styling
-st.markdown("""
-    <style>
-    .main {
-        background-color: #FFFFFF;
-    }
-    .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
-        color: #232F3E;
-    }
-    .st-emotion-cache-16txtl3 a {
-        color: #FF9900;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        padding: 10px 20px;
-        background-color: #EAEDED;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #EC7211;
-        color: white;
-    }
-    footer {
-        font-size: 0.8em;
-        color: #232F3E;
-        text-align: center;
-        margin-top: 50px;
-    }
-    .highlight {
-        background-color: #FFECCC;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #FF9900;
-    }
-    .concept-box {
-        background-color: #F2F3F3;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    .grid-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    .formula-box {
-        background-color: #EAEDED;
-        padding: 15px;
-        border-radius: 5px;
-        text-align: center;
-        margin: 10px 0;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# Initialize session state
 def init_session_state():
+    """Initialize session state variables."""
+    common.initialize_session_state()
     if 'quiz_answers' not in st.session_state:
         st.session_state.quiz_answers = {}
     if 'quiz_score' not in st.session_state:
@@ -108,81 +38,62 @@ def init_session_state():
     if 'gd_history' not in st.session_state:
         st.session_state.gd_history = None
 
-init_session_state()
 
-# Sidebar for session management
-st.sidebar.markdown("### Session Management")
-
-# Reset session button
-if st.sidebar.button("🔄 Reset Session"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    init_session_state()
-    st.sidebar.success("Session has been reset!")
-    time.sleep(1)
-    st.rerun()
-
-st.sidebar.divider()
-
-with st.sidebar.expander(label='About this application' ,expanded=False):
-    st.markdown("""
-This application explores essential machine learning optimization techniques with hands-on visualizations. The app focuses on three key areas:
-
-- **Loss Functions**: Understand different ways to measure prediction errors and when to use MSE, MAE, Log Loss, and Huber Loss
-- **Convergence**: Learn how optimization algorithms approach optimal solutions and the factors affecting their stability
-- **Gradient Descent**: Visualize the fundamental optimization algorithm through interactive 2D and 3D demonstrations
-    """)
-
-
-
-# Custom functions for data generation and visualization
 def generate_regression_data(n_samples=100, noise=0.5, random_state=42):
-    """Generate synthetic regression data"""
+    """Generate synthetic regression data."""
     X, y = make_regression(n_samples=n_samples, n_features=1, noise=noise, random_state=random_state)
     return X, y
 
+
 def generate_classification_data(n_samples=100, random_state=42):
-    """Generate synthetic classification data"""
+    """Generate synthetic classification data."""
     X, y = make_classification(
         n_samples=n_samples, n_features=2, n_redundant=0,
         n_informative=2, random_state=random_state, n_clusters_per_class=1
     )
     return X, y
 
+
 def mse_loss(y_true, y_pred):
-    """Mean Squared Error loss function"""
+    """Mean Squared Error loss function."""
     return np.mean((y_true - y_pred) ** 2)
 
+
 def mae_loss(y_true, y_pred):
-    """Mean Absolute Error loss function"""
+    """Mean Absolute Error loss function."""
     return np.mean(np.abs(y_true - y_pred))
 
+
 def log_loss_binary(y_true, y_pred):
-    """Binary cross-entropy loss function"""
+    """Binary cross-entropy loss function."""
     # Clip predictions to avoid log(0)
     eps = 1e-15
     y_pred = np.clip(y_pred, eps, 1 - eps)
     return -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
 
+
 def huber_loss(y_true, y_pred, delta=1.0):
-    """Huber loss function"""
+    """Huber loss function."""
     errors = y_true - y_pred
     mask = np.abs(errors) <= delta
     squared_loss = 0.5 * (errors ** 2)
     linear_loss = delta * (np.abs(errors) - 0.5 * delta)
     return np.mean(mask * squared_loss + (~mask) * linear_loss)
 
+
 def linear_regression_predict(X, coef, intercept):
-    """Simple linear regression prediction"""
+    """Simple linear regression prediction."""
     return X * coef + intercept
 
+
 def logistic_regression_predict(X, coef, intercept):
-    """Simple logistic regression prediction"""
+    """Simple logistic regression prediction."""
     z = X @ coef + intercept
     return 1 / (1 + np.exp(-z))
 
+
 def gradient_descent_linear(X, y, learning_rate=0.01, n_iterations=100, tolerance=1e-6):
-    """Implement gradient descent for linear regression"""
+    """Implement gradient descent for linear regression."""
     # Initialize parameters
     coef = 0.0
     intercept = 0.0
@@ -234,8 +145,9 @@ def gradient_descent_linear(X, y, learning_rate=0.01, n_iterations=100, toleranc
         
     return coef, intercept, history
 
+
 def plot_loss_function(loss_type, x_range=(-5, 5), num_points=100):
-    """Plot a loss function visualization"""
+    """Plot a loss function visualization."""
     y_true = 0  # 'correct' value
     x_vals = np.linspace(x_range[0], x_range[1], num_points)
     
@@ -292,8 +204,9 @@ def plot_loss_function(loss_type, x_range=(-5, 5), num_points=100):
     
     return fig
 
+
 def plot_convergence(iterations, loss_values, learning_rate=None, algorithm=None):
-    """Plot convergence visualization"""
+    """Plot convergence visualization."""
     
     fig = go.Figure()
     
@@ -342,8 +255,9 @@ def plot_convergence(iterations, loss_values, learning_rate=None, algorithm=None
     
     return fig
 
+
 def plot_regression_with_line(X, y, coef, intercept, iteration=None):
-    """Plot regression data with fitted line"""
+    """Plot regression data with fitted line."""
     
     # Sort for better visualization
     sort_idx = np.argsort(X.flatten())
@@ -388,8 +302,9 @@ def plot_regression_with_line(X, y, coef, intercept, iteration=None):
     
     return fig
 
+
 def visualize_gradient_descent_step(X, y, coef, intercept, learning_rate=0.01, iteration=None):
-    """Create visualization of a gradient descent step"""
+    """Create visualization of a gradient descent step."""
     
     # Sort for better visualization
     X_flat = X.flatten()
@@ -540,8 +455,9 @@ def visualize_gradient_descent_step(X, y, coef, intercept, learning_rate=0.01, i
     
     return fig, new_coef, new_intercept, loss_after
 
+
 def visualize_gradient_descent_steps_3d(X, y, history, step_size=5):
-    """Create 3D visualization of gradient descent steps"""
+    """Create 3D visualization of gradient descent steps."""
     
     # Prepare parameter grid for loss surface
     coef_min, coef_max = min(history['coef'])-0.5, max(history['coef'])+0.5
@@ -628,8 +544,9 @@ def visualize_gradient_descent_steps_3d(X, y, history, step_size=5):
     
     return fig
 
+
 def visualize_learning_rate_comparison():
-    """Create visualization comparing different learning rates"""
+    """Create visualization comparing different learning rates."""
     
     # Generate synthetic data
     np.random.seed(42)
@@ -674,17 +591,99 @@ def visualize_learning_rate_comparison():
     
     return fig
 
-# Main content with tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🏠 Introduction", 
-    "📉 Loss Functions", 
-    "🎯 Convergence", 
-    "⬇️ Gradient Descent",
-    "❓ Knowledge Check"
-])
 
-# Introduction Tab
-with tab1:
+def setup_page_config():
+    """Configure the Streamlit page settings."""
+    st.set_page_config(
+        page_title="Model Optimization Techniques | AWS Learning",
+        page_icon="🔧",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    
+    # Custom CSS for AWS themed styling
+    st.markdown("""
+        <style>
+        .main {
+            background-color: #FFFFFF;
+        }
+        .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
+            color: #232F3E;
+        }
+        .st-emotion-cache-16txtl3 a {
+            color: #FF9900;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            padding: 10px 20px;
+            background-color: #EAEDED;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .stButton>button {
+            background-color: #FF9900;
+            color: white;
+            border: none;
+        }
+        .stButton>button:hover {
+            background-color: #EC7211;
+            color: white;
+        }
+        footer {
+            font-size: 0.8em;
+            color: #232F3E;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .highlight {
+            background-color: #FFECCC;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #FF9900;
+        }
+        .concept-box {
+            background-color: #F2F3F3;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .formula-box {
+            background-color: #EAEDED;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+
+def render_sidebar():
+    """Render the sidebar content."""
+    with st.sidebar:
+        common.render_sidebar()
+        
+        with st.expander(label='About this application', expanded=False):
+            st.markdown("""
+        This application explores essential machine learning optimization techniques with hands-on visualizations. The app focuses on three key areas:
+
+        - **Loss Functions**: Understand different ways to measure prediction errors and when to use MSE, MAE, Log Loss, and Huber Loss
+        - **Convergence**: Learn how optimization algorithms approach optimal solutions and the factors affecting their stability
+        - **Gradient Descent**: Visualize the fundamental optimization algorithm through interactive 2D and 3D demonstrations
+            """)
+
+
+def render_introduction_tab():
+    """Render the Introduction tab content."""
     st.title("Model Optimization Techniques in Machine Learning")
     
     st.markdown("""
@@ -776,8 +775,9 @@ with tab1:
         convergence_preview = plot_convergence(iterations, loss_values)
         st.plotly_chart(convergence_preview, use_container_width=True)
 
-# Loss Functions Tab
-with tab2:
+
+def render_loss_functions_tab():
+    """Render the Loss Functions tab content."""
     st.title("Loss Functions")
     
     st.markdown("""
@@ -923,9 +923,6 @@ with tab2:
     mse_val = mean_squared_error(y, y_pred_mse)
     
     # MAE - Using linear model with different solver
-    from sklearn.linear_model import LinearRegression
-    from sklearn.linear_model import SGDRegressor
-    
     lr_mae = SGDRegressor(loss='epsilon_insensitive', epsilon=0, 
                            max_iter=1000, tol=1e-3, 
                            random_state=42).fit(X_flat, y)
@@ -1023,8 +1020,9 @@ with tab2:
     
     st.markdown('<p class="highlight">The choice of loss function should be guided by the characteristics of your data and the specific goals of your model.</p>', unsafe_allow_html=True)
 
-# Convergence Tab
-with tab3:
+
+def render_convergence_tab():
+    """Render the Convergence tab content."""
     st.title("Convergence")
     
     st.markdown("""
@@ -1272,8 +1270,9 @@ with tab3:
     
     st.markdown('<p class="highlight">Remember: The goal is not perfect convergence, but finding a solution that generalizes well to new data!</p>', unsafe_allow_html=True)
 
-# Gradient Descent Tab
-with tab4:
+
+def render_gradient_descent_tab():
+    """Render the Gradient Descent tab content."""
     st.title("Gradient Descent")
     
     st.markdown("""
@@ -1521,8 +1520,9 @@ with tab4:
     
     st.markdown('<p class="highlight">Remember: No single optimizer or learning rate works best for all problems. Experimentation is key!</p>', unsafe_allow_html=True)
 
-# Knowledge Check Tab
-with tab5:
+
+def render_knowledge_check_tab():
+    """Render the Knowledge Check tab content."""
     st.title("Knowledge Check")
     
     st.markdown("""
@@ -1589,7 +1589,7 @@ with tab5:
             st.markdown(f"**Question {i+1}**: {q['question']}")
             st.session_state.quiz_answers[i] = st.radio(
                 f"Select your answer for question {i+1}:",
-                q['options'],index=None,
+                q['options'], index=None,
                 key=f"q{i}"
             )
             st.markdown("---")
@@ -1665,20 +1665,71 @@ with tab5:
             st.session_state.quiz_score = 0
             st.rerun()
 
-# Summary section
-st.markdown("""
-## Summary of Model Optimization Techniques
 
-| Technique | Description | Key Considerations |
-|-----------|-------------|-------------------|
-| Loss Functions | Mathematical functions that quantify prediction errors | Choose based on problem type, sensitivity to outliers, and scale properties |
-| Convergence | When an optimization algorithm reaches its optimal solution | Monitor loss, parameter changes, and use appropriate stopping criteria |
-| Gradient Descent | Iterative optimization algorithm that follows the negative gradient | Balance learning rate, batch size, and consider advanced variants |
-""")
+def render_summary_and_footer():
+    """Render the summary section and footer."""
+    st.markdown("""
+    ## Summary of Model Optimization Techniques
 
-# Footer
-st.markdown("""
-<footer>
-© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
-</footer>
-""", unsafe_allow_html=True)
+    | Technique | Description | Key Considerations |
+    |-----------|-------------|-------------------|
+    | Loss Functions | Mathematical functions that quantify prediction errors | Choose based on problem type, sensitivity to outliers, and scale properties |
+    | Convergence | When an optimization algorithm reaches its optimal solution | Monitor loss, parameter changes, and use appropriate stopping criteria |
+    | Gradient Descent | Iterative optimization algorithm that follows the negative gradient | Balance learning rate, batch size, and consider advanced variants |
+    """)
+
+    # Footer
+    st.markdown("""
+    <footer>
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </footer>
+    """, unsafe_allow_html=True)
+
+
+def main():
+    """Main function to run the Streamlit application."""
+    # Set page config
+    setup_page_config()
+    
+    # Initialize session state
+    init_session_state()
+    
+    # Render the sidebar
+    render_sidebar()
+
+    # Create tabs for different sections
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🏠 Introduction", 
+        "📉 Loss Functions", 
+        "🎯 Convergence", 
+        "⬇️ Gradient Descent",
+        "❓ Knowledge Check"
+    ])
+
+    # Render each tab's content
+    with tab1:
+        render_introduction_tab()
+    
+    with tab2:
+        render_loss_functions_tab()
+    
+    with tab3:
+        render_convergence_tab()
+    
+    with tab4:
+        render_gradient_descent_tab()
+    
+    with tab5:
+        render_knowledge_check_tab()
+    
+    # Render summary and footer
+    render_summary_and_footer()
+
+
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

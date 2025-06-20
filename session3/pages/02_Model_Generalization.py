@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.metrics import mean_squared_error
-from sklearn.datasets import make_regression, make_classification
+from sklearn.datasets import make_regression, make_moons
 from sklearn.neural_network import MLPRegressor, MLPClassifier
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -26,94 +26,100 @@ import utils.authenticate as authenticate
 
 
 # Set page config
-st.set_page_config(
-    page_title="Model Generalization in ML | AWS Learning",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+def set_page_config():
+    st.set_page_config(
+        page_title="Model Generalization in ML | AWS Learning",
+        page_icon="🧠",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+set_page_config()
 
 # Custom CSS for AWS themed styling
-st.markdown("""
-    <style>
-    .main {
-        background-color: #FFFFFF;
-    }
-    .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
-        color: #232F3E;
-    }
-    .st-emotion-cache-16txtl3 a {
-        color: #FF9900;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        padding: 10px 20px;
-        background-color: #EAEDED;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #EC7211;
-        color: white;
-    }
-    footer {
-        font-size: 0.8em;
-        color: #232F3E;
-        text-align: center;
-        margin-top: 50px;
-    }
-    .highlight {
-        background-color: #FFECCC;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #FF9900;
-    }
-    .concept-box {
-        background-color: #F2F3F3;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    .grid-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    .formula-box {
-        background-color: #EAEDED;
-        padding: 15px;
-        border-radius: 5px;
-        text-align: center;
-        margin: 10px 0;
-    }
-    .info-box {
-        background-color: #EBF5FB;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #1166BB;
-        margin-bottom: 10px;
-    }
-    .warning-box {
-        background-color: #FDEDEC;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #D13212;
-        margin-bottom: 10px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+def set_custom_css():
+    st.markdown("""
+        <style>
+        .main {
+            background-color: #FFFFFF;
+        }
+        .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
+            color: #232F3E;
+        }
+        .st-emotion-cache-16txtl3 a {
+            color: #FF9900;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            padding: 10px 20px;
+            background-color: #EAEDED;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .stButton>button {
+            background-color: #FF9900;
+            color: white;
+            border: none;
+        }
+        .stButton>button:hover {
+            background-color: #EC7211;
+            color: white;
+        }
+        footer {
+            font-size: 0.8em;
+            color: #232F3E;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .highlight {
+            background-color: #FFECCC;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #FF9900;
+        }
+        .concept-box {
+            background-color: #F2F3F3;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .formula-box {
+            background-color: #EAEDED;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .info-box {
+            background-color: #EBF5FB;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #1166BB;
+            margin-bottom: 10px;
+        }
+        .warning-box {
+            background-color: #FDEDEC;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #D13212;
+            margin-bottom: 10px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 
 # Initialize session state
 def init_session_state():
+    common.initialize_session_state()
     if 'quiz_answers' not in st.session_state:
         st.session_state.quiz_answers = {}
     if 'quiz_score' not in st.session_state:
@@ -122,24 +128,6 @@ def init_session_state():
         st.session_state.quiz_submitted = False
     if 'feedback' not in st.session_state:
         st.session_state.feedback = {}
-
-init_session_state()
-
-with st.sidebar:
-    common.render_sidebar()
-
-    with st.expander(label='About this application' ,expanded=False):
-        st.markdown("""
-
-        This application explores model generalization in machine learning, focusing on four key areas:
-
-        - **Underfitting & Overfitting**: Visualize the balance between model simplicity and complexity
-        - **Regularization Techniques**: Learn how constraints improve model performance on unseen data
-        - **Dropout**: Explore how randomly disabling neurons enhances neural network generalization
-        - **L1/L2 Regularization**: Compare different penalty approaches for controlling model complexity
-
-        """)
-
 
 
 # Data generation functions
@@ -151,6 +139,7 @@ def generate_polynomial_data(noise=0.5):
     y = y_true + np.random.normal(0, noise, size=y_true.shape)
     return x, y, y_true
 
+
 @st.cache_data
 def generate_complex_data(n_samples=100, noise=0.5):
     np.random.seed(42)
@@ -158,6 +147,7 @@ def generate_complex_data(n_samples=100, noise=0.5):
     y_true = np.sin(x.ravel() * 1.5) * 2 + 0.5 * x.ravel()**2
     y = y_true + np.random.normal(0, noise, size=y_true.shape)
     return x, y, y_true
+
 
 @st.cache_data
 def generate_high_dim_data(n_samples=100, n_features=20, n_informative=5, noise=1.0):
@@ -172,11 +162,12 @@ def generate_high_dim_data(n_samples=100, n_features=20, n_informative=5, noise=
     )
     return X, y, coef
 
+
 @st.cache_data
 def generate_moons_data(n_samples=1000, noise=0.3):
-    from sklearn.datasets import make_moons
     X, y = make_moons(n_samples=n_samples, noise=noise, random_state=42)
     return X, y
+
 
 @st.cache_data
 def compute_reg_path(reg_type, alphas, x_train_poly, y_train):
@@ -192,21 +183,23 @@ def compute_reg_path(reg_type, alphas, x_train_poly, y_train):
     
     return np.array(coefs)
 
-# Main content
-# st.title("🧠 Model Generalization in Machine Learning")
 
-# Main content with tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "🏠 Introduction", 
-    "📉 Underfitting & Overfitting", 
-    "🔄 Regularization", 
-    "🎭 Dropout", 
-    "⚖️ L1/L2 Regularization",
-    "❓ Knowledge Check"
-])
+def render_sidebar():
+    with st.sidebar:
+        common.render_sidebar()
 
-# Tab 1: Introduction
-with tab1:
+        with st.expander(label='About this application', expanded=False):
+            st.markdown("""
+            This application explores model generalization in machine learning, focusing on four key areas:
+
+            - **Underfitting & Overfitting**: Visualize the balance between model simplicity and complexity
+            - **Regularization Techniques**: Learn how constraints improve model performance on unseen data
+            - **Dropout**: Explore how randomly disabling neurons enhances neural network generalization
+            - **L1/L2 Regularization**: Compare different penalty approaches for controlling model complexity
+            """)
+
+
+def render_introduction_tab():
     st.title("Model Generalization in Machine Learning")
     
     st.markdown("""
@@ -314,8 +307,8 @@ with tab1:
         
         st.markdown('<div class="highlight">The model with the lowest error on a validation set (not used for training) is often the one with the best generalization ability.</div>', unsafe_allow_html=True)
 
-# Tab 2: Underfitting & Overfitting
-with tab2:
+
+def render_underfitting_overfitting_tab():
     st.title("📉 Underfitting & Overfitting")
     
     st.markdown("""
@@ -470,8 +463,8 @@ with tab2:
     
     st.markdown('<div class="highlight">An ideal model should be complex enough to learn the underlying pattern but simple enough to ignore the noise.</div>', unsafe_allow_html=True)
 
-# Tab 3: Regularization
-with tab3:
+
+def render_regularization_tab():
     st.title("🔄 Regularization")
     
     st.markdown("""
@@ -716,8 +709,8 @@ with tab3:
     else:
         st.markdown('<div class="info-box">Ridge regularization shrinks all coefficients toward zero but rarely makes them exactly zero.</div>', unsafe_allow_html=True)
 
-# Tab 4: Dropout
-with tab4:
+
+def render_dropout_tab():
     st.title("🎭 Dropout")
     
     st.markdown("""
@@ -934,8 +927,8 @@ with tab4:
     with col2:
         st.markdown('<div class="info-box">⚙️ <b>When to Use Dropout</b>:<br>- Large neural networks<br>- Limited training data<br>- When overfitting is observed</div>', unsafe_allow_html=True)
 
-# Tab 5: L1/L2 Regularization
-with tab5:
+
+def render_l1l2_regularization_tab():
     st.title("⚖️ L1/L2 Regularization")
     
     st.markdown("""
@@ -1170,8 +1163,8 @@ with tab5:
     
     st.table(methods_df)
 
-# Tab 6: Knowledge Check
-with tab6:
+
+def render_knowledge_check_tab():
     st.title("❓ Knowledge Check")
     
     st.markdown("""
@@ -1334,21 +1327,74 @@ with tab6:
             st.session_state.feedback = {}
             st.rerun()
 
-# Summary section
-st.markdown("""
-## Summary of Model Generalization Techniques
 
-| Concept | Description | Key Techniques |
-|-----------|-------------|-------------------|
-| Underfitting & Overfitting | The balance between learning the pattern vs. memorizing the data | Model selection, Validation, Cross-validation |
-| Regularization | Adding constraints to prevent overfitting | L1/L2 penalties, Early stopping, Data augmentation |
-| Dropout | Randomly disabling neurons during training | Used in neural networks to prevent co-adaptation |
-| L1/L2 Regularization | Different penalty approaches for weights | L1 for sparsity, L2 for small weights, Elastic Net for both |
-""")
+def render_summary():
+    st.markdown("""
+    ## Summary of Model Generalization Techniques
 
-# Footer
-st.markdown("""
-<footer>
-© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
-</footer>
-""", unsafe_allow_html=True)
+    | Concept | Description | Key Techniques |
+    |-----------|-------------|-------------------|
+    | Underfitting & Overfitting | The balance between learning the pattern vs. memorizing the data | Model selection, Validation, Cross-validation |
+    | Regularization | Adding constraints to prevent overfitting | L1/L2 penalties, Early stopping, Data augmentation |
+    | Dropout | Randomly disabling neurons during training | Used in neural networks to prevent co-adaptation |
+    | L1/L2 Regularization | Different penalty approaches for weights | L1 for sparsity, L2 for small weights, Elastic Net for both |
+    """)
+
+
+def render_footer():
+    st.markdown("""
+    <footer>
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </footer>
+    """, unsafe_allow_html=True)
+
+
+def main():
+    set_custom_css()
+    init_session_state()
+    render_sidebar()
+    
+    # Main content with tabs
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "🏠 Introduction", 
+        "📉 Underfitting & Overfitting", 
+        "🔄 Regularization", 
+        "🎭 Dropout", 
+        "⚖️ L1/L2 Regularization",
+        "❓ Knowledge Check"
+    ])
+
+    # Render each tab's content
+    with tab1:
+        render_introduction_tab()
+    
+    with tab2:
+        render_underfitting_overfitting_tab()
+    
+    with tab3:
+        render_regularization_tab()
+    
+    with tab4:
+        render_dropout_tab()
+    
+    with tab5:
+        render_l1l2_regularization_tab()
+    
+    with tab6:
+        render_knowledge_check_tab()
+    
+    # Add summary section
+    render_summary()
+    
+    # Add footer
+    render_footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

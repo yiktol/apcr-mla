@@ -1,4 +1,3 @@
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -21,6 +20,10 @@ import time
 import base64
 from PIL import Image
 import io
+import utils.common as common
+import utils.authenticate as authenticate
+
+
 
 # Set page config
 st.set_page_config(
@@ -30,66 +33,69 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for AWS themed styling
-st.markdown("""
-    <style>
-    .main {
-        background-color: #FFFFFF;
-    }
-    .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
-        color: #232F3E;
-    }
-    .st-emotion-cache-16txtl3 a {
-        color: #FF9900;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        padding: 10px 20px;
-        background-color: #EAEDED;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #EC7211;
-        color: white;
-    }
-    footer {
-        font-size: 0.8em;
-        color: #232F3E;
-        text-align: center;
-        margin-top: 50px;
-    }
-    .highlight {
-        background-color: #FFECCC;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #FF9900;
-    }
-    .concept-box {
-        background-color: #F2F3F3;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    .grid-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Set custom CSS for AWS themed styling
+def set_custom_styles():
+    st.markdown("""
+        <style>
+        .main {
+            background-color: #FFFFFF;
+        }
+        .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
+            color: #232F3E;
+        }
+        .st-emotion-cache-16txtl3 a {
+            color: #FF9900;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            padding: 10px 20px;
+            background-color: #EAEDED;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .stButton>button {
+            background-color: #FF9900;
+            color: white;
+            border: none;
+        }
+        .stButton>button:hover {
+            background-color: #EC7211;
+            color: white;
+        }
+        footer {
+            font-size: 0.8em;
+            color: #232F3E;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .highlight {
+            background-color: #FFECCC;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #FF9900;
+        }
+        .concept-box {
+            background-color: #F2F3F3;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 
 # Initialize session state
 def init_session_state():
+    common.initialize_session_state()
     if 'dataset' not in st.session_state:
         st.session_state.dataset = 'breast_cancer'
     if 'quiz_answers' not in st.session_state:
@@ -113,50 +119,6 @@ def init_session_state():
     if 'y_prob' not in st.session_state:
         st.session_state.y_prob = None
 
-init_session_state()
-
-# Sidebar for session management
-st.sidebar.markdown("### Session Management")
-
-# Reset session button
-if st.sidebar.button("🔄 Reset Session"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    init_session_state()
-    st.sidebar.success("Session has been reset!")
-    time.sleep(1)
-    st.rerun()
-
-# Dataset selection
-st.sidebar.markdown("### Dataset Selection")
-dataset_option = st.sidebar.selectbox(
-    "Choose a dataset:",
-    options=["Breast Cancer", "Wine Classification", "Synthetic Data"],
-    key="dataset_selection"
-)
-
-
-st.sidebar.divider()
-
-with st.sidebar.expander(label='About this application' ,expanded=False):
-    st.markdown("""
-This application focuses on model evaluation techniques for classification problems in machine learning, covering five essential areas:
-
-- **Confusion Matrix**: Visualize and understand true/false positives and negatives with adjustable thresholds
-- **Accuracy & Precision**: Learn when these metrics are appropriate and their limitations
-- **Recall & F1 Score**: Explore the balance between different types of errors with an interactive calculator
-- **AUC-ROC Curves**: Visualize model performance across all possible thresholds
-- **Heat Maps**: Master different visualization techniques for interpreting model results
-    """)
-
-
-
-if dataset_option == "Breast Cancer":
-    st.session_state.dataset = 'breast_cancer'
-elif dataset_option == "Wine Classification":
-    st.session_state.dataset = 'wine'
-else:
-    st.session_state.dataset = 'synthetic'
 
 # Function to prepare dataset
 @st.cache_data
@@ -191,17 +153,6 @@ def prepare_dataset(dataset_name):
     
     return X_train, X_test, y_train, y_test, y_pred, y_prob, model, feature_names, class_names
 
-# Load dataset based on selection
-X_train, X_test, y_train, y_test, y_pred, y_prob, model, feature_names, class_names = prepare_dataset(st.session_state.dataset)
-
-# Store in session state
-st.session_state.X_train = X_train
-st.session_state.X_test = X_test
-st.session_state.y_train = y_train
-st.session_state.y_test = y_test
-st.session_state.y_pred = y_pred
-st.session_state.y_prob = y_prob
-st.session_state.model = model
 
 # Helper functions for visualizations
 def plot_confusion_matrix(y_true, y_pred, class_names):
@@ -226,6 +177,7 @@ def plot_confusion_matrix(y_true, y_pred, class_names):
     )
     
     return fig
+
 
 def plot_metrics_comparison(y_true, y_pred):
     metrics = {
@@ -254,6 +206,7 @@ def plot_metrics_comparison(y_true, y_pred):
     )
     
     return fig
+
 
 def plot_roc_curve(y_true, y_prob, class_names):
     n_classes = len(class_names)
@@ -319,6 +272,7 @@ def plot_roc_curve(y_true, y_prob, class_names):
     
     return fig
 
+
 def plot_feature_importance(model, feature_names):
     importances = model.feature_importances_
     indices = np.argsort(importances)[::-1]
@@ -344,6 +298,7 @@ def plot_feature_importance(model, feature_names):
     )
     
     return fig
+
 
 def plot_precision_recall_tradeoff(y_test, y_prob):
     thresholds = np.arange(0, 1, 0.05)
@@ -397,19 +352,9 @@ def plot_precision_recall_tradeoff(y_test, y_prob):
     
     return fig
 
-# Main content with tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "🏠 Introduction", 
-    "🔄 Confusion Matrix", 
-    "🎯 Accuracy & Precision", 
-    "📊 Recall & F1 Score", 
-    "📈 AUC-ROC", 
-    "🔥 Heat Maps", 
-    "❓ Knowledge Check"
-])
 
-# Introduction Tab
-with tab1:
+# Tab content functions
+def render_intro_tab():
     st.title("Model Evaluation for Classification Problems")
     
     st.markdown("""
@@ -450,6 +395,10 @@ with tab1:
     with col2:
         st.image("https://miro.medium.com/v2/resize:fit:4800/format:webp/0*8yher9Uy3W5gcWX_", caption="Model Evaluation Flow")
         
+        dataset_option = "Breast Cancer" if st.session_state.dataset == 'breast_cancer' else \
+                        "Wine Classification" if st.session_state.dataset == 'wine' else \
+                        "Synthetic Data"
+        
         st.markdown("""
         ### Dataset Info
         
@@ -463,12 +412,12 @@ with tab1:
             dataset_option,
             len(st.session_state.X_train),
             len(st.session_state.X_test),
-            len(feature_names),
-            len(class_names)
+            len(st.session_state.feature_names),
+            len(st.session_state.class_names)
         ))
 
-# Confusion Matrix Tab
-with tab2:
+
+def render_confusion_matrix_tab():
     st.title("Confusion Matrix")
     
     st.markdown("""
@@ -511,7 +460,7 @@ with tab2:
         st.subheader("Interactive Confusion Matrix")
         
         # Let user adjust prediction threshold for binary classification
-        if len(class_names) == 2 and st.session_state.y_prob is not None:
+        if len(st.session_state.class_names) == 2 and st.session_state.y_prob is not None:
             threshold = st.slider(
                 "Prediction Threshold:",
                 min_value=0.0,
@@ -525,7 +474,7 @@ with tab2:
             custom_preds = (st.session_state.y_prob[:, 1] >= threshold).astype(int)
             
             # Plot confusion matrix with custom threshold
-            cm_fig = plot_confusion_matrix(st.session_state.y_test, custom_preds, class_names)
+            cm_fig = plot_confusion_matrix(st.session_state.y_test, custom_preds, st.session_state.class_names)
             st.plotly_chart(cm_fig, key="cm_plot")
             
             # Show metrics based on this threshold
@@ -542,7 +491,7 @@ with tab2:
                 
         else:
             # For multiclass, just show the standard confusion matrix
-            cm_fig = plot_confusion_matrix(st.session_state.y_test, st.session_state.y_pred, class_names)
+            cm_fig = plot_confusion_matrix(st.session_state.y_test, st.session_state.y_pred, st.session_state.class_names)
             st.plotly_chart(cm_fig, key="cm_plot_2")
     
     st.markdown("""
@@ -556,8 +505,8 @@ with tab2:
     This illustrates the fundamental trade-off in classification problems!
     """)
 
-# Accuracy & Precision Tab
-with tab3:
+
+def render_accuracy_precision_tab():
     st.title("Accuracy & Precision")
     
     st.markdown("""
@@ -615,7 +564,7 @@ with tab3:
     st.markdown("### Interactive Visualization")
     
     # Precision-Recall tradeoff visualization (for binary classification)
-    if len(class_names) == 2:
+    if len(st.session_state.class_names) == 2:
         st.subheader("Precision-Recall Tradeoff")
         pr_fig = plot_precision_recall_tradeoff(st.session_state.y_test, st.session_state.y_prob)
         st.plotly_chart(pr_fig, key="pr_plot")
@@ -637,12 +586,12 @@ with tab3:
     st.plotly_chart(metrics_fig, key="metrics_plot")
     
     # Class-specific precision
-    if len(class_names) > 2:
+    if len(st.session_state.class_names) > 2:
         st.subheader("Class-specific Precision")
         class_precision = precision_score(st.session_state.y_test, st.session_state.y_pred, average=None)
         
         precision_df = pd.DataFrame({
-            'Class': class_names,
+            'Class': st.session_state.class_names,
             'Precision': class_precision
         })
         
@@ -664,8 +613,8 @@ with tab3:
         
         st.plotly_chart(prec_bar, key="prec_bar_plot")
 
-# Recall & F1 Score Tab
-with tab4:
+
+def render_recall_f1_tab():
     st.title("Recall & F1 Score")
     
     st.markdown("""
@@ -732,7 +681,7 @@ with tab4:
     class_recall = recall_score(st.session_state.y_test, st.session_state.y_pred, average=None)
     
     recall_df = pd.DataFrame({
-        'Class': class_names,
+        'Class': st.session_state.class_names,
         'Recall': class_recall
     })
     
@@ -752,7 +701,7 @@ with tab4:
         yaxis_range=[0, 1]
     )
     
-    st.plotly_chart(recall_bar,key="recall_bar")
+    st.plotly_chart(recall_bar, key="recall_bar")
     
     # Interactive visualization
     st.subheader("Interactive F1 Score Calculator")
@@ -806,7 +755,7 @@ with tab4:
     # Classification report
     st.subheader("Full Classification Report")
     
-    report = classification_report(st.session_state.y_test, st.session_state.y_pred, target_names=class_names, output_dict=True)
+    report = classification_report(st.session_state.y_test, st.session_state.y_pred, target_names=st.session_state.class_names, output_dict=True)
     report_df = pd.DataFrame(report).transpose()
     
     # Style the dataframe
@@ -817,8 +766,8 @@ with tab4:
         'support': '{:.0f}'
     }).background_gradient(cmap='YlOrRd', subset=['precision', 'recall', 'f1-score']))
 
-# AUC-ROC Tab
-with tab5:
+
+def render_auc_roc_tab():
     st.title("AUC-ROC Curve")
     
     st.markdown("""
@@ -861,7 +810,7 @@ with tab5:
     with col2:
         st.subheader("Interactive ROC Curve")
         
-        roc_fig = plot_roc_curve(st.session_state.y_test, st.session_state.y_prob, class_names)
+        roc_fig = plot_roc_curve(st.session_state.y_test, st.session_state.y_prob, st.session_state.class_names)
         st.plotly_chart(roc_fig, key='roc_fig')
         
         st.markdown("""
@@ -924,8 +873,8 @@ with tab5:
     
     st.plotly_chart(model_fig, key='model_fig')
 
-# Heat Maps Tab
-with tab6:
+
+def render_heat_maps_tab():
     st.title("Heat Maps & Visualization Techniques")
     
     st.markdown("""
@@ -953,163 +902,13 @@ with tab6:
     )
     
     if viz_option == "Confusion Matrix Heat Map":
-        st.markdown("""
-        ### Confusion Matrix Heat Map
-        
-        Heat maps make confusion matrices more intuitive:
-        - **Darker colors**: Higher values
-        - **Diagonal elements**: Correct predictions (should be darker)
-        - **Off-diagonal elements**: Errors (should be lighter)
-        """)
-        
-        # Create a normalized confusion matrix
-        cm = confusion_matrix(st.session_state.y_test, st.session_state.y_pred, normalize='true')
-        
-        # Create heatmap with annotations
-        fig = px.imshow(
-            cm,
-            text_auto='.2f',
-            labels=dict(x="Predicted Label", y="True Label", color="Proportion"),
-            x=class_names,
-            y=class_names,
-            color_continuous_scale='YlOrRd'
-        )
-        
-        fig.update_layout(
-            title="Normalized Confusion Matrix Heat Map",
-            title_x=0.5,
-            width=700,
-            height=600
-        )
-        
-        st.plotly_chart(fig, key='confusion_heatmap')
-        
-        st.markdown("""
-        **Interpretation Tips:**
-        - The diagonal elements represent the proportion of correctly classified instances for each class
-        - Off-diagonal elements show misclassifications and patterns of confusion between classes
-        - Perfect classification would show values of 1.0 along the diagonal and 0.0 elsewhere
-        """)
-    
+        render_confusion_heatmap()
     elif viz_option == "Feature Correlation Heat Map":
-        st.markdown("""
-        ### Feature Correlation Heat Map
-        
-        Correlation heat maps help identify:
-        - **Positively correlated features**: Move together (1.0 = perfect positive correlation)
-        - **Negatively correlated features**: Move in opposite directions (-1.0 = perfect negative correlation)
-        - **Uncorrelated features**: No relationship (0.0 = no correlation)
-        
-        This helps with feature selection and understanding data relationships.
-        """)
-        
-        # Select a subset of features for better visualization
-        max_features = min(10, len(feature_names))
-        feature_indices = np.random.choice(len(feature_names), max_features, replace=False) if len(feature_names) > max_features else range(len(feature_names))
-        
-        # Create correlation matrix
-        X_subset = st.session_state.X_train[:, feature_indices]
-        corr_matrix = np.corrcoef(X_subset, rowvar=False)
-        
-        # Create heatmap
-        fig = px.imshow(
-            corr_matrix,
-            text_auto='.2f',
-            labels=dict(x="Feature", y="Feature", color="Correlation"),
-            x=[feature_names[i] for i in feature_indices],
-            y=[feature_names[i] for i in feature_indices],
-            color_continuous_scale='RdBu_r',
-            zmin=-1,
-            zmax=1
-        )
-        
-        fig.update_layout(
-            title="Feature Correlation Heat Map",
-            title_x=0.5,
-            width=800,
-            height=700
-        )
-        
-        st.plotly_chart(fig, key='correlation_heatmap')
-        
-        st.markdown("""
-        **Why Feature Correlation Matters:**
-        
-        - **Highly correlated features** can cause multicollinearity in some models
-        - Can help identify **redundant features** for dimensionality reduction
-        - Reveals **relationships in your data** that might not be obvious
-        """)
-    
+        render_correlation_heatmap()
     elif viz_option == "Feature Importance":
-        st.markdown("""
-        ### Feature Importance Visualization
-        
-        Feature importance helps us understand:
-        - Which features have the most predictive power
-        - Where to focus feature engineering efforts
-        - What the model considers most relevant for predictions
-        """)
-        
-        # Plot feature importance
-        fi_fig = plot_feature_importance(st.session_state.model, feature_names)
-        st.plotly_chart(fi_fig, key='feature_importance')
-        
-        st.markdown("""
-        **Why Feature Importance Matters:**
-        
-        - Helps with **feature selection** for model simplification
-        - Provides **insights into the problem domain**
-        - Can guide **feature engineering** efforts
-        - Improves **model interpretability**
-        """)
-    
+        render_feature_importance()
     else:  # Prediction Probability Heat Map
-        st.markdown("""
-        ### Prediction Probability Heat Map
-        
-        This visualization shows:
-        - How confident the model is in its predictions
-        - Distribution of prediction probabilities across classes
-        - Areas where the model is uncertain
-        """)
-        
-        # Create a sample of test instances for visualization
-        sample_size = min(30, len(st.session_state.y_test))
-        sample_indices = np.random.choice(len(st.session_state.y_test), sample_size, replace=False)
-        
-        # Get probabilities for the sample
-        sample_probs = st.session_state.y_prob[sample_indices]
-        
-        # Create heatmap
-        fig = px.imshow(
-            sample_probs,
-            labels=dict(x="Class", y="Sample", color="Probability"),
-            x=class_names,
-            y=[f"Sample {i+1}" for i in range(sample_size)],
-            color_continuous_scale='YlOrRd',
-            zmin=0,
-            zmax=1
-        )
-        
-        fig.update_layout(
-            title="Prediction Probability Heat Map",
-            title_x=0.5,
-            width=700,
-            height=600
-        )
-        
-        st.plotly_chart(fig, key='gi8')
-        
-        st.markdown("""
-        **Interpretation:**
-        
-        - **Darker cells** indicate higher prediction probability for that class
-        - For each sample (row), probabilities across all classes sum to 1.0
-        - **Confident predictions** show one very dark cell and others light
-        - **Uncertain predictions** show more evenly distributed probabilities
-        
-        This visualization helps identify where your model is struggling to make clear predictions.
-        """)
+        render_prediction_probability_heatmap()
     
     st.markdown("""
     ### Best Practices for Heat Map Visualizations
@@ -1127,8 +926,171 @@ with tab6:
     5. **Provide clear context and interpretation** to help viewers understand what they're seeing
     """)
 
-# Knowledge Check Tab
-with tab7:
+
+def render_confusion_heatmap():
+    st.markdown("""
+    ### Confusion Matrix Heat Map
+    
+    Heat maps make confusion matrices more intuitive:
+    - **Darker colors**: Higher values
+    - **Diagonal elements**: Correct predictions (should be darker)
+    - **Off-diagonal elements**: Errors (should be lighter)
+    """)
+    
+    # Create a normalized confusion matrix
+    cm = confusion_matrix(st.session_state.y_test, st.session_state.y_pred, normalize='true')
+    
+    # Create heatmap with annotations
+    fig = px.imshow(
+        cm,
+        text_auto='.2f',
+        labels=dict(x="Predicted Label", y="True Label", color="Proportion"),
+        x=st.session_state.class_names,
+        y=st.session_state.class_names,
+        color_continuous_scale='YlOrRd'
+    )
+    
+    fig.update_layout(
+        title="Normalized Confusion Matrix Heat Map",
+        title_x=0.5,
+        width=700,
+        height=600
+    )
+    
+    st.plotly_chart(fig, key='confusion_heatmap')
+    
+    st.markdown("""
+    **Interpretation Tips:**
+    - The diagonal elements represent the proportion of correctly classified instances for each class
+    - Off-diagonal elements show misclassifications and patterns of confusion between classes
+    - Perfect classification would show values of 1.0 along the diagonal and 0.0 elsewhere
+    """)
+
+
+def render_correlation_heatmap():
+    st.markdown("""
+    ### Feature Correlation Heat Map
+    
+    Correlation heat maps help identify:
+    - **Positively correlated features**: Move together (1.0 = perfect positive correlation)
+    - **Negatively correlated features**: Move in opposite directions (-1.0 = perfect negative correlation)
+    - **Uncorrelated features**: No relationship (0.0 = no correlation)
+    
+    This helps with feature selection and understanding data relationships.
+    """)
+    
+    # Select a subset of features for better visualization
+    max_features = min(10, len(st.session_state.feature_names))
+    feature_indices = np.random.choice(len(st.session_state.feature_names), max_features, replace=False) if len(st.session_state.feature_names) > max_features else range(len(st.session_state.feature_names))
+    
+    # Create correlation matrix
+    X_subset = st.session_state.X_train[:, feature_indices]
+    corr_matrix = np.corrcoef(X_subset, rowvar=False)
+    
+    # Create heatmap
+    fig = px.imshow(
+        corr_matrix,
+        text_auto='.2f',
+        labels=dict(x="Feature", y="Feature", color="Correlation"),
+        x=[st.session_state.feature_names[i] for i in feature_indices],
+        y=[st.session_state.feature_names[i] for i in feature_indices],
+        color_continuous_scale='RdBu_r',
+        zmin=-1,
+        zmax=1
+    )
+    
+    fig.update_layout(
+        title="Feature Correlation Heat Map",
+        title_x=0.5,
+        width=800,
+        height=700
+    )
+    
+    st.plotly_chart(fig, key='correlation_heatmap')
+    
+    st.markdown("""
+    **Why Feature Correlation Matters:**
+    
+    - **Highly correlated features** can cause multicollinearity in some models
+    - Can help identify **redundant features** for dimensionality reduction
+    - Reveals **relationships in your data** that might not be obvious
+    """)
+
+
+def render_feature_importance():
+    st.markdown("""
+    ### Feature Importance Visualization
+    
+    Feature importance helps us understand:
+    - Which features have the most predictive power
+    - Where to focus feature engineering efforts
+    - What the model considers most relevant for predictions
+    """)
+    
+    # Plot feature importance
+    fi_fig = plot_feature_importance(st.session_state.model, st.session_state.feature_names)
+    st.plotly_chart(fi_fig, key='feature_importance')
+    
+    st.markdown("""
+    **Why Feature Importance Matters:**
+    
+    - Helps with **feature selection** for model simplification
+    - Provides **insights into the problem domain**
+    - Can guide **feature engineering** efforts
+    - Improves **model interpretability**
+    """)
+
+
+def render_prediction_probability_heatmap():
+    st.markdown("""
+    ### Prediction Probability Heat Map
+    
+    This visualization shows:
+    - How confident the model is in its predictions
+    - Distribution of prediction probabilities across classes
+    - Areas where the model is uncertain
+    """)
+    
+    # Create a sample of test instances for visualization
+    sample_size = min(30, len(st.session_state.y_test))
+    sample_indices = np.random.choice(len(st.session_state.y_test), sample_size, replace=False)
+    
+    # Get probabilities for the sample
+    sample_probs = st.session_state.y_prob[sample_indices]
+    
+    # Create heatmap
+    fig = px.imshow(
+        sample_probs,
+        labels=dict(x="Class", y="Sample", color="Probability"),
+        x=st.session_state.class_names,
+        y=[f"Sample {i+1}" for i in range(sample_size)],
+        color_continuous_scale='YlOrRd',
+        zmin=0,
+        zmax=1
+    )
+    
+    fig.update_layout(
+        title="Prediction Probability Heat Map",
+        title_x=0.5,
+        width=700,
+        height=600
+    )
+    
+    st.plotly_chart(fig, key='probability_heatmap')
+    
+    st.markdown("""
+    **Interpretation:**
+    
+    - **Darker cells** indicate higher prediction probability for that class
+    - For each sample (row), probabilities across all classes sum to 1.0
+    - **Confident predictions** show one very dark cell and others light
+    - **Uncertain predictions** show more evenly distributed probabilities
+    
+    This visualization helps identify where your model is struggling to make clear predictions.
+    """)
+
+
+def render_knowledge_check_tab():
     st.title("Knowledge Check")
     
     st.markdown("""
@@ -1184,135 +1146,213 @@ with tab7:
     
     # Quiz logic
     if not st.session_state.quiz_submitted:
-        st.markdown("### Answer the following questions:")
-        
-        for i, q in enumerate(quiz):
-            st.markdown(f"**Question {i+1}**: {q['question']}")
-            st.session_state.quiz_answers[i] = st.radio(
-                f"Select your answer for question {i+1}:",
-                q['options'],index=None,
-                key=f"q{i}"
-            )
-            st.markdown("---")
-        
-        if st.button("Submit Answers"):
-            score = 0
-            for i, q in enumerate(quiz):
-                if st.session_state.quiz_answers[i] == q['answer']:
-                    score += 1
-            
-            st.session_state.quiz_score = score
-            st.session_state.quiz_submitted = True
-            st.rerun()
-    
+        render_quiz_questions(quiz)
     else:
-        # Show results
-        st.markdown(f"### Your Score: {st.session_state.quiz_score}/{len(quiz)}")
-        
-        # Create gauge chart for score
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=st.session_state.quiz_score / len(quiz) * 100,
-            title={'text': "Score Percentage"},
-            gauge={
-                'axis': {'range': [0, 100], 'tickwidth': 1},
-                'bar': {'color': "#FF9900"},
-                'steps': [
-                    {'range': [0, 40], 'color': "#FF4136"},
-                    {'range': [40, 80], 'color': "#FFDC00"},
-                    {'range': [80, 100], 'color': "#2ECC40"}
-                ],
-                'threshold': {
-                    'line': {'color': "red", 'width': 4},
-                    'thickness': 0.75,
-                    'value': 80
-                }
-            }
-        ))
-        
-        fig.update_layout(height=300)
-        st.plotly_chart(fig, key='fig6')
-        
-        # Show detailed results
-        st.markdown("### Detailed Results:")
-        
+        render_quiz_results(quiz)
+
+
+def render_quiz_questions(quiz):
+    st.markdown("### Answer the following questions:")
+    
+    for i, q in enumerate(quiz):
+        st.markdown(f"**Question {i+1}**: {q['question']}")
+        st.session_state.quiz_answers[i] = st.radio(
+            f"Select your answer for question {i+1}:",
+            q['options'], index=None,
+            key=f"q{i}"
+        )
+        st.markdown("---")
+    
+    if st.button("Submit Answers"):
+        score = 0
         for i, q in enumerate(quiz):
-            user_answer = st.session_state.quiz_answers[i]
-            correct_answer = q['answer']
-            is_correct = user_answer == correct_answer
-            
-            if is_correct:
-                st.markdown(f"**Question {i+1}**: ✅ Correct!")
-            else:
-                st.markdown(f"**Question {i+1}**: ❌ Incorrect")
-                st.markdown(f"Your answer: {user_answer}")
-                st.markdown(f"Correct answer: {correct_answer}")
-            
-            st.markdown(f"*{q['question']}*")
-            st.markdown("---")
+            if st.session_state.quiz_answers[i] == q['answer']:
+                score += 1
         
-        if st.session_state.quiz_score == len(quiz):
-            st.success("🎉 Perfect score! You've mastered model evaluation concepts!")
-        elif st.session_state.quiz_score >= len(quiz) * 0.8:
-            st.success("🌟 Great job! You have a strong understanding of model evaluation!")
-        elif st.session_state.quiz_score >= len(quiz) * 0.6:
-            st.info("👍 Good effort! Review the concepts you missed to strengthen your understanding.")
+        st.session_state.quiz_score = score
+        st.session_state.quiz_submitted = True
+        st.rerun()
+
+
+def render_quiz_results(quiz):
+    st.markdown(f"### Your Score: {st.session_state.quiz_score}/{len(quiz)}")
+    
+    # Create gauge chart for score
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=st.session_state.quiz_score / len(quiz) * 100,
+        title={'text': "Score Percentage"},
+        gauge={
+            'axis': {'range': [0, 100], 'tickwidth': 1},
+            'bar': {'color': "#FF9900"},
+            'steps': [
+                {'range': [0, 40], 'color': "#FF4136"},
+                {'range': [40, 80], 'color': "#FFDC00"},
+                {'range': [80, 100], 'color': "#2ECC40"}
+            ],
+            'threshold': {
+                'line': {'color': "red", 'width': 4},
+                'thickness': 0.75,
+                'value': 80
+            }
+        }
+    ))
+    
+    fig.update_layout(height=300)
+    st.plotly_chart(fig, key='score_gauge')
+    
+    # Show detailed results
+    st.markdown("### Detailed Results:")
+    
+    for i, q in enumerate(quiz):
+        user_answer = st.session_state.quiz_answers[i]
+        correct_answer = q['answer']
+        is_correct = user_answer == correct_answer
+        
+        if is_correct:
+            st.markdown(f"**Question {i+1}**: ✅ Correct!")
         else:
-            st.warning("📚 You may need more practice. Try reviewing the material again.")
+            st.markdown(f"**Question {i+1}**: ❌ Incorrect")
+            st.markdown(f"Your answer: {user_answer}")
+            st.markdown(f"Correct answer: {correct_answer}")
         
-        if st.button("Retake Quiz"):
-            st.session_state.quiz_submitted = False
-            st.session_state.quiz_answers = {}
-            st.session_state.quiz_score = 0
-            st.rerun()
+        st.markdown(f"*{q['question']}*")
+        st.markdown("---")
+    
+    if st.session_state.quiz_score == len(quiz):
+        st.success("🎉 Perfect score! You've mastered model evaluation concepts!")
+    elif st.session_state.quiz_score >= len(quiz) * 0.8:
+        st.success("🌟 Great job! You have a strong understanding of model evaluation!")
+    elif st.session_state.quiz_score >= len(quiz) * 0.6:
+        st.info("👍 Good effort! Review the concepts you missed to strengthen your understanding.")
+    else:
+        st.warning("📚 You may need more practice. Try reviewing the material again.")
+    
+    if st.button("Retake Quiz"):
+        st.session_state.quiz_submitted = False
+        st.session_state.quiz_answers = {}
+        st.session_state.quiz_score = 0
+        st.rerun()
 
-# Footer
-st.markdown("""
-<footer>
-© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
-</footer>
-""", unsafe_allow_html=True)
-# ```
 
-# ## Explanation of the Application
+def render_sidebar():
+    # Dataset selection
+    st.markdown("### Dataset Selection")
+    dataset_option = st.selectbox(
+        "Choose a dataset:",
+        options=["Breast Cancer", "Wine Classification", "Synthetic Data"],
+        key="dataset_selection"
+    )
 
-# This Streamlit application serves as an interactive e-learning tool for model evaluation in machine learning, specifically focusing on classification problems. Here's how it's structured:
+    st.divider()
 
-# 1. **Setup and Configuration**
-#    - Uses modern Python libraries like Streamlit, scikit-learn, Matplotlib, Seaborn, and Plotly
-#    - Sets up AWS-themed styling with custom CSS
-#    - Configures session state management
+    # Sidebar for session management  
+    common.render_sidebar()  
 
-# 2. **Navigation**
-#    - Tab-based navigation with emojis for easy access to different concepts
-#    - Sidebar for session management and dataset selection
+    with st.expander(label='About this application', expanded=False):
+        st.markdown("""
+    This application focuses on model evaluation techniques for classification problems in machine learning, covering five essential areas:
 
-# 3. **Content Sections**
-#    - **Introduction**: Overview of model evaluation concepts
-#    - **Confusion Matrix**: Interactive visualization with adjustable thresholds
-#    - **Accuracy & Precision**: Definitions, formulas, and visualizations
-#    - **Recall & F1 Score**: Interactive calculator and metrics by class
-#    - **AUC-ROC**: Interactive ROC curves and model comparison
-#    - **Heat Maps**: Various visualization techniques with sample data
-#    - **Knowledge Check**: Five-question quiz with feedback
+    - **Confusion Matrix**: Visualize and understand true/false positives and negatives with adjustable thresholds
+    - **Accuracy & Precision**: Learn when these metrics are appropriate and their limitations
+    - **Recall & F1 Score**: Explore the balance between different types of errors with an interactive calculator
+    - **AUC-ROC Curves**: Visualize model performance across all possible thresholds
+    - **Heat Maps**: Master different visualization techniques for interpreting model results
+        """)
 
-# 4. **Interactive Elements**
-#    - Dataset selection (Breast Cancer, Wine, Synthetic)
-#    - Adjustable thresholds to see impacts on metrics
-#    - Interactive visualizations that respond to user inputs
-#    - Quiz with instant feedback
 
-# 5. **Visualizations**
-#    - Confusion matrices as heat maps
-#    - ROC curves
-#    - Bar charts for metrics comparison
-#    - Feature correlation heat maps
-#    - Prediction probability visualizations
+def footer():
+    st.markdown("""
+    <footer>
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </footer>
+    """, unsafe_allow_html=True)
 
-# 6. **User Experience**
-#    - Clean, modern AWS-themed styling
-#    - Responsive layout
-#    - Clear explanations with highlighted important concepts
-#    - Session reset functionality
 
-# The application is designed to be educational, engaging, and interactive, allowing users to explore model evaluation concepts through hands-on examples and visualizations.
+def update_dataset_selection(dataset_option):
+    if dataset_option == "Breast Cancer":
+        st.session_state.dataset = 'breast_cancer'
+    elif dataset_option == "Wine Classification":
+        st.session_state.dataset = 'wine'
+    else:
+        st.session_state.dataset = 'synthetic'
+
+
+def main():
+
+    
+    # Apply custom styles
+    set_custom_styles()
+    
+    # Initialize session state
+    common.initialize_session_state()
+    init_session_state()
+    
+    # Sidebar
+    with st.sidebar:
+        render_sidebar()
+        
+        # Update dataset based on selection
+        dataset_option = st.session_state.get("dataset_selection")
+        if dataset_option:
+            update_dataset_selection(dataset_option)
+    
+    # Load dataset based on selection
+    X_train, X_test, y_train, y_test, y_pred, y_prob, model, feature_names, class_names = prepare_dataset(st.session_state.dataset)
+
+    # Store in session state
+    st.session_state.X_train = X_train
+    st.session_state.X_test = X_test
+    st.session_state.y_train = y_train
+    st.session_state.y_test = y_test
+    st.session_state.y_pred = y_pred
+    st.session_state.y_prob = y_prob
+    st.session_state.model = model
+    st.session_state.feature_names = feature_names
+    st.session_state.class_names = class_names
+    
+    # Display tabs
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "🏠 Introduction", 
+        "🔄 Confusion Matrix", 
+        "🎯 Accuracy & Precision", 
+        "📊 Recall & F1 Score", 
+        "📈 AUC-ROC", 
+        "🔥 Heat Maps", 
+        "❓ Knowledge Check"
+    ])
+    
+    # Render each tab
+    with tab1:
+        render_intro_tab()
+    
+    with tab2:
+        render_confusion_matrix_tab()
+    
+    with tab3:
+        render_accuracy_precision_tab()
+    
+    with tab4:
+        render_recall_f1_tab()
+    
+    with tab5:
+        render_auc_roc_tab()
+    
+    with tab6:
+        render_heat_maps_tab()
+    
+    with tab7:
+        render_knowledge_check_tab()
+    
+    # Footer
+    footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

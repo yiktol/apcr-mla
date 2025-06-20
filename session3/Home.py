@@ -18,150 +18,170 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state variables
-if 'quiz_score' not in st.session_state:
-    st.session_state['quiz_score'] = 0
-if 'quiz_attempted' not in st.session_state:
-    st.session_state['quiz_attempted'] = False
-if 'name' not in st.session_state:
-    st.session_state['name'] = ""
-if 'visited_Model_Generalization' not in st.session_state:
-    st.session_state['visited_Model_Generalization'] = False
-if 'visited_Model_Evaluation' not in st.session_state:
-    st.session_state['visited_Model_Evaluation'] = False
-if 'visited_Classification_Metrics' not in st.session_state:
-    st.session_state['visited_Classification_Metrics'] = False
-if 'visited_Regression_Metrics' not in st.session_state:
-    st.session_state['visited_Regression_Metrics'] = False
-if 'visited_Model_Optimization' not in st.session_state:
-    st.session_state['visited_Model_Optimization'] = False
+def main():
+    """
+    Main function for the ML Engineer Associate Learning application focused on
+    Domain 2: ML Model Development - Task 2.3: Analyze Model Performance
+    """
+    common.initialize_session_state()
 
-# Custom CSS for styling - same as Domain 1
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #FF9900;
-        margin-bottom: 1rem;
-    }
-    .sub-header {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-    }
-    .section-header {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 0.8rem;
-        margin-bottom: 0.3rem;
-    }
-    .info-box {
-        background-color: #F0F2F6;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .success-box {
-        background-color: #D1FAE5;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .warning-box {
-        background-color: #FEF3C7;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .tip-box {
-        background-color: #E0F2FE;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-left: 5px solid #0EA5E9;
-    }
-    .step-box {
-        background-color: #FFFFFF;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    .card {
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        background-color: white;
-        transition: transform 0.3s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-    }
-    .aws-orange {
-        color: #FF9900;
-    }
-    .aws-blue {
-        color: #232F3E;
-    }
-    hr {
-        margin-top: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    /* Make the tab content container take full height */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #F8F9FA;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-left: 16px;
-        padding-right: 16px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .definition {
-        background-color: #EFF6FF;
-        border-left: 5px solid #3B82F6;
-        padding: 10px 15px;
-        margin: 15px 0;
-        border-radius: 0 5px 5px 0;
-    }
-    .code-box {
-        background-color: #F8F9FA;
-        padding: 15px;
-        border-radius: 5px;
-        font-family: monospace;
-        margin: 15px 0;
-        border: 1px solid #E5E7EB;
-    }
-    .model-diagram {
-        text-align: center;
-        margin: 20px;
-    }
-    .metric-card {
-        background-color: #FFFFFF;
-        border-radius: 8px;
-        border-left: 4px solid #FF9900;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-</style>
-""", unsafe_allow_html=True)
+    # Initialize session state variables
+    if 'quiz_score' not in st.session_state:
+        st.session_state['quiz_score'] = 0
+    if 'quiz_attempted' not in st.session_state:
+        st.session_state['quiz_attempted'] = False
+    if 'name' not in st.session_state:
+        st.session_state['name'] = ""
+    if 'visited_Model_Generalization' not in st.session_state:
+        st.session_state['visited_Model_Generalization'] = False
+    if 'visited_Model_Evaluation' not in st.session_state:
+        st.session_state['visited_Model_Evaluation'] = False
+    if 'visited_Classification_Metrics' not in st.session_state:
+        st.session_state['visited_Classification_Metrics'] = False
+    if 'visited_Regression_Metrics' not in st.session_state:
+        st.session_state['visited_Regression_Metrics'] = False
+    if 'visited_Model_Optimization' not in st.session_state:
+        st.session_state['visited_Model_Optimization'] = False
 
-# Function to display custom header - same as Domain 1
+    # Custom CSS for styling
+    apply_custom_css()
+
+    # Sidebar for session management
+    render_sidebar()
+
+    # Main content with tabs
+    render_tabs()
+
+    # Footer
+    render_footer()
+
+def apply_custom_css():
+    """Apply custom CSS styling to the application"""
+    st.markdown("""
+    <style>
+        .main-header {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #FF9900;
+            margin-bottom: 1rem;
+        }
+        .sub-header {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 0.8rem;
+            margin-bottom: 0.3rem;
+        }
+        .info-box {
+            background-color: #F0F2F6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .success-box {
+            background-color: #D1FAE5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .warning-box {
+            background-color: #FEF3C7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .tip-box {
+            background-color: #E0F2FE;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #0EA5E9;
+        }
+        .step-box {
+            background-color: #FFFFFF;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .aws-orange {
+            color: #FF9900;
+        }
+        .aws-blue {
+            color: #232F3E;
+        }
+        hr {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        /* Make the tab content container take full height */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #F8F9FA;
+            border-radius: 4px 4px 0px 0px;
+            gap: 1px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .definition {
+            background-color: #EFF6FF;
+            border-left: 5px solid #3B82F6;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .code-box {
+            background-color: #F8F9FA;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 15px 0;
+            border: 1px solid #E5E7EB;
+        }
+        .model-diagram {
+            text-align: center;
+            margin: 20px;
+        }
+        .metric-card {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            border-left: 4px solid #FF9900;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
 def custom_header(text, level="main"):
+    """Display custom header with specified styling"""
     if level == "main":
         st.markdown(f'<div class="main-header">{text}</div>', unsafe_allow_html=True)
     elif level == "sub":
@@ -169,8 +189,8 @@ def custom_header(text, level="main"):
     elif level == "section":
         st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
 
-# Function to create custom info box - same as Domain 1
 def info_box(text, box_type="info"):
+    """Display custom info box with specified styling"""
     if box_type == "info":
         st.markdown(f"""
             <div class="info-box">
@@ -196,16 +216,16 @@ def info_box(text, box_type="info"):
                     {text}
             """, unsafe_allow_html=True)
 
-# Function for definition box - same as Domain 1
 def definition_box(term, definition):
+    """Display a definition box for terminology"""
     st.markdown(f"""
     <div class="definition">
         <strong>{term}:</strong> {definition}
     </div>
     """, unsafe_allow_html=True)
 
-# Function to create a metric card
 def metric_card(title, description):
+    """Display a metric card with title and description"""
     st.markdown(f"""
     <div class="metric-card">
         <strong>{title}</strong><br>
@@ -213,8 +233,8 @@ def metric_card(title, description):
     </div>
     """, unsafe_allow_html=True)
 
-# Function to reset session - same as Domain 1
 def reset_session():
+    """Reset all session state variables"""
     st.session_state['quiz_score'] = 0
     st.session_state['quiz_attempted'] = False
     st.session_state['name'] = ""
@@ -225,28 +245,62 @@ def reset_session():
     st.session_state['visited_Model_Optimization'] = False
     st.rerun()
 
-# Sidebar for session management - similar to Domain 1
-with st.sidebar:
-    st.image("images/mla_badge.png", width=150)
-    st.markdown("### ML Engineer - Associate")
-    st.markdown("#### Domain 2: ML Model Development")
-    
-    common.render_sidebar()
+def render_sidebar():
+    """Render the sidebar content"""
+    with st.sidebar:
+        st.image("images/mla_badge.png", width=150)
+        st.markdown("### ML Engineer - Associate")
+        st.markdown("#### Domain 2: ML Model Development")
+        
+        common.render_sidebar()
 
-# Main content with tabs
-tabs = st.tabs([
-    "🏠 Home", 
-    "📊 Model Generalization", 
-    "📈 Model Evaluation", 
-    "🔄 Classification Metrics", 
-    "📉 Regression Metrics", 
-    "⚙️ Model Optimization", 
-    "❓ Quiz", 
-    "📚 Resources"
-])
+def render_tabs():
+    """Render the main content tabs"""
+    tabs = st.tabs([
+        "🏠 Home", 
+        "📊 Model Generalization", 
+        "📈 Model Evaluation", 
+        "🔄 Classification Metrics", 
+        "📉 Regression Metrics", 
+        "⚙️ Model Optimization", 
+        "❓ Quiz", 
+        "📚 Resources"
+    ])
 
-# Home tab
-with tabs[0]:
+    # Home tab
+    with tabs[0]:
+        render_home_tab()
+
+    # Model Generalization tab
+    with tabs[1]:
+        render_model_generalization_tab()
+
+    # Model Evaluation tab
+    with tabs[2]:
+        render_model_evaluation_tab()
+
+    # Classification Metrics tab
+    with tabs[3]:
+        render_classification_metrics_tab()
+
+    # Regression Metrics tab
+    with tabs[4]:
+        render_regression_metrics_tab()
+
+    # Model Optimization tab
+    with tabs[5]:
+        render_model_optimization_tab()
+
+    # Quiz tab
+    with tabs[6]:
+        render_quiz_tab()
+
+    # Resources tab
+    with tabs[7]:
+        render_resources_tab()
+
+def render_home_tab():
+    """Render content for the Home tab"""
     custom_header("AWS Partner Certification Readiness")
     st.markdown("## Machine Learning Engineer - Associate")
     
@@ -322,8 +376,8 @@ with tabs[0]:
         - Maintenance
         """)
 
-# Model Generalization tab
-with tabs[1]:
+def render_model_generalization_tab():
+    """Render content for the Model Generalization tab"""
     # Mark as visited
     st.session_state['visited_Model_Generalization'] = True
     
@@ -527,8 +581,8 @@ with tabs[1]:
         This example demonstrates how regularization helps achieve a better balance between bias and variance, leading to models that perform reliably on unseen data.
         """)
 
-# Model Evaluation tab
-with tabs[2]:
+def render_model_evaluation_tab():
+    """Render content for the Model Evaluation tab"""
     # Mark as visited
     st.session_state['visited_Model_Evaluation'] = True
     
@@ -741,8 +795,8 @@ with tabs[2]:
         After successful shadow testing, you can promote the shadow variant to become the new production variant with minimal disruption.
         """)
 
-# Classification Metrics tab
-with tabs[3]:
+def render_classification_metrics_tab():
+    """Render content for the Classification Metrics tab"""
     # Mark as visited
     st.session_state['visited_Classification_Metrics'] = True
     
@@ -1095,8 +1149,8 @@ with tabs[3]:
     - Help focus improvement efforts on problematic classes
     """, "info")
 
-# Regression Metrics tab
-with tabs[4]:
+def render_regression_metrics_tab():
+    """Render content for the Regression Metrics tab"""
     # Mark as visited
     st.session_state['visited_Regression_Metrics'] = True
     
@@ -1382,8 +1436,8 @@ with tabs[4]:
     For critical applications, it's best practice to consider multiple metrics together to get a complete picture of model performance.
     """, "warning")
 
-# Model Optimization tab
-with tabs[5]:
+def render_model_optimization_tab():
+    """Render content for the Model Optimization tab"""
     # Mark as visited
     st.session_state['visited_Model_Optimization'] = True
     
@@ -1750,8 +1804,8 @@ with tabs[5]:
         - Resumes training automatically
         """)
 
-# Quiz tab
-with tabs[6]:
+def render_quiz_tab():
+    """Render content for the Quiz tab"""
     custom_header("Test Your Knowledge")
     
     st.markdown("""
@@ -1875,71 +1929,79 @@ with tabs[6]:
     
     # Check if the quiz has been attempted
     if not st.session_state['quiz_attempted']:
-        # Create a form for the quiz
-        with st.form("quiz_form"):
-            st.markdown("### Answer the following questions:")
-            
-            # Track user answers
-            user_answers = []
-            
-            # Display 5 random questions
-            np.random.seed(42)  # For reproducibility
-            selected_questions = np.random.choice(questions, size=5, replace=False)
-            
-            # Display each question
-            for i, q in enumerate(selected_questions):
-                st.markdown(f"**Question {i+1}:** {q['question']}")
-                answer = st.radio(f"Select your answer for question {i+1}:", q['options'], key=f"q{i}", index=None)
-                user_answers.append((answer, q['correct'], q['explanation']))
-            
-            # Submit button
-            submitted = st.form_submit_button("Submit Quiz")
-            
-            if submitted:
-                # Calculate score
-                score = sum([1 for ua, corr, _ in user_answers if ua == corr])
-                st.session_state['quiz_score'] = score
-                st.session_state['quiz_attempted'] = True
-                st.session_state['quiz_answers'] = user_answers
-                st.rerun()
+        render_quiz_form(questions)
     else:
-        # Display results
-        score = st.session_state['quiz_score']
-        user_answers = st.session_state.get('quiz_answers', [])
+        render_quiz_results()
+
+def render_quiz_form(questions):
+    """Render the quiz form with questions"""
+    # Create a form for the quiz
+    with st.form("quiz_form"):
+        st.markdown("### Answer the following questions:")
         
-        st.markdown(f"### Your Score: {score}/5")
+        # Track user answers
+        user_answers = []
         
-        if score == 5:
-            st.success("🎉 Perfect score! You've mastered the concepts of Model Evaluation and Optimization!")
-        elif score >= 3:
-            st.success("👍 Good job! You have a solid understanding of the concepts.")
-        else:
-            st.warning("📚 You might want to review the content again to strengthen your understanding.")
+        # Display 5 random questions
+        np.random.seed(42)  # For reproducibility
+        selected_questions = np.random.choice(questions, size=5, replace=False)
         
-        # Show correct answers
-        st.markdown("### Review Questions and Answers:")
+        # Display each question
+        for i, q in enumerate(selected_questions):
+            st.markdown(f"**Question {i+1}:** {q['question']}")
+            answer = st.radio(f"Select your answer for question {i+1}:", q['options'], key=f"q{i}", index=None)
+            user_answers.append((answer, q['correct'], q['explanation']))
         
-        for i, (user_answer, correct_answer, explanation) in enumerate(user_answers):
-            st.markdown(f"**Question {i+1}**")
-            st.markdown(f"**Your answer:** {user_answer}")
-            
-            if user_answer == correct_answer:
-                st.markdown(f"**✅ Correct!**")
-            else:
-                st.markdown(f"**❌ Incorrect. The correct answer is:** {correct_answer}")
-            
-            st.markdown(f"**Explanation:** {explanation}")
-            
-            if i < len(user_answers) - 1:
-                st.markdown("---")
+        # Submit button
+        submitted = st.form_submit_button("Submit Quiz")
         
-        # Option to retake the quiz
-        if st.button("Retake Quiz"):
-            st.session_state['quiz_attempted'] = False
+        if submitted:
+            # Calculate score
+            score = sum([1 for ua, corr, _ in user_answers if ua == corr])
+            st.session_state['quiz_score'] = score
+            st.session_state['quiz_attempted'] = True
+            st.session_state['quiz_answers'] = user_answers
             st.rerun()
 
-# Resources tab
-with tabs[7]:
+def render_quiz_results():
+    """Render the quiz results after submission"""
+    # Display results
+    score = st.session_state['quiz_score']
+    user_answers = st.session_state.get('quiz_answers', [])
+    
+    st.markdown(f"### Your Score: {score}/5")
+    
+    if score == 5:
+        st.success("🎉 Perfect score! You've mastered the concepts of Model Evaluation and Optimization!")
+    elif score >= 3:
+        st.success("👍 Good job! You have a solid understanding of the concepts.")
+    else:
+        st.warning("📚 You might want to review the content again to strengthen your understanding.")
+    
+    # Show correct answers
+    st.markdown("### Review Questions and Answers:")
+    
+    for i, (user_answer, correct_answer, explanation) in enumerate(user_answers):
+        st.markdown(f"**Question {i+1}**")
+        st.markdown(f"**Your answer:** {user_answer}")
+        
+        if user_answer == correct_answer:
+            st.markdown(f"**✅ Correct!**")
+        else:
+            st.markdown(f"**❌ Incorrect. The correct answer is:** {correct_answer}")
+        
+        st.markdown(f"**Explanation:** {explanation}")
+        
+        if i < len(user_answers) - 1:
+            st.markdown("---")
+    
+    # Option to retake the quiz
+    if st.button("Retake Quiz"):
+        st.session_state['quiz_attempted'] = False
+        st.rerun()
+
+def render_resources_tab():
+    """Render content for the Resources tab"""
     custom_header("Additional Resources")
     
     st.markdown("""
@@ -2045,10 +2107,20 @@ with tabs[7]:
         - **AWS Certified Machine Learning Specialty** by Shreyas Subramanian
         """)
 
-# Footer
-st.markdown("---")
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.image("images/aws_logo.png", width=70)
-with col2:
-    st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
+def render_footer():
+    """Render the footer of the application"""
+    st.markdown("---")
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        st.image("images/aws_logo.png", width=70)
+    with col2:
+        st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

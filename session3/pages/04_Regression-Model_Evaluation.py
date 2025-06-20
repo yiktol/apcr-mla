@@ -1,4 +1,3 @@
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -18,82 +17,90 @@ from PIL import Image
 import io
 import base64
 import math
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page config
-st.set_page_config(
-    page_title="Regression Model Evaluation | AWS Learning",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
-# Custom CSS for AWS themed styling
-st.markdown("""
-    <style>
-    .main {
-        background-color: #FFFFFF;
-    }
-    .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
-        color: #232F3E;
-    }
-    .st-emotion-cache-16txtl3 a {
-        color: #FF9900;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        padding: 10px 20px;
-        background-color: #EAEDED;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #EC7211;
-        color: white;
-    }
-    footer {
-        font-size: 0.8em;
-        color: #232F3E;
-        text-align: center;
-        margin-top: 50px;
-    }
-    .highlight {
-        background-color: #FFECCC;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #FF9900;
-    }
-    .concept-box {
-        background-color: #F2F3F3;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    .grid-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    .formula-box {
-        background-color: #EAEDED;
-        padding: 15px;
-        border-radius: 5px;
-        text-align: center;
-        margin: 10px 0;
-    }
-    </style>
-""", unsafe_allow_html=True)
+def set_page_config():
+    """Configure the page settings"""
+    st.set_page_config(
+        page_title="Regression Model Evaluation | AWS Learning",
+        page_icon="📈",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
 
-# Initialize session state
+set_page_config()
+
+def apply_custom_css():
+    """Apply custom CSS for AWS themed styling"""
+    st.markdown("""
+        <style>
+        .main {
+            background-color: #FFFFFF;
+        }
+        .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
+            color: #232F3E;
+        }
+        .st-emotion-cache-16txtl3 a {
+            color: #FF9900;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            padding: 10px 20px;
+            background-color: #EAEDED;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .stButton>button {
+            background-color: #FF9900;
+            color: white;
+            border: none;
+        }
+        .stButton>button:hover {
+            background-color: #EC7211;
+            color: white;
+        }
+        footer {
+            font-size: 0.8em;
+            color: #232F3E;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .highlight {
+            background-color: #FFECCC;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #FF9900;
+        }
+        .concept-box {
+            background-color: #F2F3F3;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .formula-box {
+            background-color: #EAEDED;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+
 def init_session_state():
+    """Initialize session state variables"""
     if 'dataset' not in st.session_state:
         st.session_state.dataset = 'california'
     if 'quiz_answers' not in st.session_state:
@@ -123,58 +130,51 @@ def init_session_state():
     if 'custom_model' not in st.session_state:
         st.session_state.custom_model = None
 
-init_session_state()
 
-# Sidebar for session management
-st.sidebar.markdown("### Session Management")
+def render_sidebar():
+    """Render sidebar with dataset and model selection"""
+    with st.sidebar:
+        # Dataset selection
+        st.markdown("### Dataset Selection")
+        dataset_option = st.selectbox(
+            "Choose a dataset:",
+            options=["California Housing", "Synthetic Data"],
+            key="dataset_selection"
+        )
 
-# Reset session button
-if st.sidebar.button("🔄 Reset Session"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    init_session_state()
-    st.sidebar.success("Session has been reset!")
-    time.sleep(1)
-    st.rerun()
+        if dataset_option == "California Housing":
+            st.session_state.dataset = 'california'
+        else:
+            st.session_state.dataset = 'synthetic'
 
-# Dataset selection
-st.sidebar.markdown("### Dataset Selection")
-dataset_option = st.sidebar.selectbox(
-    "Choose a dataset:",
-    options=["California Housing", "Synthetic Data"],
-    key="dataset_selection"
-)
+        # Model selection
+        st.markdown("### Model Selection")
+        model_option = st.selectbox(
+            "Choose a regression model:",
+            options=["Linear Regression", "Ridge Regression", "Random Forest", "Gradient Boosting"],
+            key="model_selection"
+        )
+
+        st.divider()
+
+        common.render_sidebar()
+
+        with st.expander(label='About this application', expanded=False):
+            st.markdown("""
+        This application teaches regression model evaluation techniques through hands-on visualizations and dynamic examples. The app focuses on four key metrics:
+
+        - **Mean Squared Error (MSE)**: Explore how this fundamental metric penalizes prediction errors
+        - **Root Mean Squared Error (RMSE)**: Understand this interpretable metric that uses the same units as your target variable
+        - **Coefficient of Determination (R²)**: Visualize how well your model explains variance in the data
+        - **Adjusted R²**: Learn how this metric penalizes unnecessary model complexity
+        """)
+
+    return model_option
 
 
-if dataset_option == "California Housing":
-    st.session_state.dataset = 'california'
-else:
-    st.session_state.dataset = 'synthetic'
-
-# Model selection
-st.sidebar.markdown("### Model Selection")
-model_option = st.sidebar.selectbox(
-    "Choose a regression model:",
-    options=["Linear Regression", "Ridge Regression", "Random Forest", "Gradient Boosting"],
-    key="model_selection"
-)
-
-st.sidebar.divider()
-
-with st.sidebar.expander(label='About this application' ,expanded=False):
-    st.markdown("""
-This application teaches regression model evaluation techniques through hands-on visualizations and dynamic examples. The app focuses on four key metrics:
-
-- **Mean Squared Error (MSE)**: Explore how this fundamental metric penalizes prediction errors
-- **Root Mean Squared Error (RMSE)**: Understand this interpretable metric that uses the same units as your target variable
-- **Coefficient of Determination (R²)**: Visualize how well your model explains variance in the data
-- **Adjusted R²**: Learn how this metric penalizes unnecessary model complexity
-
- """)
-
-# Function to prepare dataset
 @st.cache_data
 def prepare_dataset(dataset_name, model_name):
+    """Prepare dataset based on selection and train model"""
     if dataset_name == 'california':
         data = fetch_california_housing()
         X, y = data.data, data.target
@@ -216,37 +216,32 @@ def prepare_dataset(dataset_name, model_name):
     
     return X_train_scaled, X_test_scaled, y_train, y_test, y_pred, model, feature_names, feature_importances
 
-# Load dataset based on selection
-X_train, X_test, y_train, y_test, y_pred, model, feature_names, feature_importances = prepare_dataset(
-    st.session_state.dataset, model_option
-)
 
-# Store in session state
-st.session_state.X_train = X_train
-st.session_state.X_test = X_test
-st.session_state.y_train = y_train
-st.session_state.y_test = y_test
-st.session_state.y_pred = y_pred
-st.session_state.model = model
-
-# Functions for metrics calculation
 def calculate_mse(y_true, y_pred):
+    """Calculate Mean Squared Error"""
     return mean_squared_error(y_true, y_pred)
 
+
 def calculate_rmse(y_true, y_pred):
+    """Calculate Root Mean Squared Error"""
     return np.sqrt(mean_squared_error(y_true, y_pred))
 
+
 def calculate_r2(y_true, y_pred):
+    """Calculate R-squared"""
     return r2_score(y_true, y_pred)
 
+
 def calculate_adjusted_r2(y_true, y_pred, n_features):
+    """Calculate Adjusted R-squared"""
     r2 = calculate_r2(y_true, y_pred)
     n_samples = len(y_true)
     adjusted_r2 = 1 - ((1 - r2) * (n_samples - 1) / (n_samples - n_features - 1))
     return adjusted_r2
 
-# Helper functions for visualizations
+
 def plot_predictions_vs_actual(y_true, y_pred, metric_name=None, metric_value=None):
+    """Plot predictions vs actual values with optional metric display"""
     title_text = "Predicted vs Actual Values"
     if metric_name and metric_value is not None:
         title_text += f"  {metric_name}: {metric_value:.4}"
@@ -279,7 +274,9 @@ def plot_predictions_vs_actual(y_true, y_pred, metric_name=None, metric_value=No
     
     return fig
 
+
 def plot_residuals(y_true, y_pred):
+    """Plot residuals against predicted values"""
     residuals = y_true - y_pred
     
     fig = px.scatter(
@@ -304,7 +301,9 @@ def plot_residuals(y_true, y_pred):
     
     return fig
 
+
 def plot_residuals_histogram(y_true, y_pred):
+    """Plot histogram of residuals"""
     residuals = y_true - y_pred
     
     fig = px.histogram(
@@ -329,7 +328,9 @@ def plot_residuals_histogram(y_true, y_pred):
     
     return fig
 
+
 def plot_feature_importance(importances, feature_names):
+    """Plot feature importance if available"""
     if importances is None:
         return None
     
@@ -358,7 +359,9 @@ def plot_feature_importance(importances, feature_names):
     
     return fig
 
+
 def plot_model_comparison(metrics_dict, metric_name):
+    """Plot comparison of models by given metric"""
     models = list(metrics_dict.keys())
     values = [metrics_dict[model][metric_name] for model in models]
     
@@ -378,6 +381,7 @@ def plot_model_comparison(metrics_dict, metric_name):
     )
     
     return fig
+
 
 def generate_custom_data(n_samples=100, noise=0.5, polynomial=False, degree=2):
     """Generate custom data for interactive demonstration"""
@@ -399,18 +403,30 @@ def generate_custom_data(n_samples=100, noise=0.5, polynomial=False, degree=2):
     
     return X, y, y_true, model
 
-# Main content with tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "🏠 Introduction", 
-    "📏 Mean Squared Error", 
-    "📐 RMSE", 
-    "📊 R²", 
-    "🔍 Adjusted R²",
-    "❓ Knowledge Check"
-])
 
-# Introduction Tab
-with tab1:
+@st.cache_data
+def get_model_metrics(_dataset):
+    """Calculate metrics for different models"""
+    metrics = {}
+    for model_name in ["Linear Regression", "Ridge Regression", "Random Forest", "Gradient Boosting"]:
+        _, _, _, y_test, y_pred, _, _, _ = prepare_dataset(_dataset, model_name)
+        
+        mse = calculate_mse(y_test, y_pred)
+        rmse = calculate_rmse(y_test, y_pred)
+        r2 = calculate_r2(y_test, y_pred)
+        adj_r2 = calculate_adjusted_r2(y_test, y_pred, X_test.shape[1])
+        
+        metrics[model_name] = {
+            "MSE": mse,
+            "RMSE": rmse,
+            "R²": r2,
+            "Adjusted R²": adj_r2
+        }
+    return metrics
+
+
+def render_introduction_tab(model_metrics):
+    """Render content for the Introduction tab"""
     st.title("Model Evaluation for Regression Problems")
     
     st.markdown("""
@@ -449,6 +465,9 @@ with tab1:
     with col2:
         st.image("https://miro.medium.com/v2/resize:fit:1400/format:webp/1*GrLwS0WXiRoGn5-iEQkNOw.png", caption="Regression Model Evaluation Flow")
         
+        dataset_option = "California Housing" if st.session_state.dataset == 'california' else "Synthetic Data"
+        model_option = st.session_state.model_option
+        
         st.markdown(f"""
         ### Dataset & Model Info
         
@@ -457,7 +476,7 @@ with tab1:
         
         - Training samples: {len(st.session_state.X_train)}
         - Testing samples: {len(st.session_state.X_test)}
-        - Features: {len(feature_names)}
+        - Features: {len(st.session_state.feature_names)}
         """)
     
     st.markdown("""
@@ -476,42 +495,21 @@ with tab1:
     # Show comparison of models for this dataset
     st.subheader("Quick Model Comparison")
     
-    # Calculate metrics for different models (cached)
-    @st.cache_data
-    def get_model_metrics(_dataset):
-        metrics = {}
-        for model_name in ["Linear Regression", "Ridge Regression", "Random Forest", "Gradient Boosting"]:
-            _, _, _, y_test, y_pred, _, _, _ = prepare_dataset(_dataset, model_name)
-            
-            mse = calculate_mse(y_test, y_pred)
-            rmse = calculate_rmse(y_test, y_pred)
-            r2 = calculate_r2(y_test, y_pred)
-            adj_r2 = calculate_adjusted_r2(y_test, y_pred, X_test.shape[1])
-            
-            metrics[model_name] = {
-                "MSE": mse,
-                "RMSE": rmse,
-                "R²": r2,
-                "Adjusted R²": adj_r2
-            }
-        return metrics
-    
-    model_metrics = get_model_metrics(st.session_state.dataset)
-    
     metric_to_display = st.selectbox(
         "Select a metric for comparison:",
         ["RMSE", "MSE", "R²", "Adjusted R²"]
     )
     
     comparison_fig = plot_model_comparison(model_metrics, metric_to_display)
-    st.plotly_chart(comparison_fig,key='comparison_fig')
+    st.plotly_chart(comparison_fig, key='comparison_fig')
     
     st.markdown("""
     <p class="highlight">👆 Use the dropdown above to compare models across different metrics.</p>
     """, unsafe_allow_html=True)
-    
-# Mean Squared Error Tab
-with tab2:
+
+
+def render_mse_tab():
+    """Render content for the MSE tab"""
     st.title("Mean Squared Error (MSE)")
     
     st.markdown("""
@@ -696,11 +694,13 @@ with tab2:
     # Compare MSE with other models
     st.subheader("MSE Across Different Models")
     
+    model_metrics = get_model_metrics(st.session_state.dataset)
     mse_comparison = plot_model_comparison(model_metrics, "MSE")
     st.plotly_chart(mse_comparison, key='mse_comparison')
 
-# RMSE Tab
-with tab3:
+
+def render_rmse_tab():
+    """Render content for the RMSE tab"""
     st.title("Root Mean Squared Error (RMSE)")
     
     st.markdown("""
@@ -832,11 +832,13 @@ with tab3:
     # RMSE across different models
     st.subheader("RMSE Across Different Models")
     
+    model_metrics = get_model_metrics(st.session_state.dataset)
     rmse_comparison = plot_model_comparison(model_metrics, "RMSE")
     st.plotly_chart(rmse_comparison, key='rmse_comparison')
 
-# R² Tab
-with tab4:
+
+def render_r2_tab():
+    """Render content for the R² tab"""
     st.title("Coefficient of Determination (R²)")
     
     st.markdown("""
@@ -1054,6 +1056,7 @@ with tab4:
     # Compare R² with other models
     st.subheader("R² Across Different Models")
     
+    model_metrics = get_model_metrics(st.session_state.dataset)
     r2_comparison = plot_model_comparison(model_metrics, "R²")
     st.plotly_chart(r2_comparison, key='r2_comparison')
     
@@ -1071,8 +1074,9 @@ with tab4:
     This last limitation is addressed by the Adjusted R² metric, which we'll explore in the next tab.
     """)
 
-# Adjusted R² Tab
-with tab5:
+
+def render_adjusted_r2_tab():
+    """Render content for the Adjusted R² tab"""
     st.title("Adjusted R²")
     
     st.markdown("""
@@ -1118,7 +1122,7 @@ with tab5:
     with col2:
         # Calculate R² and Adjusted R² for current model and dataset
         r2 = calculate_r2(st.session_state.y_test, st.session_state.y_pred)
-        adj_r2 = calculate_adjusted_r2(st.session_state.y_test, st.session_state.y_pred, X_test.shape[1])
+        adj_r2 = calculate_adjusted_r2(st.session_state.y_test, st.session_state.y_pred, st.session_state.X_test.shape[1])
         
         # Show metric comparison
         col1, col2 = st.columns(2)
@@ -1304,11 +1308,13 @@ with tab5:
     # Compare Adjusted R² with other models
     st.subheader("Adjusted R² Across Different Models")
     
+    model_metrics = get_model_metrics(st.session_state.dataset)
     adj_r2_comparison = plot_model_comparison(model_metrics, "Adjusted R²")
     st.plotly_chart(adj_r2_comparison,  key='adj_r2_comparison')
 
-# Knowledge Check Tab
-with tab6:
+
+def render_knowledge_check():
+    """Render content for the Knowledge Check tab"""
     st.title("Knowledge Check")
     
     st.markdown("""
@@ -1446,66 +1452,99 @@ with tab6:
             st.session_state.quiz_score = 0
             st.rerun()
 
-# Summary section
-st.markdown("""
-## Summary of Regression Evaluation Metrics
 
-| Metric | Formula | Range | When to Use |
-|--------|---------|-------|------------|
-| MSE | $\\frac{1}{n}\\sum_{i=1}^{n}(y_i - \\hat{y}_i)^2$ | [0, ∞) | For optimization algorithms |
-| RMSE | $\\sqrt{MSE}$ | [0, ∞) | For interpretable error in target units |
-| R² | $1 - \\frac{SS_{res}}{SS_{tot}}$ | (-∞, 1] | For variance explained, scale-independent comparison |
-| Adjusted R² | $1 - \\frac{(1-R^2)(n-1)}{n-p-1}$ | (-∞, 1] | For comparing models with different feature counts |
-""")
+def render_summary_and_footer():
+    """Render summary section and footer"""
+    st.markdown("""
+    ## Summary of Regression Evaluation Metrics
 
-# Footer
-st.markdown("""
-<footer>
-© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
-</footer>
-""", unsafe_allow_html=True)
-# ```
+    | Metric | Formula | Range | When to Use |
+    |--------|---------|-------|------------|
+    | MSE | $\\frac{1}{n}\\sum_{i=1}^{n}(y_i - \\hat{y}_i)^2$ | [0, ∞) | For optimization algorithms |
+    | RMSE | $\\sqrt{MSE}$ | [0, ∞) | For interpretable error in target units |
+    | R² | $1 - \\frac{SS_{res}}{SS_{tot}}$ | (-∞, 1] | For variance explained, scale-independent comparison |
+    | Adjusted R² | $1 - \\frac{(1-R^2)(n-1)}{n-p-1}$ | (-∞, 1] | For comparing models with different feature counts |
+    """)
 
-# ## Explanation of the Application
+    # Footer
+    st.markdown("""
+    <footer>
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </footer>
+    """, unsafe_allow_html=True)
 
-# This Streamlit application serves as an interactive e-learning tool for model evaluation in regression problems. Here's how it's structured:
 
-# 1. **Setup and Configuration**
-#    - Uses modern Python libraries like Streamlit, scikit-learn, Matplotlib, Seaborn, and Plotly
-#    - Sets up AWS-themed styling with custom CSS
-#    - Configures session state management for preserving data during navigation
+def main():
+    """Main function to run the application"""
+    
+    # Apply custom CSS
+    apply_custom_css()
+    
+    # Initialize common session state
+    common.initialize_session_state()
+    
+    # Initialize app-specific session state
+    init_session_state()
+    
+    # Render sidebar and get model option
+    model_option = render_sidebar()
+    
+    # Load dataset based on selection
+    X_train, X_test, y_train, y_test, y_pred, model, feature_names, feature_importances = prepare_dataset(
+        st.session_state.dataset, model_option
+    )
+    
+    # Store in session state
+    st.session_state.X_train = X_train
+    st.session_state.X_test = X_test
+    st.session_state.y_train = y_train
+    st.session_state.y_test = y_test
+    st.session_state.y_pred = y_pred
+    st.session_state.model = model
+    st.session_state.feature_names = feature_names
+    st.session_state.model_option = model_option
+    
+    # Get model metrics
+    model_metrics = get_model_metrics(st.session_state.dataset)
+    
+    # Create tabs
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "🏠 Introduction", 
+        "📏 Mean Squared Error", 
+        "📐 RMSE", 
+        "📊 R²", 
+        "🔍 Adjusted R²",
+        "❓ Knowledge Check"
+    ])
+    
+    # Render content for each tab
+    with tab1:
+        render_introduction_tab(model_metrics)
+        
+    with tab2:
+        render_mse_tab()
+        
+    with tab3:
+        render_rmse_tab()
+        
+    with tab4:
+        render_r2_tab()
+        
+    with tab5:
+        render_adjusted_r2_tab()
+        
+    with tab6:
+        render_knowledge_check()
+    
+    # Render summary and footer
+    render_summary_and_footer()
 
-# 2. **Navigation**
-#    - Tab-based navigation with emojis for easy access to different concepts
-#    - Sidebar for session management, dataset selection, and model selection
 
-# 3. **Content Sections**
-#    - **Introduction**: Overview of regression evaluation concepts with model comparison
-#    - **Mean Squared Error**: Interactive visualization showing squared errors and impact of noise/outliers
-#    - **RMSE**: Comparison with MSE and data distribution visualization
-#    - **R²**: Interactive explorer showing variance explained and prediction quality
-#    - **Adjusted R²**: Demonstration of feature selection and penalty for model complexity
-#    - **Knowledge Check**: Five-question quiz with feedback
-
-# 4. **Interactive Elements**
-#    - Dataset selection (California Housing, Synthetic Data)
-#    - Model selection (Linear Regression, Ridge, Random Forest, Gradient Boosting)
-#    - Interactive visualizations with adjustable parameters
-#    - Custom data generators to demonstrate statistical concepts
-#    - Quiz with instant feedback
-
-# 5. **Visualizations**
-#    - Actual vs. predicted scatter plots
-#    - Residual plots and histograms
-#    - Feature importance charts
-#    - Model comparison bar charts
-#    - Interactive simulations of R² and adjusted R² behavior
-
-# 6. **User Experience**
-#    - Clean, modern AWS-themed styling
-#    - Responsive layout with columns and proper spacing
-#    - Clear explanations with highlighted important concepts
-#    - Formula boxes for mathematical clarity
-#    - Session reset functionality
-
-# The application is designed to be educational, engaging, and interactive, allowing users to explore regression evaluation concepts through hands-on examples and visualizations. Each concept is thoroughly explained with both theoretical information and practical demonstrations that respond to user inputs.
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

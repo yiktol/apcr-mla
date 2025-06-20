@@ -1,4 +1,4 @@
-# numpy==1.26.1
+boto3
 scikit-learn
 tensorflow
 tabulate

@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,171 +12,335 @@ import io
 import base64
 from streamlit_lottie import st_lottie
 import requests
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page configuration for wider layout
-st.set_page_config(
-    page_title="SageMaker Tools Explorer",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# AWS Color Scheme
-AWS_COLORS = {
-    "orange": "#FF9900",
-    "teal": "#00A1C9",
-    "blue": "#232F3E",
-    "gray": "#E9ECEF",
-    "light_gray": "#F8F9FA",
-    "white": "#FFFFFF",
-    "dark_gray": "#545B64",
-    "green": "#59BA47",
-    "red": "#D13212"
-}
-
-# Load animation from URL
-def load_lottieurl(url: str):
+def load_lottie_url(url: str):
+    """Load animation from URL."""
     r = requests.get(url)
     if r.status_code != 200:
         return None
     return r.json()
 
-# Initialize session state
-if 'init_eval' not in st.session_state:
-    st.session_state.init_eval = True
-    st.session_state.user_id = str(uuid.uuid4())
-    st.session_state.clarify_model_choice = "XGBoost"
-    st.session_state.debugger_stage = 0
-    st.session_state.experiment_model = "ResNet"
-    st.session_state.shadow_test_model = "Model A"
-    st.session_state.shadow_test_traffic = 50
 
-# Custom CSS for styling
-st.markdown("""
-<style>
-    .main {
-        background-color: #F8F9FA;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #F8F9FA;
-        border-radius: 8px;
-        padding: 10px;
-        margin-bottom: 15px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 60px;
-        white-space: pre-wrap;
-        border-radius: 6px;
-        font-weight: 600;
-        background-color: #FFFFFF;
-        color: #232F3E;
-        border: 1px solid #E9ECEF;
-        padding: 5px 15px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #FF9900 !important;
-    }
-    .stButton button {
-        background-color: #FF9900;
-        color: white;
-        border-radius: 4px;
-        border: none;
-        padding: 8px 16px;
-    }
-    .stButton button:hover {
-        background-color: #EC7211;
-    }
-    .info-box {
-        background-color: #E6F2FF;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        border-left: 5px solid #00A1C9;
-    }
-    .code-box {
-        background-color: #232F3E;
-        color: #FFFFFF;
-        padding: 15px;
-        border-radius: 8px;
-        font-family: 'Courier New', monospace;
-        overflow-x: auto;
-        margin: 15px 0;
-    }
-    .footer {
-        position: fixed;
-        bottom: 0;
-        right: 0;
-        left: 0;
-        background-color: #232F3E;
-        color: white;
-        text-align: center;
-        padding: 10px;
-        font-size: 12px;
-    }
-    h1, h2, h3 {
-        color: #232F3E;
-    }
-    .metric-card {
-        background-color: white;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
-    }
-</style>
-""", unsafe_allow_html=True)
+def initialize_session_state():
+    """Initialize session state variables."""
+    if 'init_eval' not in st.session_state:
+        st.session_state.init_eval = True
+        st.session_state.user_id = str(uuid.uuid4())
+        st.session_state.clarify_model_choice = "XGBoost"
+        st.session_state.debugger_stage = 0
+        st.session_state.experiment_model = "ResNet"
+        st.session_state.shadow_test_model = "Model A"
+        st.session_state.shadow_test_traffic = 50
 
-# Sidebar for session management
-with st.sidebar:
-    st.title("Session Management")
-    st.info(f"User ID: {st.session_state.user_id}")
+
+def set_page_config():
+    """Set streamlit page configuration."""
+    st.set_page_config(
+        page_title="SageMaker Tools Explorer",
+        page_icon="🚀",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+
+
+def load_css():
+    """Load custom CSS styling."""
+    st.markdown("""
+    <style>
+        .main {
+            background-color: #F8F9FA;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: #F8F9FA;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 60px;
+            white-space: pre-wrap;
+            border-radius: 6px;
+            font-weight: 600;
+            background-color: #FFFFFF;
+            color: #232F3E;
+            border: 1px solid #E9ECEF;
+            padding: 5px 15px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #FF9900 !important;
+        }
+        .stButton button {
+            background-color: #FF9900;
+            color: white;
+            border-radius: 4px;
+            border: none;
+            padding: 8px 16px;
+        }
+        .stButton button:hover {
+            background-color: #EC7211;
+        }
+        .info-box {
+            background-color: #E6F2FF;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #00A1C9;
+        }
+        .code-box {
+            background-color: #232F3E;
+            color: #FFFFFF;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            background-color: #232F3E;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+        }
+        h1, h2, h3 {
+            color: #232F3E;
+        }
+        .metric-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def render_sidebar():
+    """Render the sidebar content."""
+    with st.sidebar:
+        common.render_sidebar()
+        
+        # Information about the application
+        with st.expander(label='About this application', expanded=False):
+            st.markdown("""
+                This interactive learning application demonstrates the powerful evaluation 
+                tools available in Amazon SageMaker. Explore each tab to learn about different 
+                capabilities and see them in action with interactive examples.
+            """)
+        
+            # AWS learning resources
+            st.subheader("Additional Resources")
+            st.markdown("""
+                - [SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
+                - [AWS ML Blog](https://aws.amazon.com/blogs/machine-learning/)
+                - [AWS Training and Certification](https://aws.amazon.com/training/)
+            """)
+
+
+def render_header():
+    """Render the application header."""
+    st.title("Amazon SageMaker Tools for Evaluation")
+    st.markdown("Explore the powerful tools that SageMaker offers for evaluating, debugging, and improving your machine learning models.")
+
+
+@st.cache_data
+def generate_sample_data():
+    """Generate sample data for clarify demo."""
+    np.random.seed(42)
+    n = 1000
+    data = {
+        'age': np.random.normal(40, 15, n).astype(int),
+        'income': np.random.exponential(50000, n).astype(int),
+        'gender': np.random.choice(['Male', 'Female'], n),
+        'education': np.random.choice(['High School', 'Bachelor', 'Master', 'PhD'], n),
+        'region': np.random.choice(['North', 'South', 'East', 'West'], n)
+    }
     
-    if st.button("🔄 Reset Session"):
-        st.session_state.clear()
-        st.rerun()
+    # Create biased approval rates based on gender and income
+    p_approve = (0.4 + 0.3 * (data['income'] > 50000) + 
+                  0.2 * (np.array([g == 'Male' for g in data['gender']])))
+    data['approved'] = np.random.binomial(1, p_approve)
     
-    st.divider()
+    return pd.DataFrame(data)
+
+
+def calculate_bias_metrics(df):
+    """Calculate bias metrics based on gender."""
+    total_approvals = df['approved'].sum()
+    total_count = len(df)
     
-    # Information about the application
-    with st.expander(label='About this application' ,expanded=False):
-        st.markdown("""
-            This interactive learning application demonstrates the powerful evaluation 
-            tools available in Amazon SageMaker. Explore each tab to learn about different 
-            capabilities and see them in action with interactive examples.
-        """)
+    bias_data = []
+    for gender in ['Male', 'Female']:
+        gender_df = df[df['gender'] == gender]
+        count = len(gender_df)
+        approvals = gender_df['approved'].sum()
+        approval_rate = approvals / count if count > 0 else 0
+        
+        bias_data.append({
+            'Gender': gender,
+            'Count': count,
+            'Approvals': approvals,
+            'Approval Rate': f"{approval_rate:.2%}",
+            'Proportion': count / total_count,
+        })
+        
+    return pd.DataFrame(bias_data)
+
+
+def simulate_training_data(epochs, learning_rate, has_issues=False):
+    """Simulate model training data for visualization."""
+    np.random.seed(42)
+    train_loss = []
+    val_loss = []
+    gradients = []
+    weights = []
     
-        # AWS learning resources
-        st.subheader("Additional Resources")
-        st.markdown("""
-            - [SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
-            - [AWS ML Blog](https://aws.amazon.com/blogs/machine-learning/)
-            - [AWS Training and Certification](https://aws.amazon.com/training/)
-        """)
+    # Starting point
+    train_val = 2.0
+    val_val = 2.2
+    grad_val = 0.5
+    weight_val = np.random.normal(0, 0.1, 5)
+    
+    # Generate data with simulated issues
+    for i in range(epochs):
+        # Decrease with some noise
+        decay_factor = np.exp(-learning_rate * i / 20)
+        train_val = max(0.1, train_val * decay_factor + np.random.normal(0, 0.05))
+        val_val = max(0.15, val_val * decay_factor + np.random.normal(0, 0.07))
+        
+        # Add issues after certain point if specified
+        if has_issues and i > epochs // 2:
+            # Simulate vanishing gradients
+            grad_val = grad_val * 0.7
+            # Simulate overfitting
+            train_val = max(0.05, train_val * 0.9)
+            val_val = min(3.0, val_val * 1.1)
+        else:
+            grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
+        
+        # Update weights with some drift
+        weight_val = weight_val - learning_rate * grad_val * np.random.normal(1, 0.1, 5)
+        
+        train_loss.append(train_val)
+        val_loss.append(val_val)
+        gradients.append(grad_val)
+        weights.append(weight_val.copy())
+        
+    return {
+        'train_loss': train_loss,
+        'val_loss': val_loss,
+        'gradients': gradients,
+        'weights': weights,
+        'epochs': list(range(1, epochs + 1))
+    }
 
-# Main app header
-st.title("Amazon SageMaker Tools for Evaluation")
-st.markdown("Explore the powerful tools that SageMaker offers for evaluating, debugging, and improving your machine learning models.")
 
-# # Animation for the header
-# lottie_url = "https://assets9.lottiefiles.com/packages/lf20_kuhijlvx.json"
-# lottie_json = load_lottieurl(lottie_url)
-# if lottie_json:
-#     st_lottie(lottie_json, height=200, key="header_animation")
+def generate_experiment_results(config):
+    """Generate experiment results based on configuration."""
+    np.random.seed(42)
+    
+    # Model-specific base performance
+    model_performance = {
+        "ResNet": {"accuracy": 0.92, "training_time": 120},
+        "VGG": {"accuracy": 0.90, "training_time": 180},
+        "MobileNet": {"accuracy": 0.88, "training_time": 90},
+        "EfficientNet": {"accuracy": 0.93, "training_time": 150}
+    }
+    
+    # Get base performance for the selected model
+    base = model_performance[config['model']]
+    
+    # Adjust based on hyperparameters
+    # Learning rate impact
+    lr_impact = 0
+    if config['learning_rate'] <= 0.0001:
+        lr_impact = -0.03  # Too small, slower convergence
+    elif config['learning_rate'] >= 0.01:
+        lr_impact = -0.05  # Too large, might overshoot
+    
+    # Optimizer impact
+    optimizer_impact = {
+        "Adam": 0.01,
+        "SGD": -0.01, 
+        "RMSprop": 0.005
+    }
+    
+    # Batch size impact
+    batch_impact = 0
+    if config['batch_size'] <= 32:
+        batch_impact = 0.01  # Better generalization but slower
+    elif config['batch_size'] >= 128:
+        batch_impact = -0.01  # Faster but less precise
+        
+    # Epochs impact (diminishing returns)
+    epoch_factor = min(1.0, config['epochs'] / 30)
+    
+    # Calculate final metrics with some randomness
+    accuracy = (base['accuracy'] + 
+                lr_impact + 
+                optimizer_impact[config['optimizer']] + 
+                batch_impact) * epoch_factor
+    
+    # Add a small random factor
+    accuracy += np.random.normal(0, 0.01)
+    accuracy = min(0.99, max(0.7, accuracy))
+    
+    # Calculate training time
+    training_time = (base['training_time'] * 
+                    (config['epochs'] / 20) * 
+                    (config['batch_size'] / 64))
+    
+    # Generate learning curves
+    epochs_range = list(range(1, config['epochs'] + 1))
+    
+    # Start from a higher loss and decrease
+    train_loss = [1.5 * np.exp(-epoch / (10 / config['learning_rate'])) + 0.2 + np.random.normal(0, 0.05) 
+                    for epoch in epochs_range]
+    
+    val_loss = [loss + 0.1 + np.random.normal(0, 0.07) for loss in train_loss]
+    
+    # Accuracy increases over time
+    max_acc = accuracy
+    train_acc = [max_acc * (1 - np.exp(-epoch / (15 / config['learning_rate']))) + np.random.normal(0, 0.01) 
+                for epoch in epochs_range]
+    
+    val_acc = [acc - 0.05 - np.random.normal(0, 0.02) for acc in train_acc]
+    val_acc = [max(0.4, min(0.98, acc)) for acc in val_acc]
+    
+    # Resource utilization
+    gpu_util = np.random.uniform(70, 95)
+    memory_util = np.random.uniform(60, 90)
+    
+    return {
+        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
+        'accuracy': accuracy,
+        'training_time': training_time,
+        'gpu_utilization': gpu_util,
+        'memory_utilization': memory_util,
+        'epochs_data': {
+            'epochs': epochs_range,
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+            'train_acc': train_acc,
+            'val_acc': val_acc
+        }
+    }
 
-# Tab-based navigation with emoji
-tab1, tab2, tab3, tab4 = st.tabs([
-    "🔍 SageMaker Clarify", 
-    "🐞 SageMaker Debugger", 
-    "🧪 SageMaker Experiments",
-    "🔄 Shadow Testing"
-])
 
-# TAB 1: SAGEMAKER CLARIFY
-with tab1:
+def render_clarify_tab():
+    """Render the SageMaker Clarify tab content."""
     st.header("Amazon SageMaker Clarify")
     
     col1, col2 = st.columns([3, 2])
@@ -200,6 +363,19 @@ with tab1:
 
     st.subheader("Interactive Demo: Explore Model Bias and Explainability")
     
+    # Define AWS colors for consistent styling
+    AWS_COLORS = {
+        "orange": "#FF9900",
+        "teal": "#00A1C9",
+        "blue": "#232F3E",
+        "gray": "#E9ECEF",
+        "light_gray": "#F8F9FA",
+        "white": "#FFFFFF",
+        "dark_gray": "#545B64",
+        "green": "#59BA47",
+        "red": "#D13212"
+    }
+    
     # Model selection
     model_options = ["XGBoost", "Random Forest", "Neural Network"]
     st.session_state.clarify_model_choice = st.selectbox(
@@ -207,26 +383,6 @@ with tab1:
         model_options, 
         index=model_options.index(st.session_state.clarify_model_choice)
     )
-    
-    # Create sample DataFrame for bias analysis
-    @st.cache_data
-    def generate_sample_data():
-        np.random.seed(42)
-        n = 1000
-        data = {
-            'age': np.random.normal(40, 15, n).astype(int),
-            'income': np.random.exponential(50000, n).astype(int),
-            'gender': np.random.choice(['Male', 'Female'], n),
-            'education': np.random.choice(['High School', 'Bachelor', 'Master', 'PhD'], n),
-            'region': np.random.choice(['North', 'South', 'East', 'West'], n)
-        }
-        
-        # Create biased approval rates based on gender and income
-        p_approve = (0.4 + 0.3 * (data['income'] > 50000) + 
-                      0.2 * (np.array([g == 'Male' for g in data['gender']])))
-        data['approved'] = np.random.binomial(1, p_approve)
-        
-        return pd.DataFrame(data)
     
     df = generate_sample_data()
     
@@ -238,28 +394,6 @@ with tab1:
     st.markdown("### Bias Analysis")
     st.markdown("Let's analyze potential bias in our loan approval dataset with respect to gender:")
     
-    # Generate bias metrics based on gender
-    def calculate_bias_metrics(df):
-        total_approvals = df['approved'].sum()
-        total_count = len(df)
-        
-        bias_data = []
-        for gender in ['Male', 'Female']:
-            gender_df = df[df['gender'] == gender]
-            count = len(gender_df)
-            approvals = gender_df['approved'].sum()
-            approval_rate = approvals / count if count > 0 else 0
-            
-            bias_data.append({
-                'Gender': gender,
-                'Count': count,
-                'Approvals': approvals,
-                'Approval Rate': f"{approval_rate:.2%}",
-                'Proportion': count / total_count,
-            })
-            
-        return pd.DataFrame(bias_data)
-            
     bias_metrics = calculate_bias_metrics(df)
     
     col1, col2 = st.columns([3, 2])
@@ -364,12 +498,11 @@ with tab1:
         st.pyplot(fig)
     
     with col2:
-        
         model_descriptions = {
-    "XGBoost": "The XGBoost model shows high sensitivity to income, with gender having substantial influence on decisions.",
-    "Random Forest": "The Random Forest model relies most heavily on income and age, with gender having less impact compared to XGBoost.",
-    "Neural Network": "The Neural Network shows more balanced feature usage, still prioritizing income but with more weight on age."
-}
+            "XGBoost": "The XGBoost model shows high sensitivity to income, with gender having substantial influence on decisions.",
+            "Random Forest": "The Random Forest model relies most heavily on income and age, with gender having less impact compared to XGBoost.",
+            "Neural Network": "The Neural Network shows more balanced feature usage, still prioritizing income but with more weight on age."
+        }
         description = model_descriptions.get(st.session_state.clarify_model_choice, "")
         
         st.markdown("#### Key Insights")
@@ -528,8 +661,21 @@ clarify_processor.run_explainability(
     4. **Trust building** - Stakeholders need to understand how AI systems make decisions
     """)
 
-# TAB 2: SAGEMAKER DEBUGGER
-with tab2:
+
+def render_debugger_tab():
+    """Render the SageMaker Debugger tab content."""
+    AWS_COLORS = {
+        "orange": "#FF9900",
+        "teal": "#00A1C9",
+        "blue": "#232F3E",
+        "gray": "#E9ECEF",
+        "light_gray": "#F8F9FA",
+        "white": "#FFFFFF",
+        "dark_gray": "#545B64",
+        "green": "#59BA47",
+        "red": "#D13212"
+    }
+    
     st.header("Amazon SageMaker Debugger")
     
     col1, col2 = st.columns([3, 2])
@@ -553,53 +699,6 @@ with tab2:
     # Interactive debugger demo
     st.subheader("Interactive Demo: Debug a Training Process")
     
-    # Simulated model training visualization
-    def simulate_training_data(epochs, learning_rate, has_issues=False):
-        np.random.seed(42)
-        train_loss = []
-        val_loss = []
-        gradients = []
-        weights = []
-        
-        # Starting point
-        train_val = 2.0
-        val_val = 2.2
-        grad_val = 0.5
-        weight_val = np.random.normal(0, 0.1, 5)
-        
-        # Generate data with simulated issues
-        for i in range(epochs):
-            # Decrease with some noise
-            decay_factor = np.exp(-learning_rate * i / 20)
-            train_val = max(0.1, train_val * decay_factor + np.random.normal(0, 0.05))
-            val_val = max(0.15, val_val * decay_factor + np.random.normal(0, 0.07))
-            
-            # Add issues after certain point if specified
-            if has_issues and i > epochs // 2:
-                # Simulate vanishing gradients
-                grad_val = grad_val * 0.7
-                # Simulate overfitting
-                train_val = max(0.05, train_val * 0.9)
-                val_val = min(3.0, val_val * 1.1)
-            else:
-                grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
-            
-            # Update weights with some drift
-            weight_val = weight_val - learning_rate * grad_val * np.random.normal(1, 0.1, 5)
-            
-            train_loss.append(train_val)
-            val_loss.append(val_val)
-            gradients.append(grad_val)
-            weights.append(weight_val.copy())
-            
-        return {
-            'train_loss': train_loss,
-            'val_loss': val_loss,
-            'gradients': gradients,
-            'weights': weights,
-            'epochs': list(range(1, epochs + 1))
-        }
-
     # Training parameters    
     col1, col2, col3 = st.columns(3)
     
@@ -978,101 +1077,21 @@ estimator.fit()
         st.markdown(f"🔷 Action")
         st.markdown(f"🔷 Confirmation")
 
-# TAB 3: SAGEMAKER EXPERIMENTS
 
-# Function to generate experiment results
-def generate_experiment_results(config):
-    np.random.seed(42)
-    
-    # Model-specific base performance
-    model_performance = {
-        "ResNet": {"accuracy": 0.92, "training_time": 120},
-        "VGG": {"accuracy": 0.90, "training_time": 180},
-        "MobileNet": {"accuracy": 0.88, "training_time": 90},
-        "EfficientNet": {"accuracy": 0.93, "training_time": 150}
+def render_experiments_tab():
+    """Render the SageMaker Experiments tab content."""
+    AWS_COLORS = {
+        "orange": "#FF9900",
+        "teal": "#00A1C9",
+        "blue": "#232F3E",
+        "gray": "#E9ECEF",
+        "light_gray": "#F8F9FA",
+        "white": "#FFFFFF",
+        "dark_gray": "#545B64",
+        "green": "#59BA47",
+        "red": "#D13212"
     }
     
-    # Get base performance for the selected model
-    base = model_performance[config['model']]
-    
-    # Adjust based on hyperparameters
-    # Learning rate impact
-    lr_impact = 0
-    if config['learning_rate'] <= 0.0001:
-        lr_impact = -0.03  # Too small, slower convergence
-    elif config['learning_rate'] >= 0.01:
-        lr_impact = -0.05  # Too large, might overshoot
-    
-    # Optimizer impact
-    optimizer_impact = {
-        "Adam": 0.01,
-        "SGD": -0.01, 
-        "RMSprop": 0.005
-    }
-    
-    # Batch size impact
-    batch_impact = 0
-    if config['batch_size'] <= 32:
-        batch_impact = 0.01  # Better generalization but slower
-    elif config['batch_size'] >= 128:
-        batch_impact = -0.01  # Faster but less precise
-        
-    # Epochs impact (diminishing returns)
-    epoch_factor = min(1.0, config['epochs'] / 30)
-    
-    # Calculate final metrics with some randomness
-    accuracy = (base['accuracy'] + 
-                lr_impact + 
-                optimizer_impact[config['optimizer']] + 
-                batch_impact) * epoch_factor
-    
-    # Add a small random factor
-    accuracy += np.random.normal(0, 0.01)
-    accuracy = min(0.99, max(0.7, accuracy))
-    
-    # Calculate training time
-    training_time = (base['training_time'] * 
-                    (config['epochs'] / 20) * 
-                    (config['batch_size'] / 64))
-    
-    # Generate learning curves
-    epochs_range = list(range(1, config['epochs'] + 1))
-    
-    # Start from a higher loss and decrease
-    train_loss = [1.5 * np.exp(-epoch / (10 / config['learning_rate'])) + 0.2 + np.random.normal(0, 0.05) 
-                    for epoch in epochs_range]
-    
-    val_loss = [loss + 0.1 + np.random.normal(0, 0.07) for loss in train_loss]
-    
-    # Accuracy increases over time
-    max_acc = accuracy
-    train_acc = [max_acc * (1 - np.exp(-epoch / (15 / config['learning_rate']))) + np.random.normal(0, 0.01) 
-                for epoch in epochs_range]
-    
-    val_acc = [acc - 0.05 - np.random.normal(0, 0.02) for acc in train_acc]
-    val_acc = [max(0.4, min(0.98, acc)) for acc in val_acc]
-    
-    # Resource utilization
-    gpu_util = np.random.uniform(70, 95)
-    memory_util = np.random.uniform(60, 90)
-    
-    return {
-        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
-        'accuracy': accuracy,
-        'training_time': training_time,
-        'gpu_utilization': gpu_util,
-        'memory_utilization': memory_util,
-        'epochs_data': {
-            'epochs': epochs_range,
-            'train_loss': train_loss,
-            'val_loss': val_loss,
-            'train_acc': train_acc,
-            'val_acc': val_acc
-        }
-    }
-
-
-with tab3:
     st.header("Amazon SageMaker Experiments")
     
     col1, col2 = st.columns([3, 2])
@@ -1147,8 +1166,6 @@ with tab3:
                 st.session_state.experiments.append(experiment)
                 
                 st.success(f"Experiment {experiment_id} completed!")
-    
-
     
     # Display experiment results
     with col2:
@@ -1519,8 +1536,101 @@ for trial in trials['TrialSummaries']:
     
     st.pyplot(fig)
 
-# TAB 4: SAGEMAKER SHADOW TESTING
-with tab4:
+
+def generate_model_comparison():
+    """Generate model performance data for shadow testing."""
+    # Model A (Production) baseline metrics
+    model_a = {
+        "accuracy": 0.92,
+        "latency_ms": 112,
+        "error_rate": 0.03,
+        "throughput": 95,
+        "precision": 0.90,
+        "recall": 0.89,
+        "f1_score": 0.895
+    }
+    
+    # Model B varies - either better or worse depending on traffic allocation
+    # Higher traffic means more confidence in the better metrics
+    if st.session_state.shadow_test_traffic >= 70:
+        # More confident results with higher traffic
+        model_b = {
+            "accuracy": 0.94,
+            "latency_ms": 98,
+            "error_rate": 0.025,
+            "throughput": 105,
+            "precision": 0.92, 
+            "recall": 0.91,
+            "f1_score": 0.915
+        }
+    else:
+        # Less confident results with lower traffic
+        model_b = {
+            "accuracy": 0.93,
+            "latency_ms": 105,
+            "error_rate": 0.028,
+            "throughput": 100,
+            "precision": 0.91,
+            "recall": 0.90,
+            "f1_score": 0.905
+        }
+    
+    return model_a, model_b
+
+
+def generate_latency_distribution(mean, std, n=1000):
+    """Generate synthetic latency distribution data."""
+    np.random.seed(42)  # For reproducibility
+    return np.random.gamma(shape=(mean/std)**2, scale=std**2/(mean))
+
+
+def generate_confusion_matrix(precision, recall, samples=1000):
+    """Generate confusion matrix data."""
+    # For a binary classification problem
+    tp = int(samples * precision * recall)
+    fp = int(tp * (1 - precision) / precision)
+    fn = int(tp * (1 - recall) / recall)
+    tn = samples - (tp + fp + fn)
+    return np.array([[tp, fp], [fn, tn]])
+
+
+def generate_resource_data():
+    """Generate synthetic resource utilization data."""
+    np.random.seed(42)
+    # Generate time points (e.g., 24 hours)
+    time_points = np.arange(24)
+    
+    # CPU usage patterns with daily variation
+    model_a_cpu = 60 + 15 * np.sin(np.pi * time_points / 12) + np.random.normal(0, 5, 24)
+    model_b_cpu = 55 + 12 * np.sin(np.pi * time_points / 12) + np.random.normal(0, 4, 24)
+    
+    # Memory usage patterns
+    model_a_mem = 70 + 5 * np.sin(np.pi * time_points / 8) + np.random.normal(0, 3, 24)
+    model_b_mem = 65 + 7 * np.sin(np.pi * time_points / 8) + np.random.normal(0, 3, 24)
+    
+    # Ensure values are within reasonable ranges
+    model_a_cpu = np.clip(model_a_cpu, 0, 100)
+    model_b_cpu = np.clip(model_b_cpu, 0, 100)
+    model_a_mem = np.clip(model_a_mem, 0, 100)
+    model_b_mem = np.clip(model_b_mem, 0, 100)
+    
+    return time_points, model_a_cpu, model_b_cpu, model_a_mem, model_b_mem
+
+
+def render_shadow_testing_tab():
+    """Render the SageMaker Shadow Testing tab content."""
+    AWS_COLORS = {
+        "orange": "#FF9900",
+        "teal": "#00A1C9",
+        "blue": "#232F3E",
+        "gray": "#E9ECEF",
+        "light_gray": "#F8F9FA",
+        "white": "#FFFFFF",
+        "dark_gray": "#545B64",
+        "green": "#59BA47",
+        "red": "#D13212"
+    }
+    
     st.header("Amazon SageMaker Shadow Testing")
     
     col1, col2 = st.columns([3, 2])
@@ -1664,46 +1774,6 @@ with tab4:
     # Shadow test comparison results
     st.markdown("### Performance Comparison Results")
     
-    # Generate model performance data
-    def generate_model_comparison():
-        # Model A (Production) baseline metrics
-        model_a = {
-            "accuracy": 0.92,
-            "latency_ms": 112,
-            "error_rate": 0.03,
-            "throughput": 95,
-            "precision": 0.90,
-            "recall": 0.89,
-            "f1_score": 0.895
-        }
-        
-        # Model B varies - either better or worse depending on traffic allocation
-        # Higher traffic means more confidence in the better metrics
-        if st.session_state.shadow_test_traffic >= 70:
-            # More confident results with higher traffic
-            model_b = {
-                "accuracy": 0.94,
-                "latency_ms": 98,
-                "error_rate": 0.025,
-                "throughput": 105,
-                "precision": 0.92, 
-                "recall": 0.91,
-                "f1_score": 0.915
-            }
-        else:
-            # Less confident results with lower traffic
-            model_b = {
-                "accuracy": 0.93,
-                "latency_ms": 105,
-                "error_rate": 0.028,
-                "throughput": 100,
-                "precision": 0.91,
-                "recall": 0.90,
-                "f1_score": 0.905
-            }
-        
-        return model_a, model_b
-    
     model_a, model_b = generate_model_comparison()
     
     # Calculate percentage differences
@@ -1748,11 +1818,6 @@ with tab4:
     perf_tab1, perf_tab2, perf_tab3 = st.tabs(["Response Time", "Accuracy Metrics", "Resource Utilization"])
     
     with perf_tab1:
-        # Generate synthetic latency distribution data
-        def generate_latency_distribution(mean, std, n=1000):
-            np.random.seed(42)  # For reproducibility
-            return np.random.gamma(shape=(mean/std)**2, scale=std**2/(mean))
-        
         model_a_latencies = generate_latency_distribution(model_a["latency_ms"], 20)
         model_b_latencies = generate_latency_distribution(model_b["latency_ms"], 18)
         
@@ -1798,15 +1863,6 @@ with tab4:
             st.metric("p99 Latency - Model B", f"{p99_b:.1f} ms", delta=f"{(p99_a-p99_b):.1f} ms")
         
     with perf_tab2:
-        # Generate confusion matrix data
-        def generate_confusion_matrix(precision, recall, samples=1000):
-            # For a binary classification problem
-            tp = int(samples * precision * recall)
-            fp = int(tp * (1 - precision) / precision)
-            fn = int(tp * (1 - recall) / recall)
-            tn = samples - (tp + fp + fn)
-            return np.array([[tp, fp], [fn, tn]])
-        
         cm_a = generate_confusion_matrix(model_a["precision"], model_a["recall"])
         cm_b = generate_confusion_matrix(model_b["precision"], model_b["recall"])
         
@@ -1858,28 +1914,6 @@ with tab4:
         st.pyplot(fig)
         
     with perf_tab3:
-        # Generate synthetic resource utilization data
-        def generate_resource_data():
-            np.random.seed(42)
-            # Generate time points (e.g., 24 hours)
-            time_points = np.arange(24)
-            
-            # CPU usage patterns with daily variation
-            model_a_cpu = 60 + 15 * np.sin(np.pi * time_points / 12) + np.random.normal(0, 5, 24)
-            model_b_cpu = 55 + 12 * np.sin(np.pi * time_points / 12) + np.random.normal(0, 4, 24)
-            
-            # Memory usage patterns
-            model_a_mem = 70 + 5 * np.sin(np.pi * time_points / 8) + np.random.normal(0, 3, 24)
-            model_b_mem = 65 + 7 * np.sin(np.pi * time_points / 8) + np.random.normal(0, 3, 24)
-            
-            # Ensure values are within reasonable ranges
-            model_a_cpu = np.clip(model_a_cpu, 0, 100)
-            model_b_cpu = np.clip(model_b_cpu, 0, 100)
-            model_a_mem = np.clip(model_a_mem, 0, 100)
-            model_b_mem = np.clip(model_b_mem, 0, 100)
-            
-            return time_points, model_a_cpu, model_b_cpu, model_a_mem, model_b_mem
-        
         time_points, model_a_cpu, model_b_cpu, model_a_mem, model_b_mem = generate_resource_data()
         
         # Plot CPU usage
@@ -2137,9 +2171,64 @@ def lambda_handler(event, context):
             if i < len(process_steps) - 1:
                 st.markdown("➡️")
 
-# Add footer
-st.markdown("""
-<div class="footer">
-© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
-</div>
-""", unsafe_allow_html=True)
+
+def render_footer():
+    """Render the application footer."""
+    st.markdown("""
+    <div class="footer">
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def main():
+    """Main function to run the application."""
+    
+    # Load custom CSS
+    load_css()
+    
+    # Initialize session state
+    initialize_session_state()
+    common.initialize_session_state()
+    
+    # Render the sidebar
+    render_sidebar()
+    
+    # Render the header
+    render_header()
+    
+    # Create tabs for navigation
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🔍 SageMaker Clarify", 
+        "🐞 SageMaker Debugger", 
+        "🧪 SageMaker Experiments",
+        "🔄 Shadow Testing"
+    ])
+    
+    # Render tab content
+    with tab1:
+        render_clarify_tab()
+        
+    with tab2:
+        render_debugger_tab()
+        
+    with tab3:
+        render_experiments_tab()
+        
+    with tab4:
+        render_shadow_testing_tab()
+    
+    # Render the footer
+    render_footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    # Configure the page
+    set_page_config()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
