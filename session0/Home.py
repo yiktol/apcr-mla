@@ -1520,14 +1520,14 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-# Main execution flow
-# if __name__ == "__main__":
-#     # First check authentication
-#     is_authenticated = authenticate.login()
-    
-#     # If authenticated, show the main app content
-#     if is_authenticated:
-#         main()
-
+#Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
+
+# if __name__ == "__main__":
+#     main()
