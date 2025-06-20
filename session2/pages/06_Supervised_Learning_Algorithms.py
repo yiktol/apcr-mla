@@ -10,14 +10,12 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, mean_squared_error, confusion_matrix, r2_score
 import altair as alt
 import time
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page configuration
-st.set_page_config(
-    page_title="SageMaker Algorithms Explorer",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Helper function for sigmoid
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
 # AWS Color Scheme
 AWS_COLORS = {
@@ -31,90 +29,8 @@ AWS_COLORS = {
     'red': '#D13212'
 }
 
-# Custom CSS
-st.markdown("""
-<style>
-    /* General Styling */
-    .main {
-        background-color: #FFFFFF;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #D5DBDB;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding: 10px 20px;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900;
-        color: #232F3E;
-    }
-    
-    /* Cards */
-    .card {
-        border-radius: 5px;
-        padding: 20px;
-        margin-bottom: 20px;
-        background-color: #F7F7F7;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    /* Buttons */
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 8px 16px;
-        font-weight: bold;
-    }
-    
-    .stButton>button:hover {
-        background-color: #E88B00;
-    }
-    
-    /* Metrics */
-    .metric-container {
-        background-color: #232F3E;
-        color: white;
-        padding: 15px;
-        border-radius: 5px;
-        margin: 10px 0;
-        text-align: center;
-    }
-    
-    /* Headers */
-    h1, h2, h3 {
-        color: #232F3E;
-    }
-    
-    h1 {
-        font-weight: bold;
-        border-bottom: 2px solid #FF9900;
-        padding-bottom: 10px;
-    }
-    
-    /* Progress bar */
-    .stProgress > div > div {
-        background-color: #FF9900;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-
-# Helper function for sigmoid
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-# Initialize session state
 def init_session_state():
+    """Initialize session state variables"""
     if 'initialized_sup' not in st.session_state:
         st.session_state.initialized_sup = True
         st.session_state.linear_learner_trained = False
@@ -158,53 +74,124 @@ def init_session_state():
         st.session_state.fm_predictions = None
         st.session_state.fm_accuracy = None
 
-# Initialize session state
-init_session_state()
+def setup_page_config():
+    """Set up the page configuration"""
+    st.set_page_config(
+        page_title="SageMaker Algorithms Explorer",
+        page_icon="🧠",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+setup_page_config()
 
-# Sidebar
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg", width=100)
-st.sidebar.title("Session Management")
+def apply_custom_css():
+    """Apply custom CSS styling"""
+    st.markdown("""
+    <style>
+        /* General Styling */
+        .main {
+            background-color: #FFFFFF;
+        }
+        
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #D5DBDB;
+            border-radius: 4px 4px 0px 0px;
+            gap: 1px;
+            padding: 10px 20px;
+        }
+        
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900;
+            color: #232F3E;
+        }
+        
+        /* Cards */
+        .card {
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #F7F7F7;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Buttons */
+        .stButton>button {
+            background-color: #FF9900;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-weight: bold;
+        }
+        
+        .stButton>button:hover {
+            background-color: #E88B00;
+        }
+        
+        /* Metrics */
+        .metric-container {
+            background-color: #232F3E;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        /* Headers */
+        h1, h2, h3 {
+            color: #232F3E;
+        }
+        
+        h1 {
+            font-weight: bold;
+            border-bottom: 2px solid #FF9900;
+            padding-bottom: 10px;
+        }
+        
+        /* Progress bar */
+        .stProgress > div > div {
+            background-color: #FF9900;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #545B64;
+            font-size: 0.8em;
+            border-top: 1px solid #D5DBDB;
+            margin-top: 40px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-if st.sidebar.button("Reset Session", key="reset_session"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    init_session_state()
-    st.sidebar.success("Session has been reset!")
+def render_sidebar():
+    """Render the sidebar content"""
+    with st.sidebar:
+        common.render_sidebar()
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-## About This App
-This interactive application demonstrates Amazon SageMaker's built-in algorithms:
-- Linear Learner
-- XGBoost
-- K-Nearest Neighbors
-- Factorization Machines
+        with st.expander("About This App", expanded=False):
+            st.markdown("""
+            ## About This App
+            This interactive application demonstrates Amazon SageMaker's built-in algorithms:
+            - Linear Learner
+            - XGBoost
+            - K-Nearest Neighbors
+            - Factorization Machines
 
-Explore each algorithm with interactive visualizations and examples.
-""")
+            Explore each algorithm with interactive visualizations and examples.
+            """)
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### Resources")
-st.sidebar.markdown("[SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)")
-st.sidebar.markdown("[AWS Machine Learning](https://aws.amazon.com/machine-learning/)")
-
-# Main content
-st.title("Amazon SageMaker Algorithms Explorer")
-st.markdown("""
-This interactive application helps you understand the main built-in algorithms available in Amazon SageMaker.
-Choose an algorithm tab below to explore its features, use cases, and see it in action!
-""")
-
-# Create tabs with emoji
-tabs = st.tabs([
-    "📈 Linear Learner", 
-    "🌲 XGBoost", 
-    "🎯 K-Nearest Neighbors", 
-    "🔢 Factorization Machines"
-])
-
-# Linear Learner Tab
-with tabs[0]:
+def display_linear_learner_tab():
+    """Display Linear Learner algorithm tab content"""
     st.header("📈 Linear Learner Algorithm")
     
     st.markdown("""
@@ -417,8 +404,8 @@ with tabs[0]:
         </div>
         """, unsafe_allow_html=True)
 
-# XGBoost Tab
-with tabs[1]:
+def display_xgboost_tab():
+    """Display XGBoost algorithm tab content"""
     st.header("🌲 XGBoost Algorithm")
     
     st.markdown("""
@@ -662,8 +649,8 @@ with tabs[1]:
             plt.tight_layout()
             st.pyplot(fig)
 
-# K-Nearest Neighbors Tab
-with tabs[2]:
+def display_knn_tab():
+    """Display KNN algorithm tab content"""
     st.header("🎯 K-Nearest Neighbors (KNN) Algorithm")
     
     st.markdown("""
@@ -917,8 +904,8 @@ with tabs[2]:
         </div>
         """, unsafe_allow_html=True)
 
-# Factorization Machines Tab
-with tabs[3]:
+def display_fm_tab():
+    """Display Factorization Machines algorithm tab content"""
     st.header("🔢 Factorization Machines Algorithm")
     
     st.markdown("""
@@ -1219,40 +1206,63 @@ with tabs[3]:
         styled_pred_df = predicted_df.style.map(highlight_predictions).format("{:.1f}")
         st.dataframe(styled_pred_df, height=200)
 
+def render_footer():
+    """Render the footer"""
+    st.markdown("""
+    <div class="footer">
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </div>
+    """, unsafe_allow_html=True)
 
-# ```
+def main():
+    """Main application function"""
+    
+    # Apply custom CSS
+    apply_custom_css()
+    
+    # Initialize session state variables
+    common.initialize_session_state()
+    init_session_state()
+    
+    # Render sidebar
+    render_sidebar()
+    
+    # Main content
+    st.title("Amazon SageMaker Algorithms Explorer")
+    st.markdown("""
+    This interactive application helps you understand the main built-in algorithms available in Amazon SageMaker.
+    Choose an algorithm tab below to explore its features, use cases, and see it in action!
+    """)
+    
+    # Create tabs with emoji
+    tabs = st.tabs([
+        "📈 Linear Learner", 
+        "🌲 XGBoost", 
+        "🎯 K-Nearest Neighbors", 
+        "🔢 Factorization Machines"
+    ])
+    
+    # Display content in each tab
+    with tabs[0]:
+        display_linear_learner_tab()
+    
+    with tabs[1]:
+        display_xgboost_tab()
+    
+    with tabs[2]:
+        display_knn_tab()
+    
+    with tabs[3]:
+        display_fm_tab()
+    
+    # Render footer
+    render_footer()
 
-# This Streamlit application provides an interactive e-learning environment that demonstrates four key Amazon SageMaker algorithms: Linear Learner, XGBoost, K-Nearest Neighbors, and Factorization Machines.
-
-# ### Key Features:
-
-# 1. **Interactive Examples**: Each algorithm has interactive examples where users can:
-#    - Generate synthetic data with configurable parameters
-#    - Train models with different hyperparameters
-#    - Visualize the results with appropriate metrics and plots
-
-# 2. **Modern UI/UX**:
-#    - Tab-based navigation with emoji icons
-#    - AWS color scheme throughout the application
-#    - Card-based layout for content organization
-#    - Responsive design elements
-
-# 3. **Educational Content**:
-#    - Algorithm overviews and key features
-#    - Use case recommendations
-#    - Visualizations of model performance
-#    - Code snippets for SageMaker implementation
-
-# 4. **Session Management**:
-#    - Reset functionality in the sidebar
-#    - Session state initialization on load
-#    - No preservation of inputs across sessions
-
-# 5. **Rich Visualizations**:
-#    - Decision boundary plots
-#    - Confusion matrices
-#    - Performance metrics
-#    - Feature importance charts
-#    - Recommendation system examples
-
-# The application is structured to be both educational and practical, giving users hands-on experience with each algorithm while explaining their core concepts and implementation details.
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

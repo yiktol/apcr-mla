@@ -10,7 +10,7 @@ import uuid
 import time
 import json
 from typing import List, Dict, Any, Optional
-
+import utils.authenticate as authenticate
 # LangChain imports
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
@@ -426,15 +426,8 @@ def reset_session():
 
 def parameter_sidebar():
     """Sidebar with model selection and parameter tuning."""
-    with st.sidebar:
-        st.markdown("<div class='sub-header'>Session Management</div>", unsafe_allow_html=True)
-        
-        
-        if st.button("Reset Session", key="reset_session", help="Clear conversation history and uploaded documents"):
-            reset_session()
-        
-        st.markdown("<hr>", unsafe_allow_html=True)
-            
+    with st.container(border=True):
+           
         st.markdown("<div class='sub-header'>Model Selection</div>", unsafe_allow_html=True)
         
         MODEL_CATEGORIES = {
@@ -455,15 +448,14 @@ def parameter_sidebar():
         
         st.markdown("<div class='sub-header'>Parameter Tuning</div>", unsafe_allow_html=True)
         
-        with st.expander("Model Parameters", expanded=True):
-            temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.1, step=0.1, 
-                                help="Higher values make output more random, lower values more deterministic")
-            
-            top_p = st.slider("Top P", min_value=0.0, max_value=1.0, value=0.9, step=0.1,
-                             help="Controls diversity via nucleus sampling")
-            
-            max_tokens = st.number_input("Max Tokens", min_value=50, max_value=4096, value=1024, step=50,
-                                       help="Maximum number of tokens in the response")
+        temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.1, step=0.1, 
+                            help="Higher values make output more random, lower values more deterministic")
+        
+        top_p = st.slider("Top P", min_value=0.0, max_value=1.0, value=0.9, step=0.1,
+                            help="Controls diversity via nucleus sampling")
+        
+        max_tokens = st.number_input("Max Tokens", min_value=50, max_value=4096, value=1024, step=50,
+                                    help="Maximum number of tokens in the response")
             
         params = {
             "temperature": temperature,
@@ -471,7 +463,25 @@ def parameter_sidebar():
             "maxTokens": max_tokens
         }
         
-        with st.expander("About", expanded=False):
+        st.markdown("<div class='sub-header'>RAG Settings</div>", unsafe_allow_html=True)
+                # RAG settings
+        k_results = st.number_input(
+            "Number of context chunks", 
+            min_value=1, 
+            max_value=10, 
+            value=4,
+            help="Number of document chunks to retrieve for context"
+        )
+
+    with st.sidebar:        
+        
+        st.markdown("<div class='sub-header'>Session Management</div>", unsafe_allow_html=True)
+        st.markdown(f"**Session ID:** `{st.session_state.session_id[:8]}`")
+        
+        if st.button("Reset Session", key="reset_session", help="Clear conversation history and uploaded documents"):
+            reset_session()
+        
+        with st.expander("About this App", expanded=False):
             st.markdown("""
             This app demonstrates Amazon Bedrock's Converse API with RAG capabilities.
             
@@ -484,9 +494,9 @@ def parameter_sidebar():
             """)
         
         
-        st.markdown(f"**Session ID:** `{st.session_state.session_id}`")
         
-    return model_id, params
+        
+    return model_id, params,k_results
 
 def document_uploader():
     """Interface for document uploading and processing."""
@@ -550,28 +560,16 @@ def document_uploader():
     
     return st.session_state.document_processed
 
-def rag_interface(model_id, params):
+def rag_interface(model_id, params, k_results):
     """Interface for RAG-enabled conversation."""
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        system_prompt = st.text_area(
+  
+
+    system_prompt = st.text_area(
             "System Prompt", 
             value="You are a helpful assistant that answers questions based on the provided context. Use the context to provide accurate and relevant answers.", 
             height=100
         )
-    with col2:
-        st.caption("This defines the AI assistant's behavior")
-        
-        # RAG settings
-        k_results = st.number_input(
-            "Number of context chunks", 
-            min_value=1, 
-            max_value=10, 
-            value=4,
-            help="Number of document chunks to retrieve for context"
-        )
+
 
     user_prompt = st.text_area(
         "Your Question", 
@@ -681,18 +679,13 @@ def rag_interface(model_id, params):
 
 def normal_conversation_interface(model_id, params):
     """Interface for regular conversation without RAG."""
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
     
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        system_prompt = st.text_area(
+    system_prompt = st.text_area(
             "System Prompt", 
             value="You are a helpful assistant that provides detailed and thoughtful responses.", 
             height=100,
             key="normal_system"
         )
-    with col2:
-        st.caption("This defines the AI assistant's behavior")
 
     user_prompt = st.text_area(
         "Your Question", 
@@ -780,28 +773,38 @@ def main():
     This interactive dashboard demonstrates Retrieval Augmented Generation (RAG) with Amazon Bedrock.
     Upload your documents, process them into embeddings, and ask questions to get answers grounded in your data.
     """)
-    
-    # Get model and parameters from sidebar
-    model_id, params = parameter_sidebar()
-    
-    # Document processor section
-    has_documents = document_uploader()
-    
-    # Create tabs for different interaction modes
-    tabs = st.tabs([
-        "🔍 RAG Conversation", 
-        "💬 Regular Conversation"
-    ])
-    
-    # Populate each tab
-    with tabs[0]:
-        rag_interface(model_id, params)
-    
-    with tabs[1]:
-        normal_conversation_interface(model_id, params)
+
+
+    # Create a 70/30 layout
+    col1, col2 = st.columns([0.7, 0.3])     
+        # Get model and parameters from the right column
+    with col2:
+        model_id, params, k_results = parameter_sidebar()  
+
+    with col1:
+        # Document processor section
+        has_documents = document_uploader()
+        
+        # Create tabs for different interaction modes
+        tabs = st.tabs([
+            "🔍 RAG Conversation", 
+            "💬 Regular Conversation"
+        ])
+        
+        # Populate each tab
+        with tabs[0]:
+            rag_interface(model_id, params, k_results)
+        
+        with tabs[1]:
+            normal_conversation_interface(model_id, params)
     
     # Add footer
     st.markdown('<div class="footer">© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

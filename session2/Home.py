@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,154 +7,19 @@ import seaborn as sns
 from PIL import Image
 import base64
 import io
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page config
 st.set_page_config(
-    page_title="ML Engineer - Associate Learning",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+        page_title="ML Engineer - Associate Learning",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
-# Initialize session state variables
-if 'quiz_score' not in st.session_state:
-    st.session_state['quiz_score'] = 0
-if 'quiz_attempted' not in st.session_state:
-    st.session_state['quiz_attempted'] = False
-if 'name' not in st.session_state:
-    st.session_state['name'] = ""
-if 'visited_ML_Lifecycle' not in st.session_state:
-    st.session_state['visited_ML_Lifecycle'] = False
-if 'visited_Modeling_Approaches' not in st.session_state:
-    st.session_state['visited_Modeling_Approaches'] = False
-if 'visited_Amazon_Bedrock' not in st.session_state:
-    st.session_state['visited_Amazon_Bedrock'] = False
-if 'visited_Neural_Networks' not in st.session_state:
-    st.session_state['visited_Neural_Networks'] = False
-if 'visited_Model_Training' not in st.session_state:
-    st.session_state['visited_Model_Training'] = False
 
-# Custom CSS for styling
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #FF9900;
-        margin-bottom: 1rem;
-    }
-    .sub-header {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-    }
-    .section-header {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 0.8rem;
-        margin-bottom: 0.3rem;
-    }
-    .info-box {
-        background-color: #F0F2F6;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .success-box {
-        background-color: #D1FAE5;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .warning-box {
-        background-color: #FEF3C7;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .tip-box {
-        background-color: #E0F2FE;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-left: 5px solid #0EA5E9;
-    }
-    .step-box {
-        background-color: #FFFFFF;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    .card {
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        background-color: white;
-        transition: transform 0.3s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-    }
-    .aws-orange {
-        color: #FF9900;
-    }
-    .aws-blue {
-        color: #232F3E;
-    }
-    hr {
-        margin-top: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    /* Make the tab content container take full height */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #F8F9FA;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-left: 16px;
-        padding-right: 16px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .definition {
-        background-color: #EFF6FF;
-        border-left: 5px solid #3B82F6;
-        padding: 10px 15px;
-        margin: 15px 0;
-        border-radius: 0 5px 5px 0;
-    }
-    .code-box {
-        background-color: #F8F9FA;
-        padding: 15px;
-        border-radius: 5px;
-        font-family: monospace;
-        margin: 15px 0;
-        border: 1px solid #E5E7EB;
-    }
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-    }
-    .stButton>button:hover {
-        background-color: #FFAC31;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Function to display custom header
 def custom_header(text, level="main"):
+    """Display custom header with specified styling level"""
     if level == "main":
         st.markdown(f'<div class="main-header">{text}</div>', unsafe_allow_html=True)
     elif level == "sub":
@@ -163,44 +27,28 @@ def custom_header(text, level="main"):
     elif level == "section":
         st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
 
-# Function to create custom info box
+
 def info_box(text, box_type="info"):
-    if box_type == "info":
-        st.markdown(f"""
-            <div class="info-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "success":
-        st.markdown(f"""
-            <div class="success-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "warning":
-        st.markdown(f"""
-            <div class="warning-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "tip":
-        st.markdown(f"""
-            <div class="tip-box">
-                <div markdown="1">
-                    {text}
+    """Create a custom styled information box"""
+    box_class = f"{box_type}-box"
+    st.markdown(f"""
+        <div class="{box_class}">
+            <div markdown="1">
+                {text}
+        """, unsafe_allow_html=True)
 
-            """, unsafe_allow_html=True)
 
-# Function for definition box
 def definition_box(term, definition):
+    """Display a term and its definition in a styled box"""
     st.markdown(f"""
     <div class="definition">
         <strong>{term}:</strong> {definition}
     </div>
     """, unsafe_allow_html=True)
 
-# Function to reset session
+
 def reset_session():
+    """Reset all session state variables"""
     st.session_state['quiz_score'] = 0
     st.session_state['quiz_attempted'] = False
     st.session_state['name'] = ""
@@ -211,76 +59,252 @@ def reset_session():
     st.session_state['visited_Model_Training'] = False
     st.rerun()
 
-# Sidebar for session management
-with st.sidebar:
-    st.image("images/mla_badge.png", width=150)
-    st.markdown("### ML Engineer - Associate")
-    st.markdown("#### Domain 2: ML Model Development")
+
+def plot_learning_rate_effect(alpha):
+    """Create visualization showing learning rate effects"""
+    # Simple function with local minimum
+    x = np.linspace(-5, 5, 100)
+    y = x**2 + 2*np.sin(x)
     
-    # If user has provided their name, greet them
-    if st.session_state['name']:
-        st.success(f"Welcome, {st.session_state['name']}! 👋")
-    else:
-        name = st.text_input("Enter your name:")
-        if name:
-            st.session_state['name'] = name
-            st.rerun()
+    # Starting point
+    x0 = 4
+    y0 = x0**2 + 2*np.sin(x0)
     
-    # Reset button
-    if st.button("🔄 Reset Session"):
-        reset_session()
+    # Gradient at x0
+    grad = 2*x0 + 2*np.cos(x0)
     
-    # Progress tracking
-    if st.session_state['name']:
-        st.markdown("---")
-        st.markdown("### Your Progress")
-        
-        # Track visited pages
-        visited_pages = [page for page in ["ML_Lifecycle", "Modeling_Approaches", "Amazon_Bedrock", "Neural_Networks", "Model_Training"] 
-                         if st.session_state.get(f"visited_{page}", False)]
-        
-        progress = len(visited_pages) / 5
-        st.progress(progress)
-        st.markdown(f"**{len(visited_pages)}/5 sections completed**")
-        
-        # Track quiz score if attempted
-        if st.session_state['quiz_attempted']:
-            st.markdown(f"**Quiz Score: {st.session_state['quiz_score']}/5**")
-        
-        # Learning outcomes reminder
-        st.markdown("---")
-        st.markdown("### Learning Outcomes")
-        st.markdown("""
-        - Understand the ML lifecycle
-        - Choose appropriate modeling approaches
-        - Utilize Amazon Bedrock for generative AI
-        - Implement hyperparameter tuning
-        - Apply distributed training techniques
-        """)
+    # Update
+    x1 = x0 - alpha * grad
+    y1 = x1**2 + 2*np.sin(x1)
     
-    st.markdown("---")
-    st.markdown("### Resources")
+    # Create figure
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Plot function
+    ax.plot(x, y, 'b-', linewidth=2)
+    
+    # Plot current point
+    ax.scatter(x0, y0, color='red', s=100, zorder=3)
+    
+    # Plot update
+    ax.scatter(x1, y1, color='green', s=100, zorder=3)
+    
+    # Plot update vector
+    ax.arrow(x0, y0, x1-x0, y1-y0, head_width=0.2, head_length=0.2, fc='black', ec='black', linewidth=2)
+    
+    # Annotate points
+    ax.annotate("Starting point", (x0, y0), xytext=(x0+0.5, y0+2), arrowprops=dict(facecolor='black', shrink=0.05))
+    ax.annotate("Updated position", (x1, y1), xytext=(x1-0.5, y1+2), arrowprops=dict(facecolor='black', shrink=0.05))
+    
+    # Title and labels
+    ax.set_title(f"Effect of Learning Rate = {alpha}")
+    ax.set_xlabel("Parameter Value")
+    ax.set_ylabel("Loss")
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    return fig
+
+
+def draw_neural_network(ax, layer_sizes, layer_names=None):
+    """Draw a neural network diagram"""
+    if layer_names is None:
+        layer_names = [f"Layer {i+1}" for i in range(len(layer_sizes))]
+    
+    # Vertical spacing
+    v_spacing = 1
+    h_spacing = 3
+    
+    # Compute positions
+    layer_positions = []
+    for i, size in enumerate(layer_sizes):
+        layer_pos = []
+        for j in range(size):
+            layer_pos.append((i*h_spacing, (size-1)/2 - j*v_spacing))
+        layer_positions.append(layer_pos)
+    
+    # Draw nodes
+    for i, layer in enumerate(layer_positions):
+        for j, pos in enumerate(layer):
+            circle = plt.Circle(pos, 0.5, fill=True, 
+                               facecolor='#FF9900' if i==0 else ('#232F3E' if i==len(layer_positions)-1 else '#1E88E5'), 
+                               alpha=0.7)
+            ax.add_patch(circle)
+            
+        # Add layer name
+        if layer:
+            ax.text(i*h_spacing, -3, layer_names[i], ha='center')
+    
+    # Draw edges
+    for i in range(len(layer_positions) - 1):
+        for j, pos_a in enumerate(layer_positions[i]):
+            for k, pos_b in enumerate(layer_positions[i+1]):
+                ax.plot([pos_a[0], pos_b[0]], [pos_a[1], pos_b[1]], 'k-', alpha=0.3)
+    
+    # Set limits
+    ax.set_aspect('equal')
+    ax.set_xlim(-1, (len(layer_sizes) - 1) * h_spacing + 1)
+    ax.set_ylim(-3.5, (max(layer_sizes) - 1) * v_spacing / 2 + 1)
+    ax.axis('off')
+
+
+def setup_page_config():
+    """Set up the Streamlit page configuration"""
+    
+    # Custom CSS for styling
     st.markdown("""
-    - [AWS ML Documentation](https://docs.aws.amazon.com/machine-learning)
-    - [SageMaker Developer Guide](https://docs.aws.amazon.com/sagemaker)
-    - [Amazon Bedrock Documentation](https://docs.aws.amazon.com/bedrock)
-    """)
+    <style>
+        .main-header {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #FF9900;
+            margin-bottom: 1rem;
+        }
+        .sub-header {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 0.8rem;
+            margin-bottom: 0.3rem;
+        }
+        .info-box {
+            background-color: #F0F2F6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .success-box {
+            background-color: #D1FAE5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .warning-box {
+            background-color: #FEF3C7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .tip-box {
+            background-color: #E0F2FE;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #0EA5E9;
+        }
+        .step-box {
+            background-color: #FFFFFF;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .aws-orange {
+            color: #FF9900;
+        }
+        .aws-blue {
+            color: #232F3E;
+        }
+        hr {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        /* Make the tab content container take full height */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #F8F9FA;
+            border-radius: 4px 4px 0px 0px;
+            gap: 1px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .definition {
+            background-color: #EFF6FF;
+            border-left: 5px solid #3B82F6;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .code-box {
+            background-color: #F8F9FA;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 15px 0;
+            border: 1px solid #E5E7EB;
+        }
+        .stButton>button {
+            background-color: #FF9900;
+            color: white;
+        }
+        .stButton>button:hover {
+            background-color: #FFAC31;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Main content with tabs
-tabs = st.tabs([
-    "🏠 Home", 
-    "🔄 ML Lifecycle", 
-    "🧠 Modeling Approaches", 
-    "🤖 Amazon Bedrock", 
-    "🔬 Neural Networks", 
-    "🚂 Model Training", 
-    "⚙️ Hyperparameters", 
-    "❓ Knowledge Check", 
-    "📚 Resources"
-])
 
-# Home tab
-with tabs[0]:
+def initialize_session_state():
+    """Initialize all session state variables"""
+    common.initialize_session_state()
+
+    # Initialize session state variables
+    if 'quiz_score' not in st.session_state:
+        st.session_state['quiz_score'] = 0
+    if 'quiz_attempted' not in st.session_state:
+        st.session_state['quiz_attempted'] = False
+    if 'name' not in st.session_state:
+        st.session_state['name'] = ""
+    if 'visited_ML_Lifecycle' not in st.session_state:
+        st.session_state['visited_ML_Lifecycle'] = False
+    if 'visited_Modeling_Approaches' not in st.session_state:
+        st.session_state['visited_Modeling_Approaches'] = False
+    if 'visited_Amazon_Bedrock' not in st.session_state:
+        st.session_state['visited_Amazon_Bedrock'] = False
+    if 'visited_Neural_Networks' not in st.session_state:
+        st.session_state['visited_Neural_Networks'] = False
+    if 'visited_Model_Training' not in st.session_state:
+        st.session_state['visited_Model_Training'] = False
+
+
+def render_sidebar():
+    """Render the sidebar content"""
+    with st.sidebar:
+        st.image("images/mla_badge.png", width=150)
+        st.markdown("### ML Engineer - Associate")
+        st.markdown("#### Domain 2: ML Model Development")
+        
+        common.render_sidebar()
+
+
+def render_home_tab():
+    """Render content for the Home tab"""
     custom_header("AWS Partner Certification Readiness")
     st.markdown("## Machine Learning Engineer - Associate")
     
@@ -372,8 +396,9 @@ with tabs[0]:
         - Improve models iteratively
         """)
 
-# ML Lifecycle tab
-with tabs[1]:
+
+def render_ml_lifecycle_tab():
+    """Render content for ML Lifecycle tab"""
     # Mark as visited
     st.session_state['visited_ML_Lifecycle'] = True
     
@@ -540,8 +565,9 @@ In this phase, you'll focus on:
     This is why SageMaker offers tools like Experiments to track multiple trials and versions.
     """, "info")
 
-# Modeling Approaches tab
-with tabs[2]:
+
+def render_modeling_approaches_tab():
+    """Render content for Modeling Approaches tab"""
     # Mark as visited
     st.session_state['visited_Modeling_Approaches'] = True
     
@@ -611,7 +637,7 @@ with tabs[2]:
     """)
     
     # Create visualization of supervised learning algorithms
-    st.image('images/supervised_learning.png',width=800)
+    st.image('images/supervised_learning.png', width=800)
     
     # Unsupervised learning
     custom_header("Unsupervised Learning Algorithms", "section")
@@ -628,7 +654,7 @@ with tabs[2]:
         - **Topic Modeling**: Discover abstract topics in documents (LDA, NTM)
         """)
         
-        st.image('images/unsupervised_learning.png',width=800)
+        st.image('images/unsupervised_learning.png', width=800)
 
     with col2:
         # Simple representation of unsupervised learning
@@ -731,8 +757,9 @@ with tabs[2]:
           - Auto-handles seasonality and missing values
         """)
 
-# Amazon Bedrock tab
-with tabs[3]:
+
+def render_amazon_bedrock_tab():
+    """Render content for Amazon Bedrock tab"""
     # Mark as visited
     st.session_state['visited_Amazon_Bedrock'] = True
     
@@ -856,8 +883,9 @@ Unlike traditional ML models built for specific tasks, FMs provide a versatile f
 6. <b>Response:</b> The model generates an answer based on both its training and the supplied context.
     """, "success")
 
-# Neural Networks tab
-with tabs[4]:
+
+def render_neural_networks_tab():
+    """Render content for Neural Networks tab"""
     # Mark as visited
     st.session_state['visited_Neural_Networks'] = True
     
@@ -883,45 +911,6 @@ with tabs[4]:
     with col2:
         # Create a neural network visualization
         fig, ax = plt.subplots(figsize=(8, 6))
-        
-        def draw_neural_network(ax, layer_sizes, layer_names=None):
-            """Draw a neural network diagram"""
-            if layer_names is None:
-                layer_names = [f"Layer {i+1}" for i in range(len(layer_sizes))]
-            
-            # Vertical spacing
-            v_spacing = 1
-            h_spacing = 3
-            
-            # Compute positions
-            layer_positions = []
-            for i, size in enumerate(layer_sizes):
-                layer_pos = []
-                for j in range(size):
-                    layer_pos.append((i*h_spacing, (size-1)/2 - j*v_spacing))
-                layer_positions.append(layer_pos)
-            
-            # Draw nodes
-            for i, layer in enumerate(layer_positions):
-                for j, pos in enumerate(layer):
-                    circle = plt.Circle(pos, 0.5, fill=True, facecolor='#FF9900' if i==0 else ('#232F3E' if i==len(layer_positions)-1 else '#1E88E5'), alpha=0.7)
-                    ax.add_patch(circle)
-                    
-                # Add layer name
-                if layer:
-                    ax.text(i*h_spacing, -3, layer_names[i], ha='center')
-            
-            # Draw edges
-            for i in range(len(layer_positions) - 1):
-                for j, pos_a in enumerate(layer_positions[i]):
-                    for k, pos_b in enumerate(layer_positions[i+1]):
-                        ax.plot([pos_a[0], pos_b[0]], [pos_a[1], pos_b[1]], 'k-', alpha=0.3)
-            
-            # Set limits
-            ax.set_aspect('equal')
-            ax.set_xlim(-1, (len(layer_sizes) - 1) * h_spacing + 1)
-            ax.set_ylim(-3.5, (max(layer_sizes) - 1) * v_spacing / 2 + 1)
-            ax.axis('off')
         
         # Define network architecture
         layer_sizes = [4, 5, 5, 3]
@@ -1097,8 +1086,9 @@ with tabs[4]:
     
     definition_box("Neural Network", "A computational model inspired by the human brain, consisting of layers of interconnected nodes (neurons) that process and transform data, capable of learning complex patterns from examples.")
 
-# Model Training tab
-with tabs[5]:
+
+def render_model_training_tab():
+    """Render content for Model Training tab"""
     # Mark as visited
     st.session_state['visited_Model_Training'] = True
     
@@ -1243,50 +1233,6 @@ with tabs[5]:
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        # Function to create learning rate visualization
-        def plot_learning_rate_effect(alpha):
-            # Simple function with local minimum
-            x = np.linspace(-5, 5, 100)
-            y = x**2 + 2*np.sin(x)
-            
-            # Starting point
-            x0 = 4
-            y0 = x0**2 + 2*np.sin(x0)
-            
-            # Gradient at x0
-            grad = 2*x0 + 2*np.cos(x0)
-            
-            # Update
-            x1 = x0 - alpha * grad
-            y1 = x1**2 + 2*np.sin(x1)
-            
-            # Create figure
-            fig, ax = plt.subplots(figsize=(8, 6))
-            
-            # Plot function
-            ax.plot(x, y, 'b-', linewidth=2)
-            
-            # Plot current point
-            ax.scatter(x0, y0, color='red', s=100, zorder=3)
-            
-            # Plot update
-            ax.scatter(x1, y1, color='green', s=100, zorder=3)
-            
-            # Plot update vector
-            ax.arrow(x0, y0, x1-x0, y1-y0, head_width=0.2, head_length=0.2, fc='black', ec='black', linewidth=2)
-            
-            # Annotate points
-            ax.annotate("Starting point", (x0, y0), xytext=(x0+0.5, y0+2), arrowprops=dict(facecolor='black', shrink=0.05))
-            ax.annotate("Updated position", (x1, y1), xytext=(x1-0.5, y1+2), arrowprops=dict(facecolor='black', shrink=0.05))
-            
-            # Title and labels
-            ax.set_title(f"Effect of Learning Rate = {alpha}")
-            ax.set_xlabel("Parameter Value")
-            ax.set_ylabel("Loss")
-            ax.grid(True, linestyle='--', alpha=0.7)
-            
-            return fig
-        
         # Plot with small learning rate
         fig = plot_learning_rate_effect(0.1)
         st.pyplot(fig)
@@ -1691,9 +1637,9 @@ SageMaker automatically implements early stopping for hyperparameter tuning jobs
         ```
         """)
 
-# Hyperparameters tab
-with tabs[6]:
-    # Hyperparameters content removed as it's combined with the Model Training tab
+
+def render_hyperparameters_tab():
+    """Render content for Hyperparameters tab"""
     custom_header("Hyperparameter Optimization Techniques")
     
     st.markdown("""
@@ -1908,8 +1854,9 @@ with tabs[6]:
     6. Save hyperparameters from successful runs for future reference.
     """, "tip")
 
-# Knowledge Check tab
-with tabs[7]:
+
+def render_knowledge_check_tab():
+    """Render content for Knowledge Check tab"""
     custom_header("Knowledge Check")
     
     st.markdown("""
@@ -2017,8 +1964,9 @@ with tabs[7]:
             st.session_state['quiz_attempted'] = False
             st.rerun()
 
-# Resources tab
-with tabs[8]:
+
+def render_resources_tab():
+    """Render content for Resources tab"""
     custom_header("Additional Resources")
     
     st.markdown("""
@@ -2110,10 +2058,78 @@ with tabs[8]:
           - [Transfer Learning with HuggingFace and BERT](https://github.com/aws/amazon-sagemaker-examples/blob/main/sagemaker-python-sdk/huggingface_sentiment_ipynb)
         """)
 
-# Footer
-st.markdown("---")
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.image("images/aws_logo.png", width=70)
-with col2:
-    st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
+
+def render_footer():
+    """Render the footer"""
+    st.markdown("---")
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        st.image("images/aws_logo.png", width=70)
+    with col2:
+        st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
+
+
+def main():
+    """Main function to run the Streamlit application"""
+    # Set up page config and CSS
+    setup_page_config()
+    
+    # Initialize session state variables
+    initialize_session_state()
+    
+    # Render the sidebar
+    render_sidebar()
+    
+    # Create main content tabs
+    tabs = st.tabs([
+        "🏠 Home", 
+        "🔄 ML Lifecycle", 
+        "🧠 Modeling Approaches", 
+        "🤖 Amazon Bedrock", 
+        "🔬 Neural Networks", 
+        "🚂 Model Training", 
+        "⚙️ Hyperparameters", 
+        "❓ Knowledge Check", 
+        "📚 Resources"
+    ])
+    
+    # Render content for each tab
+    with tabs[0]:
+        render_home_tab()
+    
+    with tabs[1]:
+        render_ml_lifecycle_tab()
+    
+    with tabs[2]:
+        render_modeling_approaches_tab()
+    
+    with tabs[3]:
+        render_amazon_bedrock_tab()
+    
+    with tabs[4]:
+        render_neural_networks_tab()
+    
+    with tabs[5]:
+        render_model_training_tab()
+    
+    with tabs[6]:
+        render_hyperparameters_tab()
+    
+    with tabs[7]:
+        render_knowledge_check_tab()
+    
+    with tabs[8]:
+        render_resources_tab()
+    
+    # Render footer
+    render_footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

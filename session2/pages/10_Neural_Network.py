@@ -1,3 +1,4 @@
+
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -18,14 +19,8 @@ import seaborn as sns
 from streamlit_lottie import st_lottie
 import requests
 import json
-
-# Set page configuration
-st.set_page_config(
-    page_title="Neural Network Explorer",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+import utils.common as common
+import utils.authenticate as authenticate
 
 # ---- AWS Color Scheme ----
 AWS_COLORS = {
@@ -38,101 +33,6 @@ AWS_COLORS = {
     'teal': '#007E99'
 }
 
-# ---- Custom CSS for AWS style ----
-st.markdown("""
-<style>
-    /* AWS color scheme */
-    .stApp {
-        background-color: #FFFFFF;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #F2F3F3;
-        border-radius: 4px 4px 0px 0px;
-        padding: 10px 20px;
-        color: #232F3E;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    h1, h2, h3, h4 {
-        color: #232F3E;
-    }
-    .highlight {
-        background-color: #FF9900;
-        border-radius: 4px;
-        padding: 0.25em 0.5em;
-    }
-    .stButton>button {
-        background-color: #FF9900;
-        color: #232F3E;
-        font-weight: bold;
-        border: none;
-        border-radius: 4px;
-    }
-    .stButton>button:hover {
-        background-color: #E88E00;
-    }
-    # .stSidebar {
-    #     background-color: #232F3E;
-    #     color: white;
-    # }
-    footer {
-        font-size: 0.8rem;
-        padding: 10px;
-        text-align: center;
-        border-top: 1px solid #ddd;
-    }
-    /* Responsive layout */
-    @media (max-width: 768px) {
-        .responsive-container {
-            flex-direction: column !important;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ---- Session Management ----
-def initialize_session_state():
-    if "neural_network" not in st.session_state:
-        st.session_state.neural_network = None
-    if "train_losses" not in st.session_state:
-        st.session_state.train_losses = []
-    if "input_features" not in st.session_state:
-        st.session_state.input_features = 2
-    if "hidden_neurons" not in st.session_state:
-        st.session_state.hidden_neurons = 5
-    if "dataset_type" not in st.session_state:
-        st.session_state.dataset_type = "moons"
-    if "training_in_progress" not in st.session_state:
-        st.session_state.training_in_progress = False
-    if "trained_epochs" not in st.session_state:
-        st.session_state.trained_epochs = 0
-    if "X_train" not in st.session_state:
-        st.session_state.X_train = None
-    if "X_test" not in st.session_state:
-        st.session_state.X_test = None
-    if "y_train" not in st.session_state:
-        st.session_state.y_train = None
-    if "y_test" not in st.session_state:
-        st.session_state.y_test = None
-
-# Initialize session state
-initialize_session_state()
-
-
-# Session management in sidebar
-st.sidebar.header("Session Management")
-if st.sidebar.button("Reset Session"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    initialize_session_state()
-    st.sidebar.success("Session has been reset!")
-
-# ---- Helper Functions ----
 def load_lottie_url(url: str):
     """Load a Lottie animation file from URL"""
     r = requests.get(url)
@@ -167,8 +67,8 @@ def create_dataset(dataset_type, samples=1000):
         X, y = make_circles(n_samples=samples, noise=0.2, factor=0.5, random_state=42)
     else:  # blobs
         X, y = make_classification(n_samples=samples, n_features=2, n_redundant=0, 
-                                   n_informative=2, random_state=42, 
-                                   n_clusters_per_class=1)
+                                  n_informative=2, random_state=42, 
+                                  n_clusters_per_class=1)
     
     # Scale features
     scaler = StandardScaler()
@@ -207,25 +107,214 @@ class SimpleNN(nn.Module):
         }
         return weights
 
-# ---- Main Application ----
-# Title and description
-st.title("🧠 Neural Network")
-st.markdown("""
-This interactive application helps you understand how neural networks work through visualizations and hands-on examples.
-Explore each tab to learn different aspects of neural networks!
-""")
+def setup_page_configuration():
+    """Configure the Streamlit page settings"""
+    st.set_page_config(
+        page_title="Neural Network Explorer",
+        page_icon="🧠",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
-# Tab-based navigation with emojis
-tabs = st.tabs([
-    "📚 Introduction", 
-    "🧩 Building Blocks", 
-    "🔄 Training Process", 
-    "🛠️ Interactive Playground",
-    "🔍 Advanced Concepts"
-])
+setup_page_configuration()
 
-# ---- Tab 1: Introduction ----
-with tabs[0]:
+def apply_custom_css():
+    """Apply custom CSS styling for AWS theme"""
+    st.markdown("""
+    <style>
+        /* AWS color scheme */
+        .stApp {
+            background-color: #FFFFFF;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            background-color: #F2F3F3;
+            border-radius: 4px 4px 0px 0px;
+            padding: 10px 20px;
+            color: #232F3E;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        h1, h2, h3, h4 {
+            color: #232F3E;
+        }
+        .highlight {
+            background-color: #FF9900;
+            border-radius: 4px;
+            padding: 0.25em 0.5em;
+        }
+        .stButton>button {
+            background-color: #FF9900;
+            color: #232F3E;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+        }
+        .stButton>button:hover {
+            background-color: #E88E00;
+        }
+        footer {
+            font-size: 0.8rem;
+            padding: 10px;
+            text-align: center;
+            border-top: 1px solid #ddd;
+        }
+        /* Responsive layout */
+        @media (max-width: 768px) {
+            .responsive-container {
+                flex-direction: column !important;
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+def initialize_session_state():
+    """Initialize session state variables"""
+    if "neural_network" not in st.session_state:
+        st.session_state.neural_network = None
+    if "train_losses" not in st.session_state:
+        st.session_state.train_losses = []
+    if "input_features" not in st.session_state:
+        st.session_state.input_features = 2
+    if "hidden_neurons" not in st.session_state:
+        st.session_state.hidden_neurons = 5
+    if "dataset_type" not in st.session_state:
+        st.session_state.dataset_type = "moons"
+    if "training_in_progress" not in st.session_state:
+        st.session_state.training_in_progress = False
+    if "trained_epochs" not in st.session_state:
+        st.session_state.trained_epochs = 0
+    if "X_train" not in st.session_state:
+        st.session_state.X_train = None
+    if "X_test" not in st.session_state:
+        st.session_state.X_test = None
+    if "y_train" not in st.session_state:
+        st.session_state.y_train = None
+    if "y_test" not in st.session_state:
+        st.session_state.y_test = None
+
+def plot_nn_architecture(input_size=3, hidden_sizes=[4], output_size=2):
+    """Create a visualization of neural network architecture"""
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Determine number of layers
+    n_layers = len(hidden_sizes) + 2  # input + hidden + output
+    layer_sizes = [input_size] + hidden_sizes + [output_size]
+    
+    # Colors
+    input_color = AWS_COLORS['light_blue']
+    hidden_color = AWS_COLORS['orange']
+    output_color = AWS_COLORS['teal']
+    
+    # Max layer height
+    max_neurons = max(layer_sizes)
+    vertical_distance = 0.8 / max_neurons
+    
+    # Position layers horizontally
+    horizontal_distance = 1.0 / (n_layers - 1)
+    
+    # Draw neurons and connections
+    layer_positions = []
+    
+    for l, layer_size in enumerate(layer_sizes):
+        x = l * horizontal_distance
+        
+        # Save neuron positions for this layer
+        neurons = []
+        
+        # Place neurons in this layer
+        for n in range(layer_size):
+            if layer_size == 1:
+                y = 0.5
+            else:
+                y = 0.1 + (n * vertical_distance * max_neurons / layer_size)
+            
+            # Choose color based on layer
+            if l == 0:
+                color = input_color
+            elif l == len(layer_sizes) - 1:
+                color = output_color
+            else:
+                color = hidden_color
+            
+            # Draw neuron
+            circle = plt.Circle((x, y), 0.02, fill=True, color=color)
+            ax.add_patch(circle)
+            
+            # Label
+            if l == 0:
+                ax.text(x - 0.05, y, f"x{n+1}", ha='right', va='center')
+            elif l == len(layer_sizes) - 1:
+                ax.text(x + 0.05, y, f"y{n+1}", ha='left', va='center')
+            
+            neurons.append((x, y))
+        
+        layer_positions.append(neurons)
+    
+    # Draw connections between layers
+    for l in range(len(layer_sizes) - 1):
+        for i, (x1, y1) in enumerate(layer_positions[l]):
+            for j, (x2, y2) in enumerate(layer_positions[l + 1]):
+                ax.plot([x1, x2], [y1, y2], 'gray', alpha=0.5)
+    
+    # Add layer labels
+    for l in range(n_layers):
+        x = l * horizontal_distance
+        if l == 0:
+            ax.text(x, 0.02, "Input\nLayer", ha='center', va='center')
+        elif l == n_layers - 1:
+            ax.text(x, 0.02, "Output\nLayer", ha='center', va='center')
+        else:
+            ax.text(x, 0.02, f"Hidden\nLayer {l}", ha='center', va='center')
+    
+    ax.set_xlim(-0.1, 1.1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+    return fig
+
+def plot_gradient_descent():
+    """Create a visualization of gradient descent optimization"""
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Create a simple function (bowl shaped)
+    x = np.linspace(-5, 5, 100)
+    y = np.linspace(-5, 5, 100)
+    X, Y = np.meshgrid(x, y)
+    Z = X**2 + Y**2
+    
+    # Plot contour
+    contour = ax.contour(X, Y, Z, levels=20, cmap='Blues', alpha=0.8)
+    ax.clabel(contour, inline=True, fontsize=8)
+    
+    # Plot gradient descent path
+    path_x = [-4]
+    path_y = [4]
+    learning_rate = 0.3
+    
+    for _ in range(10):
+        # Compute gradient
+        grad_x = 2 * path_x[-1]
+        grad_y = 2 * path_y[-1]
+        
+        # Update position
+        new_x = path_x[-1] - learning_rate * grad_x
+        new_y = path_y[-1] - learning_rate * grad_y
+        
+        path_x.append(new_x)
+        path_y.append(new_y)
+    
+    ax.plot(path_x, path_y, 'ro-', markersize=8, linewidth=2)
+    ax.set_xlabel('Weight 1')
+    ax.set_ylabel('Weight 2')
+    ax.set_title('Gradient Descent Optimization')
+    return fig
+
+def render_introduction_tab():
+    """Render the Introduction tab content"""
     st.header("📚 Introduction to Neural Networks")
     
     col1, col2 = st.columns([3, 2])
@@ -253,14 +342,6 @@ with tabs[0]:
         - 🏥 Medical diagnostics
         """)
     
-    with col2:
-        # Load and display a Lottie animation
-        brain_animation = load_lottie_url("https://assets5.lottiefiles.com/packages/lf20_UJNc2t.json")
-        if brain_animation:
-            st_lottie(brain_animation, speed=1, height=400, key="brain_animation")
-        else:
-            st.image("https://cdn.pixabay.com/photo/2017/09/05/11/37/ai-2717282_1280.jpg", 
-                     caption="Neural Network Visualization")
     
     st.markdown("---")
     
@@ -374,8 +455,8 @@ with tabs[0]:
         ax.set_title('Tanh Function')
         st.pyplot(fig)
 
-# ---- Tab 2: Building Blocks ----
-with tabs[1]:
+def render_building_blocks_tab():
+    """Render the Building Blocks tab content"""
     st.header("🧩 Building Blocks of Neural Networks")
     
     st.subheader("Neural Network Architecture")
@@ -391,84 +472,6 @@ with tabs[1]:
     """)
     
     # Neural Network Architecture Visualization
-    def plot_nn_architecture(input_size=3, hidden_sizes=[4], output_size=2):
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Determine number of layers
-        n_layers = len(hidden_sizes) + 2  # input + hidden + output
-        layer_sizes = [input_size] + hidden_sizes + [output_size]
-        
-        # Colors
-        input_color = AWS_COLORS['light_blue']
-        hidden_color = AWS_COLORS['orange']
-        output_color = AWS_COLORS['teal']
-        
-        # Max layer height
-        max_neurons = max(layer_sizes)
-        vertical_distance = 0.8 / max_neurons
-        
-        # Position layers horizontally
-        horizontal_distance = 1.0 / (n_layers - 1)
-        
-        # Draw neurons and connections
-        layer_positions = []
-        
-        for l, layer_size in enumerate(layer_sizes):
-            x = l * horizontal_distance
-            
-            # Save neuron positions for this layer
-            neurons = []
-            
-            # Place neurons in this layer
-            for n in range(layer_size):
-                if layer_size == 1:
-                    y = 0.5
-                else:
-                    y = 0.1 + (n * vertical_distance * max_neurons / layer_size)
-                
-                # Choose color based on layer
-                if l == 0:
-                    color = input_color
-                elif l == len(layer_sizes) - 1:
-                    color = output_color
-                else:
-                    color = hidden_color
-                
-                # Draw neuron
-                circle = plt.Circle((x, y), 0.02, fill=True, color=color)
-                ax.add_patch(circle)
-                
-                # Label
-                if l == 0:
-                    ax.text(x - 0.05, y, f"x{n+1}", ha='right', va='center')
-                elif l == len(layer_sizes) - 1:
-                    ax.text(x + 0.05, y, f"y{n+1}", ha='left', va='center')
-                
-                neurons.append((x, y))
-            
-            layer_positions.append(neurons)
-        
-        # Draw connections between layers
-        for l in range(len(layer_sizes) - 1):
-            for i, (x1, y1) in enumerate(layer_positions[l]):
-                for j, (x2, y2) in enumerate(layer_positions[l + 1]):
-                    ax.plot([x1, x2], [y1, y2], 'gray', alpha=0.5)
-        
-        # Add layer labels
-        for l in range(n_layers):
-            x = l * horizontal_distance
-            if l == 0:
-                ax.text(x, 0.02, "Input\nLayer", ha='center', va='center')
-            elif l == n_layers - 1:
-                ax.text(x, 0.02, "Output\nLayer", ha='center', va='center')
-            else:
-                ax.text(x, 0.02, f"Hidden\nLayer {l}", ha='center', va='center')
-        
-        ax.set_xlim(-0.1, 1.1)
-        ax.set_ylim(0, 1)
-        ax.axis('off')
-        return fig
-    
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -642,8 +645,8 @@ with tabs[1]:
         st.image("https://miro.medium.com/max/1000/1*sX6T0Y4_95Hm2Q3ICsCYig.gif", 
                  caption="Recurrent Network", width=250)
 
-# ---- Tab 3: Training Process ----
-with tabs[2]:
+def render_training_process_tab():
+    """Render the Training Process tab content"""
     st.header("🔄 Training Neural Networks")
     
     st.markdown("""
@@ -687,42 +690,6 @@ with tabs[2]:
         """)
         
         # Simple animation of gradient descent
-        def plot_gradient_descent():
-            fig, ax = plt.subplots(figsize=(8, 6))
-            
-            # Create a simple function (bowl shaped)
-            x = np.linspace(-5, 5, 100)
-            y = np.linspace(-5, 5, 100)
-            X, Y = np.meshgrid(x, y)
-            Z = X**2 + Y**2
-            
-            # Plot contour
-            contour = ax.contour(X, Y, Z, levels=20, cmap='Blues', alpha=0.8)
-            ax.clabel(contour, inline=True, fontsize=8)
-            
-            # Plot gradient descent path
-            path_x = [-4]
-            path_y = [4]
-            learning_rate = 0.3
-            
-            for _ in range(10):
-                # Compute gradient
-                grad_x = 2 * path_x[-1]
-                grad_y = 2 * path_y[-1]
-                
-                # Update position
-                new_x = path_x[-1] - learning_rate * grad_x
-                new_y = path_y[-1] - learning_rate * grad_y
-                
-                path_x.append(new_x)
-                path_y.append(new_y)
-            
-            ax.plot(path_x, path_y, 'ro-', markersize=8, linewidth=2)
-            ax.set_xlabel('Weight 1')
-            ax.set_ylabel('Weight 2')
-            ax.set_title('Gradient Descent Optimization')
-            return fig
-        
         st.pyplot(plot_gradient_descent())
     
     st.markdown("---")
@@ -926,8 +893,8 @@ with tabs[2]:
         causing gradients to vanish during backpropagation.
         """)
 
-# ---- Tab 4: Interactive Playground ----
-with tabs[3]:
+def render_interactive_playground_tab():
+    """Render the Interactive Playground tab content"""
     st.header("🛠️ Neural Network Interactive Playground")
     
     st.markdown("""
@@ -1209,16 +1176,16 @@ with tabs[3]:
             if st.checkbox("Show weight values"):
                 st.markdown("### Input to Hidden Layer Weights")
                 st.dataframe(pd.DataFrame(weights['w1'], 
-                                         columns=[f"Input {i+1}" for i in range(n_input)],
-                                         index=[f"Hidden {i+1}" for i in range(n_hidden)]))
+                                        columns=[f"Input {i+1}" for i in range(n_input)],
+                                        index=[f"Hidden {i+1}" for i in range(n_hidden)]))
                 
                 st.markdown("### Hidden to Output Layer Weights")
                 st.dataframe(pd.DataFrame(weights['w2'], 
-                                         columns=[f"Hidden {i+1}" for i in range(n_hidden)],
-                                         index=["Output"]))
+                                        columns=[f"Hidden {i+1}" for i in range(n_hidden)],
+                                        index=["Output"]))
 
-# ---- Tab 5: Advanced Concepts ----
-with tabs[4]:
+def render_advanced_concepts_tab():
+    """Render the Advanced Concepts tab content"""
     st.header("🔍 Advanced Neural Network Concepts")
     
     st.markdown("""
@@ -1562,9 +1529,68 @@ with tabs[4]:
                 st.image("https://miro.medium.com/max/1400/1*50kQyKrKxxAhPFIwJzIKAQ.png",
                         caption="Diffusion Process")
 
-# ---- Footer ----
-st.markdown("""
-<footer>
-© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
-</footer>
-""", unsafe_allow_html=True)
+def render_footer():
+    """Render the page footer"""
+    st.markdown("""
+    <footer>
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </footer>
+    """, unsafe_allow_html=True)
+
+def main():
+    """Main application function"""
+   
+    # Apply custom CSS
+    apply_custom_css()
+    
+    # Initialize session state
+    initialize_session_state()
+    common.initialize_session_state()
+
+    # Session management in sidebar
+    with st.sidebar:
+        common.render_sidebar()
+
+    # Title and description
+    st.title("🧠 Neural Network")
+    st.markdown("""
+    This interactive application helps you understand how neural networks work through visualizations and hands-on examples.
+    Explore each tab to learn different aspects of neural networks!
+    """)
+
+    # Tab-based navigation with emojis
+    tabs = st.tabs([
+        "📚 Introduction", 
+        "🧩 Building Blocks", 
+        "🔄 Training Process", 
+        "🛠️ Interactive Playground",
+        "🔍 Advanced Concepts"
+    ])
+
+    # Render content for each tab
+    with tabs[0]:
+        render_introduction_tab()
+    
+    with tabs[1]:
+        render_building_blocks_tab()
+    
+    with tabs[2]:
+        render_training_process_tab()
+    
+    with tabs[3]:
+        render_interactive_playground_tab()
+    
+    with tabs[4]:
+        render_advanced_concepts_tab()
+    
+    # Render footer
+    render_footer()
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

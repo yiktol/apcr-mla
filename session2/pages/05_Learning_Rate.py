@@ -18,14 +18,8 @@ from io import BytesIO
 import altair as alt
 from streamlit_lottie import st_lottie
 import json
-
-# Page configuration
-st.set_page_config(
-    page_title="ML Concepts Explorer",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+import utils.common as common
+import utils.authenticate as authenticate
 
 # AWS color palette
 AWS_COLORS = {
@@ -38,59 +32,69 @@ AWS_COLORS = {
     'dark': '#16191F'         # Very dark blue/black
 }
 
-# Custom CSS styles
-st.markdown(f"""
-<style>
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 10px;
-    }}
-    .stTabs [data-baseweb="tab"] {{
-        background-color: {AWS_COLORS['mid']};
-        border-radius: 4px 4px 0px 0px;
-        padding: 15px 20px;
-        color: {AWS_COLORS['primary']};
-    }}
-    .stTabs [aria-selected="true"] {{
-        background-color: {AWS_COLORS['secondary']};
-        color: {AWS_COLORS['light']};
-    }}
-    .stButton > button {{
-        background-color: {AWS_COLORS['secondary']};
-        color: {AWS_COLORS['primary']};
-        border: none;
-        border-radius: 4px;
-        padding: 10px 24px;
-        font-weight: bold;
-    }}
-    .highlight {{
-        background-color: {AWS_COLORS['mid']};
-        border-radius: 10px;
-        padding: 20px;
-        margin: 10px 0;
-        border-left: 5px solid {AWS_COLORS['secondary']};
-    }}
-    .title {{
-        color: {AWS_COLORS['primary']};
-        font-size: 30px;
-        font-weight: bold;
-        margin-bottom: 20px;
-    }}
-    .subtitle {{
-        color: {AWS_COLORS['accent2']};
-        font-size: 20px;
-        font-weight: bold;
-        margin: 15px 0;
-    }}
-    .caption {{
-        font-size: 14px;
-        color: {AWS_COLORS['primary']};
-        font-style: italic;
-    }}
-</style>
-""", unsafe_allow_html=True)
+def set_page_config():
+    """Configure the Streamlit page settings"""
+    st.set_page_config(
+        page_title="ML Concepts Explorer",
+        page_icon="🧠",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+set_page_config()
+def load_custom_css():
+    """Load custom CSS styles"""
+    st.markdown(f"""
+    <style>
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 10px;
+        }}
+        .stTabs [data-baseweb="tab"] {{
+            background-color: {AWS_COLORS['mid']};
+            border-radius: 4px 4px 0px 0px;
+            padding: 15px 20px;
+            color: {AWS_COLORS['primary']};
+        }}
+        .stTabs [aria-selected="true"] {{
+            background-color: {AWS_COLORS['secondary']};
+            color: {AWS_COLORS['light']};
+        }}
+        .stButton > button {{
+            background-color: {AWS_COLORS['secondary']};
+            color: {AWS_COLORS['primary']};
+            border: none;
+            border-radius: 4px;
+            padding: 10px 24px;
+            font-weight: bold;
+        }}
+        .highlight {{
+            background-color: {AWS_COLORS['mid']};
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            border-left: 5px solid {AWS_COLORS['secondary']};
+        }}
+        .title {{
+            color: {AWS_COLORS['primary']};
+            font-size: 30px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }}
+        .subtitle {{
+            color: {AWS_COLORS['accent2']};
+            font-size: 20px;
+            font-weight: bold;
+            margin: 15px 0;
+        }}
+        .caption {{
+            font-size: 14px;
+            color: {AWS_COLORS['primary']};
+            font-style: italic;
+        }}
+    </style>
+    """, unsafe_allow_html=True)
 
-# Initialize Session State
 def init_session_state():
+    """Initialize session state variables"""
     if 'hyperparams' not in st.session_state:
         st.session_state.hyperparams = {
             'generated_data': None,
@@ -115,37 +119,8 @@ def init_session_state():
             'final_loss': None,
         }
 
-# Initialize session state at app start
-init_session_state()
-
-# Sidebar for session management
-with st.sidebar:
-    st.title("🔄 Session Management")
-    if st.button("Reset All Sessions"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        init_session_state()
-        st.success("Session reset successfully!")
-        
-    st.markdown("---")
-    st.markdown("""
-    <div class='highlight'>
-    <p>This application helps you learn key machine learning concepts through interactive examples:</p>
-    <ul>
-        <li>Hyperparameters</li>
-        <li>Learning Rate</li>
-        <li>Early Stopping</li>
-    </ul>
-    <p>Use the tabs above to navigate between concepts.</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Add AWS-styled logo at the bottom
-    st.markdown("---")
-    st.markdown("<div style='text-align: center'>Powered by <b>ML Explorer</b></div>", unsafe_allow_html=True)
-
-# Load animations/lottie files
 def load_lottie_url(url):
+    """Load a Lottie animation from URL"""
     try:
         r = requests.get(url)
         if r.status_code != 200:
@@ -154,15 +129,26 @@ def load_lottie_url(url):
     except:
         return None
 
-# Title
-st.markdown("<div class='title'>Interactive Machine Learning Concepts Explorer</div>", unsafe_allow_html=True)
-st.markdown("Explore key machine learning concepts through hands-on interactive examples")
+def render_sidebar():
+    """Render the sidebar content"""
+    with st.sidebar:
+        common.render_sidebar()
+        
+        with st.expander("About This App", expanded=False):
+            st.markdown("""
+            <div class='highlight'>
+            <p>This application helps you learn key machine learning concepts through interactive examples:</p>
+            <ul>
+                <li>Hyperparameters</li>
+                <li>Learning Rate</li>
+                <li>Early Stopping</li>
+            </ul>
+            <p>Use the tabs above to navigate between concepts.</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-# Main tabs
-tabs = st.tabs(["🎛️ Hyperparameters", "📈 Learning Rate", "🛑 Early Stopping"])
-
-# Tab 1: Hyperparameters
-with tabs[0]:
+def render_hyperparameters_tab():
+    """Render the hyperparameters tab content"""
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -179,14 +165,6 @@ with tabs[0]:
         - Number of trees in a random forest
         """)
     
-    with col2:
-        # Display a relevant animation
-        lottie_hyper = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_khzniaya.json")
-        if lottie_hyper:
-            st_lottie(lottie_hyper, height=200, key="hyper_animation")
-        else:
-            st.image("https://miro.medium.com/v2/resize:fit:828/format:webp/1*oLMItzWLblVaH6RFQVDmpg.jpeg", caption="Hyperparameter tuning concept")
-
     st.markdown("---")
     st.markdown("<div class='subtitle'>Interactive Demo: SVM Classifier Hyperparameter Tuning</div>", unsafe_allow_html=True)
     
@@ -319,8 +297,8 @@ with tabs[0]:
         In practice, a combination of these methods is often used, starting with random search to find promising regions, followed by more focused tuning.
         """)
 
-# Tab 2: Learning Rate
-with tabs[1]:
+def render_learning_rate_tab():
+    """Render the learning rate tab content"""
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -410,12 +388,6 @@ with tabs[1]:
                     'final_test_loss': test_losses[-1]
                 }
                 
-                # Find best learning rate so far
-                # if 'best_lr' not in st.session_state.learning_rate or \
-                #    st.session_state.learning_rate['histories'][selected_lr]['final_test_loss'] < \
-                #    st.session_state.learning_rate['histories'][st.session_state.learning_rate['best_lr']]['final_test_loss']:
-                #     st.session_state.learning_rate['best_lr'] = selected_lr
-
             # Find best learning rate so far
             if 'best_lr' not in st.session_state.learning_rate or \
             st.session_state.learning_rate['best_lr'] is None:
@@ -425,8 +397,6 @@ with tabs[1]:
                 best_test_loss = st.session_state.learning_rate['histories'][st.session_state.learning_rate['best_lr']]['final_test_loss']
                 if current_test_loss < best_test_loss:
                     st.session_state.learning_rate['best_lr'] = selected_lr
-
-
 
     with col2:
         # Display results if model has been trained
@@ -559,8 +529,8 @@ with tabs[1]:
         **Learning Rate Finder**: Modern practice often involves using a learning rate finder that tests multiple learning rates in a single run to identify the optimal rate.
         """)
 
-# Tab 3: Early Stopping
-with tabs[2]:
+def render_early_stopping_tab():
+    """Render the early stopping tab content"""
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -845,10 +815,53 @@ with tabs[2]:
             # Show a comparison image
             st.image("https://miro.medium.com/v2/resize:fit:1400/format:webp/1*0KMm0nouBZJZwvUVi2T2uw.png", caption="Early stopping can prevent overfitting")
 
-# Add a footer
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: gray; padding: 10px;'>
-ML Concepts Explorer © 2025 | Built with Streamlit | Images and content for educational purposes only
-</div>
-""", unsafe_allow_html=True)
+def render_footer():
+    """Render the footer of the application"""
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; color: gray; padding: 10px;'>
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </div>
+    """, unsafe_allow_html=True)
+
+def main():
+    """Main function to run the application"""
+    
+    # Initialize session state
+    common.initialize_session_state()
+    init_session_state()
+    
+    # Apply custom CSS
+    load_custom_css()
+    
+    # Render sidebar
+    render_sidebar()
+
+    # Title
+    st.markdown("<div class='title'>Interactive Machine Learning Concepts Explorer</div>", unsafe_allow_html=True)
+    st.markdown("Explore key machine learning concepts through hands-on interactive examples")
+
+    # Main tabs
+    tabs = st.tabs(["🎛️ Hyperparameters", "📈 Learning Rate", "🛑 Early Stopping"])
+
+    # Tab contents
+    with tabs[0]:
+        render_hyperparameters_tab()
+    
+    with tabs[1]:
+        render_learning_rate_tab()
+        
+    with tabs[2]:
+        render_early_stopping_tab()
+    
+    # Render footer
+    render_footer()
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

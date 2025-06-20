@@ -4,17 +4,18 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.datasets import make_blobs, fetch_20newsgroups, load_iris, make_swiss_roll
+from sklearn.datasets import make_blobs, fetch_20newsgroups, load_iris, make_swiss_roll, make_classification
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.decomposition import PCA, LatentDirichletAllocation, TruncatedSVD
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, precision_recall_fscore_support, confusion_matrix, roc_curve, auc
 from sklearn.ensemble import IsolationForest
 import altair as alt
 import time
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import umap
 import networkx as nx
 from gensim.models import Word2Vec
@@ -27,12 +28,9 @@ from io import BytesIO
 import base64
 import requests
 from datetime import datetime
-
-# Download NLTK resources
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
+import utils.common as common
+import utils.authenticate as authenticate
+from wordcloud import WordCloud
 
 # Set page configuration
 st.set_page_config(
@@ -42,137 +40,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Define AWS Color Scheme
-AWS_COLORS = {
-    'orange': '#FF9900',
-    'blue': '#232F3E',
-    'light_blue': '#1A73E8',
-    'grey': '#545B64',
-    'light_grey': '#D5DBDB',
-    'white': '#FFFFFF',
-    'green': '#008296',
-    'red': '#D13212',
-    'dark_orange': '#E76D0C'
-}
 
-# Custom CSS
-st.markdown("""
-<style>
-    /* Main styling */
-    .main {
-        background-color: #FFFFFF;
-    }
-    
-    /* Tab styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-        background-color: #FFFFFF;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #D5DBDB;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding: 10px 20px;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900;
-        color: #232F3E;
-    }
-    
-    /* Card styling */
-    .card {
-        border-radius: 5px;
-        padding: 20px;
-        margin-bottom: 20px;
-        background-color: #F7F7F7;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    .metric-card {
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 10px;
-        background-color: #232F3E;
-        color: white;
-        text-align: center;
-    }
-    
-    /* Button styling */
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 8px 16px;
-        font-weight: bold;
-    }
-    
-    .stButton>button:hover {
-        background-color: #E76D0C;
-    }
-    
-    /* Headers */
-    h1, h2, h3 {
-        color: #232F3E;
-    }
-    
-    h1 {
-        font-weight: bold;
-        border-bottom: 2px solid #FF9900;
-        padding-bottom: 10px;
-    }
-    
-    /* Progress bar */
-    .stProgress > div > div {
-        background-color: #FF9900;
-    }
-    
-    /* Sidebar */
-    .sidebar .sidebar-content {
-        background-color: #232F3E;
-        color: white;
-    }
-    
-    /* Info boxes */
-    .info-box {
-        background-color: #F0F8FF;
-        border-left: 5px solid #1A73E8;
-        padding: 10px;
-        margin-bottom: 15px;
-    }
-    
-    /* Algorithm description */
-    .algorithm-description {
-        background-color: #F5F5F5;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 20px;
-        border-left: 5px solid #FF9900;
-    }
-    
-    /* Code blocks */
-    code {
-        background-color: #F0F0F0;
-        padding: 2px 5px;
-        border-radius: 3px;
-        font-family: monospace;
-    }
-    
-    pre {
-        background-color: #232F3E;
-        color: #FFFFFF;
-        padding: 15px;
-        border-radius: 5px;
-        overflow-x: auto;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Download NLTK resources
+def download_nltk_resources():
+    try:
+        nltk.data.find('corpora/stopwords')
+    except LookupError:
+        nltk.download('stopwords', quiet=True)
 
-# Initialize session state
+
+# Initialize session state variables for the app
 def init_session_state():
     if 'initialized_usup' not in st.session_state:
         st.session_state.initialized_usup = True
@@ -211,53 +88,164 @@ def init_session_state():
         st.session_state.pca_components = None
         st.session_state.pca_explained_variance = None
 
-# Initialize session state
-init_session_state()
 
-# Sidebar
-with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg", width=100)
-    st.title("Session Management")
+# Create sliding window features from a time series
+def create_sliding_window_features(ts, window_size=10):
+    """Create sliding window features from a time series."""
+    n = len(ts)
+    X = np.zeros((n - window_size + 1, window_size))
     
-    if st.button("Reset Session", key="reset_session"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        init_session_state()
-        st.success("Session has been reset!")
+    for i in range(n - window_size + 1):
+        X[i, :] = ts[i:i + window_size]
     
-    st.divider()
-    st.subheader("About This App")
-    st.write("""
-    This interactive application demonstrates Amazon SageMaker's built-in unsupervised learning algorithms.
-    Explore each algorithm with interactive examples and visualizations.
-    """)
-    
-    st.divider()
-    st.subheader("Resources")
+    return X
+
+
+# Define AWS Color Scheme
+AWS_COLORS = {
+    'orange': '#FF9900',
+    'blue': '#232F3E',
+    'light_blue': '#1A73E8',
+    'grey': '#545B64',
+    'light_grey': '#D5DBDB',
+    'white': '#FFFFFF',
+    'green': '#008296',
+    'red': '#D13212',
+    'dark_orange': '#E76D0C'
+}
+
+
+# Set custom CSS for styling
+def set_custom_css():
     st.markdown("""
-    - [SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
-    - [AWS Machine Learning](https://aws.amazon.com/machine-learning/)
-    - [AWS Training & Certification](https://aws.amazon.com/training/)
-    """)
+    <style>
+        /* Main styling */
+        .main {
+            background-color: #FFFFFF;
+        }
+        
+        /* Tab styling */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+            background-color: #FFFFFF;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #D5DBDB;
+            border-radius: 4px 4px 0px 0px;
+            gap: 1px;
+            padding: 10px 20px;
+        }
+        
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900;
+            color: #232F3E;
+        }
+        
+        /* Card styling */
+        .card {
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #F7F7F7;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .metric-card {
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #232F3E;
+            color: white;
+            text-align: center;
+        }
+        
+        /* Button styling */
+        .stButton>button {
+            background-color: #FF9900;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-weight: bold;
+        }
+        
+        .stButton>button:hover {
+            background-color: #E76D0C;
+        }
+        
+        /* Headers */
+        h1, h2, h3 {
+            color: #232F3E;
+        }
+        
+        h1 {
+            font-weight: bold;
+            border-bottom: 2px solid #FF9900;
+            padding-bottom: 10px;
+        }
+        
+        /* Progress bar */
+        .stProgress > div > div {
+            background-color: #FF9900;
+        }
+        
+        /* Sidebar */
+        .sidebar .sidebar-content {
+            background-color: #232F3E;
+            color: white;
+        }
+        
+        /* Info boxes */
+        .info-box {
+            background-color: #F0F8FF;
+            border-left: 5px solid #1A73E8;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        /* Algorithm description */
+        .algorithm-description {
+            background-color: #F5F5F5;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 5px solid #FF9900;
+        }
+        
+        /* Code blocks */
+        code {
+            background-color: #F0F0F0;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        pre {
+            background-color: #232F3E;
+            color: #FFFFFF;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        /* Footer */
+        .footer {
+            position: relative;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 15px;
+            color: #545B64;
+            font-size: 12px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Main content
-st.title("Amazon SageMaker Unsupervised Learning Explorer")
-st.markdown("""
-This interactive application helps you understand the main built-in unsupervised learning algorithms available in Amazon SageMaker. 
-Select an algorithm tab below to explore its features, use cases, and see it in action with interactive examples.
-""")
 
-tabs = st.tabs([
-    "🔵 K-means", 
-    "📚 LDA", 
-    "🧩 Object2Vec", 
-    "🌲 Random Cut Forest", 
-    "🌐 IP Insights", 
-    "📊 PCA"
-])
-
-# ------------- K-means Tab -------------
-with tabs[0]:
+def render_kmeans_tab():
     st.header("🔵 K-means Clustering")
     
     st.markdown("""
@@ -615,9 +603,9 @@ role = sagemaker.get_execution_role()</code>
         </pre>
         </div>
         """, unsafe_allow_html=True)
-    
-# ------------- LDA Tab -------------
-with tabs[1]:
+
+
+def render_lda_tab():
     st.header("📚 Latent Dirichlet Allocation (LDA)")
     
     st.markdown("""
@@ -798,8 +786,6 @@ with tabs[1]:
                     st.success(f"Processed {len(documents)} documents with {X.shape[1]} features")
                     
                     # Show word cloud of the corpus
-                    from wordcloud import WordCloud
-                    
                     wordcloud = WordCloud(
                         width=800, 
                         height=400, 
@@ -1123,8 +1109,8 @@ print(topics)
         </div>
         """, unsafe_allow_html=True)
 
-# ------------- Object2Vec Tab -------------
-with tabs[2]:
+
+def render_obj2vec_tab():
     st.header("🧩 Object2Vec")
     
     st.markdown("""
@@ -1445,8 +1431,8 @@ with tabs[2]:
                 
                 if st.button("Train Embeddings", key="train_movie_embeddings"):
                     with st.spinner("Training embeddings..."):
-                        # This is a simplified version, in a real scenario we would use a proper embedding model
-                        # Here we'll create synthetic embeddings for demonstration purposes
+                        # This is a simplified version, in a real scenario we would use the actual IP Insights algorithm.
+                        # For this demo, we'll create synthetic embeddings for demonstration purposes
                         
                         # Create user and movie IDs
                         user_ids = st.session_state.obj2vec_interactions['user_id'].unique()
@@ -1505,6 +1491,7 @@ with tabs[2]:
             embedding_ids = list(range(len(user_embeddings))) + list(range(len(movie_embeddings)))
             
             # Reduce to 2D
+            from sklearn.manifold import TSNE
             tsne = TSNE(n_components=2, random_state=42)
             embeddings_2d = tsne.fit_transform(all_embeddings)
             
@@ -1717,8 +1704,8 @@ word_vectors = word_embedding_predictor.predict(words)
         </div>
         """, unsafe_allow_html=True)
 
-# ------------- Random Cut Forest Tab -------------
-with tabs[3]:
+
+def render_rcf_tab():
     st.header("🌲 Random Cut Forest (RCF)")
     
     st.markdown("""
@@ -2078,8 +2065,6 @@ with tabs[3]:
                 st.markdown("### Anomaly Detection Performance")
                 
                 # Calculate metrics
-                from sklearn.metrics import precision_recall_fscore_support, confusion_matrix, roc_curve, auc
-                
                 y_true = st.session_state.rcf_labels.astype(bool)
                 y_pred = st.session_state.rcf_anomalies
                 
@@ -2332,8 +2317,8 @@ anomaly_scores = rcf_predictor.predict(test_data)
         </div>
         """, unsafe_allow_html=True)
 
-# ------------- IP Insights Tab -------------
-with tabs[4]:
+
+def render_ip_insights_tab():
     st.header("🌐 IP Insights")
     
     st.markdown("""
@@ -2478,7 +2463,6 @@ with tabs[4]:
                 st.success(f"Generated {len(access_df)} access logs with {n_anomalies} anomalies")
     
     with ip_col2:
-        # if hasattr(st.session_state, 'ip_data') and not st.session_state.ip_data.empty:
         if 'ip_data' in st.session_state and st.session_state.ip_data is not None and not st.session_state.ip_data.empty:
             # Display some statistics about the data
             st.markdown("### Access Log Overview")
@@ -2501,7 +2485,6 @@ with tabs[4]:
         else:
             st.warning("No data available. Please load the data first.")
     
-    # if hasattr(st.session_state, 'ip_data') and not st.session_state.ip_data.empty:
     if 'ip_data' in st.session_state and st.session_state.ip_data is not None and not st.session_state.ip_data.empty:
         st.divider()
         st.subheader("Train IP Insights Model")
@@ -2929,8 +2912,8 @@ scores = predictor.predict(test_data)
         </div>
         """, unsafe_allow_html=True)
 
-# ------------- PCA Tab -------------
-with tabs[5]:
+
+def render_pca_tab():
     st.header("📊 Principal Component Analysis (PCA)")
     
     st.markdown("""
@@ -3541,46 +3524,77 @@ transformed_data = transformer.output_path
         </div>
         """, unsafe_allow_html=True)
 
-# Helper functions
-def create_sliding_window_features(ts, window_size=10):
-    """Create sliding window features from a time series."""
-    n = len(ts)
-    X = np.zeros((n - window_size + 1, window_size))
-    
-    for i in range(n - window_size + 1):
-        X[i, :] = ts[i:i + window_size]
-    
-    return X
 
-# Run the app
+def render_footer():
+    st.markdown("""
+    <div class="footer">
+        © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def main():
+
+    # Initialize prerequisites
+    download_nltk_resources()
+    common.initialize_session_state()
+    init_session_state()
+    set_custom_css()
+    
+    # Sidebar
+    with st.sidebar:
+        common.render_sidebar()
+        
+        with st.expander("About This App", expanded=False):
+            st.write("""
+            This interactive application demonstrates Amazon SageMaker's built-in unsupervised learning algorithms.
+            Explore each algorithm with interactive examples and visualizations.
+            """)
+    
+    # Main content
+    st.title("Amazon SageMaker Unsupervised Learning Explorer")
+    st.markdown("""
+    This interactive application helps you understand the main built-in unsupervised learning algorithms available in Amazon SageMaker. 
+    Select an algorithm tab below to explore its features, use cases, and see it in action with interactive examples.
+    """)
+    
+    tabs = st.tabs([
+        "🔵 K-means", 
+        "📚 LDA", 
+        "🧩 Object2Vec", 
+        "🌲 Random Cut Forest", 
+        "🌐 IP Insights", 
+        "📊 PCA"
+    ])
+    
+    with tabs[0]:
+        render_kmeans_tab()
+    
+    with tabs[1]:
+        render_lda_tab()
+    
+    with tabs[2]:
+        render_obj2vec_tab()
+    
+    with tabs[3]:
+        render_rcf_tab()
+    
+    with tabs[4]:
+        render_ip_insights_tab()
+    
+    with tabs[5]:
+        render_pca_tab()
+    
+    # Add footer
+    render_footer()
+
+
+# Main execution flow
 if __name__ == "__main__":
-    pass  # The Streamlit app is already running at this point
-# ```
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
 
-# This comprehensive Streamlit application showcases Amazon SageMaker's unsupervised learning algorithms with interactive examples and visualizations. Here's a summary of what the application includes:
-
-# ### Key Features:
-# 1. **Tab-based Navigation**: Six tabs with emojis for different algorithms
-# 2. **Modern UI/UX**: AWS color scheme, card-based layout, and responsive design 
-# 3. **Interactive Examples**: Each algorithm has configurable parameters and visual results
-# 4. **Comprehensive Visualizations**: Interactive plots, charts, and 3D renderings
-# 5. **Session Management**: Reset functionality in the sidebar
-# 6. **Educational Content**: Algorithm descriptions, use cases, and SageMaker implementation code
-
-# ### Algorithms Included:
-# 1. **K-means**: Clustering visualization with optimal k selection
-# 2. **LDA**: Topic modeling with word distribution and document-topic analysis
-# 3. **Object2Vec**: Word embeddings and recommendation system demonstrations
-# 4. **Random Cut Forest**: Anomaly detection in 2D data and time series
-# 5. **IP Insights**: IP-entity relationship analysis and anomaly detection
-# 6. **PCA**: Dimensionality reduction with variance analysis and reconstructions
-
-# ### Implementation Details:
-# - Used the latest Python libraries (Streamlit, Plotly, Pandas, NumPy, etc.)
-# - Incorporated interactive visualizations with Plotly and Matplotlib
-# - Added session state management for resetting user state
-# - Included detailed SageMaker implementation code for each algorithm
-# - Created synthetic data generation for interactive experimentation
-# - Added performance metrics and evaluation for model assessment
-
-# This application serves as both an educational tool and a practical demonstration of how to leverage Amazon SageMaker's unsupervised learning algorithms for various machine learning tasks.

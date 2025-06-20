@@ -1,4 +1,3 @@
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -19,17 +18,17 @@ import base64
 from io import BytesIO
 from PIL import Image
 import warnings
-
-warnings.filterwarnings('ignore')
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Set page configuration
 st.set_page_config(
-    page_title="Hyperparameter Tuning Explorer",
+    page_title="Hyperparameter Tuning",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# AWS Color Scheme
+# Constants
 AWS_COLORS = {
     "orange": "#FF9900",
     "light_orange": "#FFAC31",
@@ -43,8 +42,36 @@ AWS_COLORS = {
     "slate": "#687078"
 }
 
-# Custom CSS for AWS styling
-st.markdown("""
+def init_session_state():
+    """Initialize session state variables for the hyperparameter tuning app."""
+    if 'initialized_hyper' not in st.session_state:
+        st.session_state.initialized_hyper = True
+        # Data
+        st.session_state.X_train = None
+        st.session_state.X_test = None
+        st.session_state.y_train = None
+        st.session_state.y_test = None
+        # Models
+        st.session_state.best_grid_model = None
+        st.session_state.best_random_model = None
+        st.session_state.best_bayesian_model = None
+        st.session_state.best_hyperband_model = None
+        # Results
+        st.session_state.grid_results = None
+        st.session_state.random_results = None
+        st.session_state.bayesian_results = None
+        st.session_state.hyperband_results = None
+        # Timing
+        st.session_state.grid_time = 0
+        st.session_state.random_time = 0
+        st.session_state.bayesian_time = 0
+        st.session_state.hyperband_time = 0
+        # Task type
+        st.session_state.task_type = "classification"
+
+def set_custom_css():
+    """Set custom CSS for styling the app."""
+    st.markdown("""
     <style>
     .main {
         background-color: #FFFFFF;
@@ -122,75 +149,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Initialize session state
-def init_session_state():
-    if 'initialized_hyper' not in st.session_state:
-        st.session_state.initialized_hyper = True
-        # Data
-        st.session_state.X_train = None
-        st.session_state.X_test = None
-        st.session_state.y_train = None
-        st.session_state.y_test = None
-        # Models
-        st.session_state.best_grid_model = None
-        st.session_state.best_random_model = None
-        st.session_state.best_bayesian_model = None
-        st.session_state.best_hyperband_model = None
-        # Results
-        st.session_state.grid_results = None
-        st.session_state.random_results = None
-        st.session_state.bayesian_results = None
-        st.session_state.hyperband_results = None
-        # Timing
-        st.session_state.grid_time = 0
-        st.session_state.random_time = 0
-        st.session_state.bayesian_time = 0
-        st.session_state.hyperband_time = 0
-        # Task type
-        st.session_state.task_type = "classification"
-
-init_session_state()
-
-# Sidebar
-with st.sidebar:
-    
-    # Session management
-    st.subheader("⚙️ Session Management")
-    if st.button("🔄 Reset Session"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        init_session_state()
-        st.success("Session reset successful!")
-    
-    st.markdown("---")
-    st.subheader("🛠️ Task Selection")
-    task_type = st.radio(
-        "Choose a task type:",
-        ["Classification", "Regression"],
-        index=0 if st.session_state.task_type == "classification" else 1
-    )
-    st.session_state.task_type = task_type.lower()
-    
-    st.markdown("---")
-    st.markdown("### About This App")
-    st.info("""
-    This interactive application demonstrates various hyperparameter tuning techniques 
-    for machine learning models. Explore, learn, and compare different methods.
-    """)
-
-# Main content
-st.title("Hyperparameter Tuning Explorer")
-
-st.markdown("""
-<div class="card">
-<p>Hyperparameter tuning is a critical step in the machine learning pipeline. It involves finding the optimal set of 
-hyperparameters for a learning algorithm to maximize its performance. This application helps you understand and 
-compare different hyperparameter tuning techniques through interactive demos and visualizations.</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Helper functions
 def load_dataset():
+    """Load and split dataset based on the selected task type."""
     if st.session_state.task_type == "classification":
         X, y = make_classification(
             n_samples=1000, n_features=20, n_informative=10, n_classes=2, random_state=42
@@ -209,6 +169,7 @@ def load_dataset():
     return X_train, X_test, y_train, y_test
 
 def get_model_and_params():
+    """Get the appropriate model, parameter grid, and scoring metric based on task type."""
     if st.session_state.task_type == "classification":
         model = RandomForestClassifier(random_state=42)
         param_grid = {
@@ -231,6 +192,7 @@ def get_model_and_params():
     return model, param_grid, scoring
 
 def evaluate_model(model, X_test, y_test):
+    """Evaluate model performance on test data."""
     if st.session_state.task_type == "classification":
         y_pred = model.predict(X_test)
         score = accuracy_score(y_test, y_pred)
@@ -243,6 +205,7 @@ def evaluate_model(model, X_test, y_test):
     return score, metric_name
 
 def create_comparison_chart():
+    """Create a comparison chart of different hyperparameter tuning methods."""
     methods = ["Grid Search", "Random Search", "Bayesian Optimization", "Hyperband"]
     
     # Collect available results
@@ -309,17 +272,8 @@ def create_comparison_chart():
     
     return None
 
-# Create tabs
-tabs = st.tabs([
-    "📊 Overview", 
-    "🔍 Grid Search", 
-    "🎲 Random Search", 
-    "🧠 Bayesian Optimization", 
-    "⚡ Hyperband"
-])
-
-# Tab 1: Overview
-with tabs[0]:
+def render_overview_tab():
+    """Render content for the Overview tab."""
     st.header("Understanding Hyperparameter Tuning")
     
     col1, col2 = st.columns([2, 1])
@@ -412,8 +366,8 @@ with tabs[0]:
     Try different configurations to better understand how each method works and when to use it!
     """)
 
-# Tab 2: Grid Search
-with tabs[1]:
+def render_grid_search_tab():
+    """Render content for the Grid Search tab."""
     st.header("Grid Search")
     
     st.markdown("""
@@ -696,8 +650,8 @@ with tabs[1]:
     else:
         st.info("Configure the parameter grid and click 'Run Grid Search' to start the optimization process.")
 
-# Tab 3: Random Search
-with tabs[2]:
+def render_random_search_tab():
+    """Render content for the Random Search tab."""
     st.header("Random Search")
     
     st.markdown("""
@@ -1043,8 +997,8 @@ with tabs[2]:
     </div>
     """, unsafe_allow_html=True)
 
-# Tab 4: Bayesian Optimization
-with tabs[3]:
+def render_bayesian_tab():
+    """Render content for the Bayesian Optimization tab."""
     st.header("Bayesian Optimization")
     
     st.markdown("""
@@ -1425,8 +1379,8 @@ with tabs[3]:
     </div>
     """, unsafe_allow_html=True)
 
-# Tab 5: Hyperband
-with tabs[4]:
+def render_hyperband_tab():
+    """Render content for the Hyperband tab."""
     st.header("Hyperband")
     
     st.markdown("""
@@ -1945,11 +1899,93 @@ with tabs[4]:
     </div>
     """, unsafe_allow_html=True)
 
-# Footer
-st.markdown("---")
-st.markdown("""
-<div style="text-align: center">
-    <p>© 2023 Hyperparameter Tuning Explorer | Created with Streamlit</p>
-    <p><small>For educational purposes only</small></p>
-</div>
-""", unsafe_allow_html=True)
+def render_sidebar():
+    """Render the sidebar content."""
+    with st.sidebar:
+        st.subheader("🛠️ Task Selection")
+        task_type = st.radio(
+            "Choose a task type:",
+            ["Classification", "Regression"],
+            index=0 if st.session_state.task_type == "classification" else 1
+        )
+        st.session_state.task_type = task_type.lower()
+        st.divider()
+        common.render_sidebar()
+        
+        with st.expander("About This App", expanded=False):
+            st.info("""
+            This interactive application demonstrates various hyperparameter tuning techniques 
+            for machine learning models. Explore, learn, and compare different methods.
+            """)
+
+def render_footer():
+    """Render the footer with copyright information."""
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center">
+        <p>© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+def main():
+    """Main function to run the Hyperparameter Tuning Explorer app."""
+    warnings.filterwarnings('ignore')
+    
+    
+    # Initialize session state
+    common.initialize_session_state()
+    init_session_state()
+    
+    # Set custom CSS
+    set_custom_css()
+    
+    # Render sidebar
+    render_sidebar()
+    
+    # Main content
+    st.title("Hyperparameter Tuning Explorer")
+    
+    st.markdown("""
+    <div class="card">
+    <p>Hyperparameter tuning is a critical step in the machine learning pipeline. It involves finding the optimal set of 
+    hyperparameters for a learning algorithm to maximize its performance. This application helps you understand and 
+    compare different hyperparameter tuning techniques through interactive demos and visualizations.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create tabs
+    tabs = st.tabs([
+        "📊 Overview", 
+        "🔍 Grid Search", 
+        "🎲 Random Search", 
+        "🧠 Bayesian Optimization", 
+        "⚡ Hyperband"
+    ])
+    
+    # Render tab content
+    with tabs[0]:
+        render_overview_tab()
+    
+    with tabs[1]:
+        render_grid_search_tab()
+    
+    with tabs[2]:
+        render_random_search_tab()
+    
+    with tabs[3]:
+        render_bayesian_tab()
+    
+    with tabs[4]:
+        render_hyperband_tab()
+    
+    # Render footer
+    render_footer()
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

@@ -1,4 +1,3 @@
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -6,8 +5,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.datasets import make_classification, make_regression, load_breast_cancer, load_diabetes
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, StackingClassifier, BaggingClassifier
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor, StackingRegressor, BaggingRegressor
+from sklearn.ensemble import (
+    RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, 
+    StackingClassifier, BaggingClassifier, RandomForestRegressor, 
+    GradientBoostingRegressor, AdaBoostRegressor, StackingRegressor, BaggingRegressor
+)
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.svm import SVC, SVR
@@ -18,15 +20,11 @@ import time
 from PIL import Image
 import base64
 import io
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page configuration
-st.set_page_config(
-    page_title="Ensemble Learning",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# AWS Color Scheme
+# Constants
 AWS_COLORS = {
     "orange": "#FF9900",
     "light_orange": "#FFAC31",
@@ -42,8 +40,19 @@ AWS_COLORS = {
     "background": "#F8F8F8"
 }
 
-# Custom CSS for AWS styling
-st.markdown("""
+
+def set_page_configuration():
+    """Configure the page settings."""
+    st.set_page_config(
+        page_title="Ensemble Learning",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+set_page_configuration()
+
+def apply_custom_styling():
+    """Apply custom CSS styling."""
+    st.markdown("""
     <style>
     .main {
         background-color: #FFFFFF;
@@ -93,114 +102,98 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Initialize session state
-if 'dataset' not in st.session_state:
-    st.session_state.dataset = None
-if 'X_train' not in st.session_state:
-    st.session_state.X_train = None
-if 'X_test' not in st.session_state:
-    st.session_state.X_test = None 
-if 'y_train' not in st.session_state:
-    st.session_state.y_train = None
-if 'y_test' not in st.session_state:
-    st.session_state.y_test = None
-if 'task_type' not in st.session_state:
-    st.session_state.task_type = 'classification'
-if 'model_results' not in st.session_state:
-    st.session_state.model_results = {}
 
-# Sidebar
-with st.sidebar:
-    
-    # Session management
-    st.subheader("⚙️ Session Management")
-    if st.button("🔄 Reset Session"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
-    
-    # Data generation options
-    st.markdown("---")
-    st.subheader("🛠️ Data Configuration")
-    task = st.radio("Select Task Type:", ["Classification", "Regression"])
-    st.session_state.task_type = task.lower()
-    
-    dataset_option = st.selectbox(
-        "Select Dataset:",
-        ["Generated Data", "Breast Cancer (Classification)", "Diabetes (Regression)"]
-    )
-    
-    if st.button("Generate Data", key="generate_data_btn"):
-        with st.spinner("Generating dataset..."):
-            if dataset_option == "Generated Data":
-                if st.session_state.task_type == 'classification':
-                    X, y = make_classification(
-                        n_samples=1000, n_features=20, n_informative=10,
-                        n_redundant=5, random_state=42
-                    )
-                else:
-                    X, y = make_regression(
-                        n_samples=1000, n_features=20, n_informative=10,
-                        random_state=42, noise=0.1
-                    )
-            elif dataset_option == "Breast Cancer (Classification)":
-                data = load_breast_cancer()
-                X, y = data.data, data.target
-                st.session_state.task_type = 'classification'
-            elif dataset_option == "Diabetes (Regression)":
-                data = load_diabetes()
-                X, y = data.data, data.target
-                st.session_state.task_type = 'regression'
-                
-            # Split the data
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42
-            )
+def initialize_session_state():
+    """Initialize session state variables if they don't exist."""
+    if 'dataset' not in st.session_state:
+        st.session_state.dataset = None
+    if 'X_train' not in st.session_state:
+        st.session_state.X_train = None
+    if 'X_test' not in st.session_state:
+        st.session_state.X_test = None 
+    if 'y_train' not in st.session_state:
+        st.session_state.y_train = None
+    if 'y_test' not in st.session_state:
+        st.session_state.y_test = None
+    if 'task_type' not in st.session_state:
+        st.session_state.task_type = 'classification'
+    if 'model_results' not in st.session_state:
+        st.session_state.model_results = {}
+
+
+def setup_sidebar():
+    """Set up the sidebar with data generation options."""
+    with st.sidebar:
+        # Data generation options
+        st.subheader("🛠️ Data Configuration")
+        task = st.radio("Select Task Type:", ["Classification", "Regression"])
+        st.session_state.task_type = task.lower()
+        
+        dataset_option = st.selectbox(
+            "Select Dataset:",
+            ["Generated Data", "Breast Cancer (Classification)", "Diabetes (Regression)"]
+        )
+        
+        if st.button("Generate Data", key="generate_data_btn", use_container_width=True):
+            generate_data(dataset_option)
+        
+        st.divider()
+        common.render_sidebar()
+        
+        with st.expander("About This App", expanded=False):
+            st.info("""
+            This interactive explorer demonstrates various ensemble learning techniques 
+            used in machine learning to improve model performance.
             
-            # Store in session state
-            st.session_state.X_train = X_train
-            st.session_state.X_test = X_test
-            st.session_state.y_train = y_train
-            st.session_state.y_test = y_test
-            st.session_state.dataset = dataset_option
+            Learn about:
+            - Bagging
+            - Boosting
+            - Stacking
             
-            st.success("✅ Data generated successfully!")
-    
-    st.markdown("---")
-    st.markdown("### About This App")
-    st.info("""
-    This interactive explorer demonstrates various ensemble learning techniques 
-    used in machine learning to improve model performance.
-    
-    Learn about:
-    - Bagging
-    - Boosting
-    - Stacking
-    
-    Try the interactive examples to see how each technique affects model performance!
-    """)
+            Try the interactive examples to see how each technique affects model performance!
+            """)
 
-# Main content
-st.title("Ensemble Learning")
 
-st.markdown("""
-<div class="card">
-<p>Ensemble learning is a powerful machine learning paradigm where multiple models (often called "weak learners") 
-are trained to solve the same problem and combined to get better results. This approach frequently produces more 
-accurate solutions than a single model would.</p>
-</div>
-""", unsafe_allow_html=True)
+def generate_data(dataset_option):
+    """Generate or load the selected dataset."""
+    with st.spinner("Generating dataset..."):
+        if dataset_option == "Generated Data":
+            if st.session_state.task_type == 'classification':
+                X, y = make_classification(
+                    n_samples=1000, n_features=20, n_informative=10,
+                    n_redundant=5, random_state=42
+                )
+            else:
+                X, y = make_regression(
+                    n_samples=1000, n_features=20, n_informative=10,
+                    random_state=42, noise=0.1
+                )
+        elif dataset_option == "Breast Cancer (Classification)":
+            data = load_breast_cancer()
+            X, y = data.data, data.target
+            st.session_state.task_type = 'classification'
+        elif dataset_option == "Diabetes (Regression)":
+            data = load_diabetes()
+            X, y = data.data, data.target
+            st.session_state.task_type = 'regression'
+            
+        # Split the data
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+        
+        # Store in session state
+        st.session_state.X_train = X_train
+        st.session_state.X_test = X_test
+        st.session_state.y_train = y_train
+        st.session_state.y_test = y_test
+        st.session_state.dataset = dataset_option
+        
+        st.success("✅ Data generated successfully!")
 
-# Create tabs
-tabs = st.tabs([
-    "📊 Overview", 
-    "🌲 Bagging", 
-    "🚀 Boosting", 
-    "🏗️ Stacking"
-])
 
-# Tab 1: Overview
-with tabs[0]:
+def render_overview_tab():
+    """Render the Overview tab content."""
     st.header("Understanding Ensemble Learning")
     
     col1, col2 = st.columns([3, 2])
@@ -302,8 +295,9 @@ with tabs[0]:
     if st.session_state.X_train is None:
         st.warning("👆 Please generate a dataset first using the sidebar options.")
 
-# Tab 2: Bagging
-with tabs[1]:
+
+def render_bagging_tab():
+    """Render the Bagging tab content."""
     st.header("Bagging (Bootstrap Aggregating)")
     
     st.markdown("""
@@ -378,197 +372,10 @@ with tabs[1]:
         col1, col2 = st.columns([1, 2])
         
         with col1:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            n_estimators = st.slider(
-                "Number of Base Estimators", 
-                min_value=1, 
-                max_value=100, 
-                value=10,
-                key="bagging_n_estimators"
-            )
-            
-            max_samples = st.slider(
-                "Max Samples (% of training data)", 
-                min_value=10, 
-                max_value=100, 
-                value=80,
-                key="bagging_max_samples"
-            ) / 100.0
-            
-            max_features = st.slider(
-                "Max Features (% of features used)", 
-                min_value=10, 
-                max_value=100, 
-                value=80,
-                key="bagging_max_features"
-            ) / 100.0
-            
-            bootstrap = st.checkbox("Bootstrap", value=True, key="bagging_bootstrap")
-            
-            if st.button("Train Bagging Model", key="train_bagging"):
-                with st.spinner("Training..."):
-                    if st.session_state.task_type == 'classification':
-                        # Base model
-                        base_model = DecisionTreeClassifier(max_depth=3)
-                        base_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        base_preds = base_model.predict(st.session_state.X_test)
-                        base_accuracy = accuracy_score(st.session_state.y_test, base_preds)
-                        
-                        # Bagging model
-                        bagging_model = BaggingClassifier(
-                            estimator=DecisionTreeClassifier(max_depth=3),
-                            n_estimators=n_estimators,
-                            max_samples=max_samples,
-                            max_features=max_features,
-                            bootstrap=bootstrap,
-                            random_state=42
-                        )
-                        
-                        bagging_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        bagging_preds = bagging_model.predict(st.session_state.X_test)
-                        bagging_accuracy = accuracy_score(st.session_state.y_test, bagging_preds)
-                        
-                        # Store results
-                        st.session_state.model_results["bagging"] = {
-                            "base_accuracy": base_accuracy,
-                            "bagging_accuracy": bagging_accuracy,
-                            "conf_matrix": confusion_matrix(st.session_state.y_test, bagging_preds),
-                            "classification_report": classification_report(st.session_state.y_test, bagging_preds, output_dict=True)
-                        }
-                        
-                    else:  # regression
-                        # Base model
-                        base_model = DecisionTreeRegressor(max_depth=3)
-                        base_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        base_preds = base_model.predict(st.session_state.X_test)
-                        base_mse = mean_squared_error(st.session_state.y_test, base_preds)
-                        base_r2 = r2_score(st.session_state.y_test, base_preds)
-                        
-                        # Bagging model
-                        bagging_model = BaggingRegressor(
-                            estimator=DecisionTreeRegressor(max_depth=3),
-                            n_estimators=n_estimators,
-                            max_samples=max_samples,
-                            max_features=max_features,
-                            bootstrap=bootstrap,
-                            random_state=42
-                        )
-                        
-                        bagging_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        bagging_preds = bagging_model.predict(st.session_state.X_test)
-                        bagging_mse = mean_squared_error(st.session_state.y_test, bagging_preds)
-                        bagging_r2 = r2_score(st.session_state.y_test, bagging_preds)
-                        
-                        # Store results
-                        st.session_state.model_results["bagging"] = {
-                            "base_mse": base_mse,
-                            "base_r2": base_r2,
-                            "bagging_mse": bagging_mse,
-                            "bagging_r2": bagging_r2
-                        }
-                
-                st.success("✅ Bagging model trained successfully!")
-            st.markdown('</div>', unsafe_allow_html=True)
+            render_bagging_controls(col1)
         
         with col2:
-            if "bagging" in st.session_state.model_results:
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                if st.session_state.task_type == 'classification':
-                    # Get results
-                    results = st.session_state.model_results["bagging"]
-                    
-                    # Create a comparison bar chart
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=['Base Model', 'Bagging Model'],
-                        y=[results["base_accuracy"] * 100, results["bagging_accuracy"] * 100],
-                        text=[f'{results["base_accuracy"]:.2%}', f'{results["bagging_accuracy"]:.2%}'],
-                        textposition='auto',
-                        marker_color=[AWS_COLORS["slate"], AWS_COLORS["teal"]]
-                    ))
-                    fig.update_layout(
-                        title='Model Accuracy Comparison',
-                        yaxis_title='Accuracy (%)',
-                        yaxis=dict(range=[0, 100]),
-                        height=350
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Display confusion matrix
-                    st.subheader("Confusion Matrix")
-                    class_report = results["classification_report"]
-                    cm = results["conf_matrix"]
-                    
-                    fig = px.imshow(
-                        cm, 
-                        text_auto=True,
-                        color_continuous_scale=px.colors.sequential.Blues,
-                        labels=dict(x="Predicted Label", y="True Label"),
-                        x=['Class 0', 'Class 1'],
-                        y=['Class 0', 'Class 1']
-                    )
-                    fig.update_layout(height=350)
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Display classification report
-                    st.subheader("Classification Report")
-                    report_df = pd.DataFrame(class_report).transpose()
-                    st.dataframe(report_df.style.highlight_max(axis=0))
-                    
-                else:  # regression
-                    # Get results
-                    results = st.session_state.model_results["bagging"]
-                    
-                    # Create plots
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        # MSE Comparison
-                        fig = go.Figure()
-                        fig.add_trace(go.Bar(
-                            x=['Base Model', 'Bagging Model'],
-                            y=[results["base_mse"], results["bagging_mse"]],
-                            text=[f'{results["base_mse"]:.4f}', f'{results["bagging_mse"]:.4f}'],
-                            textposition='auto',
-                            marker_color=[AWS_COLORS["slate"], AWS_COLORS["teal"]]
-                        ))
-                        fig.update_layout(
-                            title='Mean Squared Error (Lower is Better)',
-                            yaxis_title='MSE',
-                            height=350
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    with col2:
-                        # R² Comparison
-                        fig = go.Figure()
-                        fig.add_trace(go.Bar(
-                            x=['Base Model', 'Bagging Model'],
-                            y=[results["base_r2"], results["bagging_r2"]],
-                            text=[f'{results["base_r2"]:.4f}', f'{results["bagging_r2"]:.4f}'],
-                            textposition='auto',
-                            marker_color=[AWS_COLORS["slate"], AWS_COLORS["teal"]]
-                        ))
-                        fig.update_layout(
-                            title='R² Score (Higher is Better)',
-                            yaxis_title='R²',
-                            height=350
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-                st.markdown("""
-                <div class="card">
-                    <h3>Interpreting the Results:</h3>
-                    <ul>
-                        <li>Bagging typically improves performance by reducing variance</li>
-                        <li>Increasing the number of estimators generally helps but with diminishing returns</li>
-                        <li>The optimal max_samples and max_features values depend on the dataset</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.info("Train the model to see the results!")
+            render_bagging_results(col2)
     else:
         st.warning("Please generate a dataset first using the sidebar options.")
 
@@ -605,8 +412,214 @@ with tabs[1]:
         </div>
         """, unsafe_allow_html=True)
 
-# Tab 3: Boosting
-with tabs[2]:
+
+def render_bagging_controls(container):
+    """Render the controls for the Bagging demo."""
+    with container:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        n_estimators = st.slider(
+            "Number of Base Estimators", 
+            min_value=1, 
+            max_value=100, 
+            value=10,
+            key="bagging_n_estimators"
+        )
+        
+        max_samples = st.slider(
+            "Max Samples (% of training data)", 
+            min_value=10, 
+            max_value=100, 
+            value=80,
+            key="bagging_max_samples"
+        ) / 100.0
+        
+        max_features = st.slider(
+            "Max Features (% of features used)", 
+            min_value=10, 
+            max_value=100, 
+            value=80,
+            key="bagging_max_features"
+        ) / 100.0
+        
+        bootstrap = st.checkbox("Bootstrap", value=True, key="bagging_bootstrap")
+        
+        if st.button("Train Bagging Model", key="train_bagging"):
+            train_bagging_model(n_estimators, max_samples, max_features, bootstrap)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+def train_bagging_model(n_estimators, max_samples, max_features, bootstrap):
+    """Train the Bagging model with the given parameters."""
+    with st.spinner("Training..."):
+        if st.session_state.task_type == 'classification':
+            # Base model
+            base_model = DecisionTreeClassifier(max_depth=3)
+            base_model.fit(st.session_state.X_train, st.session_state.y_train)
+            base_preds = base_model.predict(st.session_state.X_test)
+            base_accuracy = accuracy_score(st.session_state.y_test, base_preds)
+            
+            # Bagging model
+            bagging_model = BaggingClassifier(
+                estimator=DecisionTreeClassifier(max_depth=3),
+                n_estimators=n_estimators,
+                max_samples=max_samples,
+                max_features=max_features,
+                bootstrap=bootstrap,
+                random_state=42
+            )
+            
+            bagging_model.fit(st.session_state.X_train, st.session_state.y_train)
+            bagging_preds = bagging_model.predict(st.session_state.X_test)
+            bagging_accuracy = accuracy_score(st.session_state.y_test, bagging_preds)
+            
+            # Store results
+            st.session_state.model_results["bagging"] = {
+                "base_accuracy": base_accuracy,
+                "bagging_accuracy": bagging_accuracy,
+                "conf_matrix": confusion_matrix(st.session_state.y_test, bagging_preds),
+                "classification_report": classification_report(st.session_state.y_test, bagging_preds, output_dict=True)
+            }
+            
+        else:  # regression
+            # Base model
+            base_model = DecisionTreeRegressor(max_depth=3)
+            base_model.fit(st.session_state.X_train, st.session_state.y_train)
+            base_preds = base_model.predict(st.session_state.X_test)
+            base_mse = mean_squared_error(st.session_state.y_test, base_preds)
+            base_r2 = r2_score(st.session_state.y_test, base_preds)
+            
+            # Bagging model
+            bagging_model = BaggingRegressor(
+                estimator=DecisionTreeRegressor(max_depth=3),
+                n_estimators=n_estimators,
+                max_samples=max_samples,
+                max_features=max_features,
+                bootstrap=bootstrap,
+                random_state=42
+            )
+            
+            bagging_model.fit(st.session_state.X_train, st.session_state.y_train)
+            bagging_preds = bagging_model.predict(st.session_state.X_test)
+            bagging_mse = mean_squared_error(st.session_state.y_test, bagging_preds)
+            bagging_r2 = r2_score(st.session_state.y_test, bagging_preds)
+            
+            # Store results
+            st.session_state.model_results["bagging"] = {
+                "base_mse": base_mse,
+                "base_r2": base_r2,
+                "bagging_mse": bagging_mse,
+                "bagging_r2": bagging_r2
+            }
+    
+    st.success("✅ Bagging model trained successfully!")
+
+
+def render_bagging_results(container):
+    """Render the results of the Bagging model."""
+    with container:
+        if "bagging" in st.session_state.model_results:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            if st.session_state.task_type == 'classification':
+                # Get results
+                results = st.session_state.model_results["bagging"]
+                
+                # Create a comparison bar chart
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=['Base Model', 'Bagging Model'],
+                    y=[results["base_accuracy"] * 100, results["bagging_accuracy"] * 100],
+                    text=[f'{results["base_accuracy"]:.2%}', f'{results["bagging_accuracy"]:.2%}'],
+                    textposition='auto',
+                    marker_color=[AWS_COLORS["slate"], AWS_COLORS["teal"]]
+                ))
+                fig.update_layout(
+                    title='Model Accuracy Comparison',
+                    yaxis_title='Accuracy (%)',
+                    yaxis=dict(range=[0, 100]),
+                    height=350
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Display confusion matrix
+                st.subheader("Confusion Matrix")
+                class_report = results["classification_report"]
+                cm = results["conf_matrix"]
+                
+                fig = px.imshow(
+                    cm, 
+                    text_auto=True,
+                    color_continuous_scale=px.colors.sequential.Blues,
+                    labels=dict(x="Predicted Label", y="True Label"),
+                    x=['Class 0', 'Class 1'],
+                    y=['Class 0', 'Class 1']
+                )
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Display classification report
+                st.subheader("Classification Report")
+                report_df = pd.DataFrame(class_report).transpose()
+                st.dataframe(report_df.style.highlight_max(axis=0))
+                
+            else:  # regression
+                # Get results
+                results = st.session_state.model_results["bagging"]
+                
+                # Create plots
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # MSE Comparison
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(
+                        x=['Base Model', 'Bagging Model'],
+                        y=[results["base_mse"], results["bagging_mse"]],
+                        text=[f'{results["base_mse"]:.4f}', f'{results["bagging_mse"]:.4f}'],
+                        textposition='auto',
+                        marker_color=[AWS_COLORS["slate"], AWS_COLORS["teal"]]
+                    ))
+                    fig.update_layout(
+                        title='Mean Squared Error (Lower is Better)',
+                        yaxis_title='MSE',
+                        height=350
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    # R² Comparison
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(
+                        x=['Base Model', 'Bagging Model'],
+                        y=[results["base_r2"], results["bagging_r2"]],
+                        text=[f'{results["base_r2"]:.4f}', f'{results["bagging_r2"]:.4f}'],
+                        textposition='auto',
+                        marker_color=[AWS_COLORS["slate"], AWS_COLORS["teal"]]
+                    ))
+                    fig.update_layout(
+                        title='R² Score (Higher is Better)',
+                        yaxis_title='R²',
+                        height=350
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div class="card">
+                <h3>Interpreting the Results:</h3>
+                <ul>
+                    <li>Bagging typically improves performance by reducing variance</li>
+                    <li>Increasing the number of estimators generally helps but with diminishing returns</li>
+                    <li>The optimal max_samples and max_features values depend on the dataset</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("Train the model to see the results!")
+
+
+def render_boosting_tab():
+    """Render the Boosting tab content."""
     st.header("Boosting")
     
     st.markdown("""
@@ -683,213 +696,10 @@ with tabs[2]:
         col1, col2 = st.columns([1, 2])
         
         with col1:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            boosting_algorithm = st.selectbox(
-                "Boosting Algorithm",
-                ["AdaBoost", "Gradient Boosting"],
-                key="boosting_algorithm"
-            )
-            
-            n_estimators = st.slider(
-                "Number of Estimators", 
-                min_value=10, 
-                max_value=200, 
-                value=50,
-                step=10,
-                key="boosting_n_estimators"
-            )
-            
-            learning_rate = st.slider(
-                "Learning Rate", 
-                min_value=0.01, 
-                max_value=1.0, 
-                value=0.1,
-                step=0.05,
-                key="boosting_learning_rate"
-            )
-            
-            if boosting_algorithm == "Gradient Boosting":
-                max_depth = st.slider(
-                    "Max Depth of Base Estimators", 
-                    min_value=1, 
-                    max_value=10, 
-                    value=3,
-                    key="boosting_max_depth"
-                )
-            
-            if st.button("Train Boosting Model", key="train_boosting"):
-                with st.spinner("Training..."):
-                    if st.session_state.task_type == 'classification':
-                        # Base model
-                        base_model = DecisionTreeClassifier(max_depth=1)
-                        base_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        base_preds = base_model.predict(st.session_state.X_test)
-                        base_accuracy = accuracy_score(st.session_state.y_test, base_preds)
-                        
-                        # Boosting model
-                        if boosting_algorithm == "AdaBoost":
-                            boosting_model = AdaBoostClassifier(
-                                n_estimators=n_estimators,
-                                learning_rate=learning_rate,
-                                random_state=42
-                            )
-                        else:
-                            boosting_model = GradientBoostingClassifier(
-                                n_estimators=n_estimators,
-                                learning_rate=learning_rate,
-                                max_depth=max_depth,
-                                random_state=42
-                            )
-                        
-                        boosting_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        
-                        # Track performance across iterations
-                        staged_scores = []
-                        if boosting_algorithm == "Gradient Boosting":
-                            for i, y_pred in enumerate(boosting_model.staged_predict(st.session_state.X_test)):
-                                staged_scores.append(accuracy_score(st.session_state.y_test, y_pred))
-                        
-                        boosting_preds = boosting_model.predict(st.session_state.X_test)
-                        boosting_accuracy = accuracy_score(st.session_state.y_test, boosting_preds)
-                        
-                        # Store results
-                        st.session_state.model_results["boosting"] = {
-                            "base_accuracy": base_accuracy,
-                            "boosting_accuracy": boosting_accuracy,
-                            "conf_matrix": confusion_matrix(st.session_state.y_test, boosting_preds),
-                            "classification_report": classification_report(st.session_state.y_test, boosting_preds, output_dict=True),
-                            "staged_scores": staged_scores,
-                            "feature_importance": boosting_model.feature_importances_
-                        }
-                        
-                    else:  # regression
-                        # Base model
-                        base_model = DecisionTreeRegressor(max_depth=1)
-                        base_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        base_preds = base_model.predict(st.session_state.X_test)
-                        base_mse = mean_squared_error(st.session_state.y_test, base_preds)
-                        base_r2 = r2_score(st.session_state.y_test, base_preds)
-                        
-                        # Boosting model
-                        if boosting_algorithm == "AdaBoost":
-                            boosting_model = AdaBoostRegressor(
-                                n_estimators=n_estimators,
-                                learning_rate=learning_rate,
-                                random_state=42
-                            )
-                        else:
-                            boosting_model = GradientBoostingRegressor(
-                                n_estimators=n_estimators,
-                                learning_rate=learning_rate,
-                                max_depth=max_depth,
-                                random_state=42
-                            )
-                        
-                        boosting_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        
-                        # Track performance across iterations
-                        staged_scores = []
-                        if boosting_algorithm == "Gradient Boosting":
-                            for i, y_pred in enumerate(boosting_model.staged_predict(st.session_state.X_test)):
-                                staged_scores.append(mean_squared_error(st.session_state.y_test, y_pred))
-                        
-                        boosting_preds = boosting_model.predict(st.session_state.X_test)
-                        boosting_mse = mean_squared_error(st.session_state.y_test, boosting_preds)
-                        boosting_r2 = r2_score(st.session_state.y_test, boosting_preds)
-                        
-                        # Store results
-                        st.session_state.model_results["boosting"] = {
-                            "base_mse": base_mse,
-                            "base_r2": base_r2,
-                            "boosting_mse": boosting_mse,
-                            "boosting_r2": boosting_r2,
-                            "staged_scores": staged_scores,
-                            "feature_importance": boosting_model.feature_importances_
-                        }
-                
-                st.success(f"✅ {boosting_algorithm} model trained successfully!")
-            st.markdown('</div>', unsafe_allow_html=True)
+            render_boosting_controls(col1)
         
         with col2:
-            if "boosting" in st.session_state.model_results:
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                
-                results = st.session_state.model_results["boosting"]
-                
-                if st.session_state.task_type == 'classification':
-                    # Create a comparison bar chart
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=['Base Model', f'{boosting_algorithm}'],
-                        y=[results["base_accuracy"] * 100, results["boosting_accuracy"] * 100],
-                        text=[f'{results["base_accuracy"]:.2%}', f'{results["boosting_accuracy"]:.2%}'],
-                        textposition='auto',
-                        marker_color=[AWS_COLORS["slate"], AWS_COLORS["orange"]]
-                    ))
-                    fig.update_layout(
-                        title='Model Accuracy Comparison',
-                        yaxis_title='Accuracy (%)',
-                        yaxis=dict(range=[0, 100]),
-                        height=350
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Learning curve
-                    if len(results["staged_scores"]) > 0:
-                        fig = px.line(
-                            x=list(range(1, len(results["staged_scores"]) + 1)),
-                            y=results["staged_scores"],
-                            labels={'x': 'Number of Trees', 'y': 'Accuracy'},
-                            title='Learning Curve: Effect of Adding More Trees'
-                        )
-                        fig.update_traces(line_color=AWS_COLORS["light_blue"])
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                else:  # regression
-                    # MSE Comparison
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=['Base Model', f'{boosting_algorithm}'],
-                        y=[results["base_mse"], results["boosting_mse"]],
-                        text=[f'{results["base_mse"]:.4f}', f'{results["boosting_mse"]:.4f}'],
-                        textposition='auto',
-                        marker_color=[AWS_COLORS["slate"], AWS_COLORS["orange"]]
-                    ))
-                    fig.update_layout(
-                        title='Mean Squared Error (Lower is Better)',
-                        yaxis_title='MSE',
-                        height=350
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Learning curve
-                    if len(results["staged_scores"]) > 0:
-                        fig = px.line(
-                            x=list(range(1, len(results["staged_scores"]) + 1)),
-                            y=results["staged_scores"],
-                            labels={'x': 'Number of Trees', 'y': 'MSE'},
-                            title='Learning Curve: Effect of Adding More Trees'
-                        )
-                        fig.update_traces(line_color=AWS_COLORS["light_blue"])
-                        st.plotly_chart(fig, use_container_width=True)
-                
-                # Feature importance
-                feature_imp = results["feature_importance"]
-                indices = np.argsort(feature_imp)[-10:]  # Top 10 features
-                
-                fig = px.bar(
-                    x=feature_imp[indices],
-                    y=[f"Feature {i}" for i in indices],
-                    orientation='h',
-                    title='Top 10 Feature Importance',
-                    labels={'x': 'Importance', 'y': 'Feature'},
-                )
-                fig.update_traces(marker_color=AWS_COLORS["orange"])
-                st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                st.info("Train the model to see the results!")
+            render_boosting_results(col2)
     else:
         st.warning("Please generate a dataset first using the sidebar options.")
 
@@ -941,8 +751,234 @@ with tabs[2]:
         </div>
         """, unsafe_allow_html=True)
 
-# Tab 4: Stacking
-with tabs[3]:
+
+def render_boosting_controls(container):
+    """Render the controls for the Boosting demo."""
+    with container:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        boosting_algorithm = st.selectbox(
+            "Boosting Algorithm",
+            ["AdaBoost", "Gradient Boosting"],
+            key="boosting_algorithm"
+        )
+        
+        n_estimators = st.slider(
+            "Number of Estimators", 
+            min_value=10, 
+            max_value=200, 
+            value=50,
+            step=10,
+            key="boosting_n_estimators"
+        )
+        
+        learning_rate = st.slider(
+            "Learning Rate", 
+            min_value=0.01, 
+            max_value=1.0, 
+            value=0.1,
+            step=0.05,
+            key="boosting_learning_rate"
+        )
+        
+        max_depth = 3  # Default value
+        if boosting_algorithm == "Gradient Boosting":
+            max_depth = st.slider(
+                "Max Depth of Base Estimators", 
+                min_value=1, 
+                max_value=10, 
+                value=3,
+                key="boosting_max_depth"
+            )
+        
+        if st.button("Train Boosting Model", key="train_boosting"):
+            train_boosting_model(boosting_algorithm, n_estimators, learning_rate, max_depth)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+def train_boosting_model(boosting_algorithm, n_estimators, learning_rate, max_depth):
+    """Train the Boosting model with the given parameters."""
+    with st.spinner("Training..."):
+        if st.session_state.task_type == 'classification':
+            # Base model
+            base_model = DecisionTreeClassifier(max_depth=1)
+            base_model.fit(st.session_state.X_train, st.session_state.y_train)
+            base_preds = base_model.predict(st.session_state.X_test)
+            base_accuracy = accuracy_score(st.session_state.y_test, base_preds)
+            
+            # Boosting model
+            if boosting_algorithm == "AdaBoost":
+                boosting_model = AdaBoostClassifier(
+                    n_estimators=n_estimators,
+                    learning_rate=learning_rate,
+                    random_state=42
+                )
+            else:
+                boosting_model = GradientBoostingClassifier(
+                    n_estimators=n_estimators,
+                    learning_rate=learning_rate,
+                    max_depth=max_depth,
+                    random_state=42
+                )
+            
+            boosting_model.fit(st.session_state.X_train, st.session_state.y_train)
+            
+            # Track performance across iterations
+            staged_scores = []
+            if boosting_algorithm == "Gradient Boosting":
+                for i, y_pred in enumerate(boosting_model.staged_predict(st.session_state.X_test)):
+                    staged_scores.append(accuracy_score(st.session_state.y_test, y_pred))
+            
+            boosting_preds = boosting_model.predict(st.session_state.X_test)
+            boosting_accuracy = accuracy_score(st.session_state.y_test, boosting_preds)
+            
+            # Store results
+            st.session_state.model_results["boosting"] = {
+                "base_accuracy": base_accuracy,
+                "boosting_accuracy": boosting_accuracy,
+                "conf_matrix": confusion_matrix(st.session_state.y_test, boosting_preds),
+                "classification_report": classification_report(st.session_state.y_test, boosting_preds, output_dict=True),
+                "staged_scores": staged_scores,
+                "feature_importance": boosting_model.feature_importances_,
+                "algorithm": boosting_algorithm
+            }
+            
+        else:  # regression
+            # Base model
+            base_model = DecisionTreeRegressor(max_depth=1)
+            base_model.fit(st.session_state.X_train, st.session_state.y_train)
+            base_preds = base_model.predict(st.session_state.X_test)
+            base_mse = mean_squared_error(st.session_state.y_test, base_preds)
+            base_r2 = r2_score(st.session_state.y_test, base_preds)
+            
+            # Boosting model
+            if boosting_algorithm == "AdaBoost":
+                boosting_model = AdaBoostRegressor(
+                    n_estimators=n_estimators,
+                    learning_rate=learning_rate,
+                    random_state=42
+                )
+            else:
+                boosting_model = GradientBoostingRegressor(
+                    n_estimators=n_estimators,
+                    learning_rate=learning_rate,
+                    max_depth=max_depth,
+                    random_state=42
+                )
+            
+            boosting_model.fit(st.session_state.X_train, st.session_state.y_train)
+            
+            # Track performance across iterations
+            staged_scores = []
+            if boosting_algorithm == "Gradient Boosting":
+                for i, y_pred in enumerate(boosting_model.staged_predict(st.session_state.X_test)):
+                    staged_scores.append(mean_squared_error(st.session_state.y_test, y_pred))
+            
+            boosting_preds = boosting_model.predict(st.session_state.X_test)
+            boosting_mse = mean_squared_error(st.session_state.y_test, boosting_preds)
+            boosting_r2 = r2_score(st.session_state.y_test, boosting_preds)
+            
+            # Store results
+            st.session_state.model_results["boosting"] = {
+                "base_mse": base_mse,
+                "base_r2": base_r2,
+                "boosting_mse": boosting_mse,
+                "boosting_r2": boosting_r2,
+                "staged_scores": staged_scores,
+                "feature_importance": boosting_model.feature_importances_,
+                "algorithm": boosting_algorithm
+            }
+    
+    st.success(f"✅ {boosting_algorithm} model trained successfully!")
+
+
+def render_boosting_results(container):
+    """Render the results of the Boosting model."""
+    with container:
+        if "boosting" in st.session_state.model_results:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            
+            results = st.session_state.model_results["boosting"]
+            boosting_algorithm = results.get("algorithm", "Boosting")
+            
+            if st.session_state.task_type == 'classification':
+                # Create a comparison bar chart
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=['Base Model', f'{boosting_algorithm}'],
+                    y=[results["base_accuracy"] * 100, results["boosting_accuracy"] * 100],
+                    text=[f'{results["base_accuracy"]:.2%}', f'{results["boosting_accuracy"]:.2%}'],
+                    textposition='auto',
+                    marker_color=[AWS_COLORS["slate"], AWS_COLORS["orange"]]
+                ))
+                fig.update_layout(
+                    title='Model Accuracy Comparison',
+                    yaxis_title='Accuracy (%)',
+                    yaxis=dict(range=[0, 100]),
+                    height=350
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Learning curve
+                if len(results["staged_scores"]) > 0:
+                    fig = px.line(
+                        x=list(range(1, len(results["staged_scores"]) + 1)),
+                        y=results["staged_scores"],
+                        labels={'x': 'Number of Trees', 'y': 'Accuracy'},
+                        title='Learning Curve: Effect of Adding More Trees'
+                    )
+                    fig.update_traces(line_color=AWS_COLORS["light_blue"])
+                    st.plotly_chart(fig, use_container_width=True)
+                
+            else:  # regression
+                # MSE Comparison
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=['Base Model', f'{boosting_algorithm}'],
+                    y=[results["base_mse"], results["boosting_mse"]],
+                    text=[f'{results["base_mse"]:.4f}', f'{results["boosting_mse"]:.4f}'],
+                    textposition='auto',
+                    marker_color=[AWS_COLORS["slate"], AWS_COLORS["orange"]]
+                ))
+                fig.update_layout(
+                    title='Mean Squared Error (Lower is Better)',
+                    yaxis_title='MSE',
+                    height=350
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Learning curve
+                if len(results["staged_scores"]) > 0:
+                    fig = px.line(
+                        x=list(range(1, len(results["staged_scores"]) + 1)),
+                        y=results["staged_scores"],
+                        labels={'x': 'Number of Trees', 'y': 'MSE'},
+                        title='Learning Curve: Effect of Adding More Trees'
+                    )
+                    fig.update_traces(line_color=AWS_COLORS["light_blue"])
+                    st.plotly_chart(fig, use_container_width=True)
+            
+            # Feature importance
+            feature_imp = results["feature_importance"]
+            indices = np.argsort(feature_imp)[-10:]  # Top 10 features
+            
+            fig = px.bar(
+                x=feature_imp[indices],
+                y=[f"Feature {i}" for i in indices],
+                orientation='h',
+                title='Top 10 Feature Importance',
+                labels={'x': 'Importance', 'y': 'Feature'},
+            )
+            fig.update_traces(marker_color=AWS_COLORS["orange"])
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.info("Train the model to see the results!")
+
+
+def render_stacking_tab():
+    """Render the Stacking tab content."""
     st.header("Stacking (Stacked Generalization)")
     
     st.markdown("""
@@ -1024,269 +1060,10 @@ with tabs[3]:
         col1, col2 = st.columns([1, 2])
         
         with col1:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            
-            # Model selection
-            st.subheader("Select Base Models")
-            
-            if st.session_state.task_type == 'classification':
-                use_rf = st.checkbox("Random Forest", value=True, key="stacking_use_rf")
-                use_svm = st.checkbox("Support Vector Machine", value=True, key="stacking_use_svm")
-                use_lr = st.checkbox("Logistic Regression", value=True, key="stacking_use_lr")
-                use_gb = st.checkbox("Gradient Boosting", value=True, key="stacking_use_gb")
-                
-                st.subheader("Meta-Model")
-                meta_model = st.selectbox(
-                    "Choose Meta-Model",
-                    ["Logistic Regression", "Random Forest"],
-                    key="stacking_meta_model"
-                )
-            else:
-                use_rf = st.checkbox("Random Forest", value=True, key="stacking_use_rf")
-                use_svr = st.checkbox("SVR", value=True, key="stacking_use_svr")
-                use_lr = st.checkbox("Linear Regression", value=True, key="stacking_use_lr")
-                use_gb = st.checkbox("Gradient Boosting", value=True, key="stacking_use_gb")
-                
-                st.subheader("Meta-Model")
-                meta_model = st.selectbox(
-                    "Choose Meta-Model",
-                    ["Linear Regression", "Random Forest"],
-                    key="stacking_meta_model"
-                )
-            
-            cv_folds = st.slider(
-                "Cross-Validation Folds", 
-                min_value=2, 
-                max_value=10, 
-                value=5,
-                key="stacking_cv_folds"
-            )
-            
-            if st.button("Train Stacking Ensemble", key="train_stacking"):
-                with st.spinner("Training stacking ensemble..."):
-                    if st.session_state.task_type == 'classification':
-                        # Create list of base models
-                        estimators = []
-                        if use_rf:
-                            estimators.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
-                        if use_svm:
-                            estimators.append(('svm', SVC(probability=True, random_state=42)))
-                        if use_lr:
-                            estimators.append(('lr', LogisticRegression(max_iter=1000, random_state=42)))
-                        if use_gb:
-                            estimators.append(('gb', GradientBoostingClassifier(n_estimators=10, random_state=42)))
-                        
-                        if len(estimators) == 0:
-                            st.error("Please select at least one base model!")
-                            st.stop()
-                        
-                        # Create and train individual models for comparison
-                        individual_scores = {}
-                        for name, model in estimators:
-                            model.fit(st.session_state.X_train, st.session_state.y_train)
-                            y_pred = model.predict(st.session_state.X_test)
-                            score = accuracy_score(st.session_state.y_test, y_pred)
-                            individual_scores[name] = score
-                        
-                        # Create meta-model
-                        if meta_model == "Logistic Regression":
-                            final_estimator = LogisticRegression(max_iter=1000)
-                        else:
-                            final_estimator = RandomForestClassifier(n_estimators=100)
-                        
-                        # Create and train stacking model
-                        stacking_model = StackingClassifier(
-                            estimators=estimators,
-                            final_estimator=final_estimator,
-                            cv=cv_folds,
-                            stack_method='predict_proba',
-                            n_jobs=-1,
-                            passthrough=True
-                        )
-                        
-                        stacking_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        stacking_pred = stacking_model.predict(st.session_state.X_test)
-                        stacking_score = accuracy_score(st.session_state.y_test, stacking_pred)
-                        
-                        # Store results
-                        st.session_state.model_results["stacking"] = {
-                            "individual_scores": individual_scores,
-                            "stacking_score": stacking_score,
-                            "conf_matrix": confusion_matrix(st.session_state.y_test, stacking_pred),
-                            "classification_report": classification_report(st.session_state.y_test, stacking_pred, output_dict=True)
-                        }
-                        
-                    else:  # regression
-                        # Create list of base models
-                        estimators = []
-                        if use_rf:
-                            estimators.append(('rf', RandomForestRegressor(n_estimators=100, random_state=42)))
-                        if use_svr:
-                            estimators.append(('svr', SVR()))
-                        if use_lr:
-                            estimators.append(('lr', LinearRegression()))
-                        if use_gb:
-                            estimators.append(('gb', GradientBoostingRegressor(n_estimators=100, random_state=42)))
-                        
-                        if len(estimators) == 0:
-                            st.error("Please select at least one base model!")
-                            st.stop()
-                        
-                        # Create and train individual models for comparison
-                        individual_scores_mse = {}
-                        individual_scores_r2 = {}
-                        for name, model in estimators:
-                            model.fit(st.session_state.X_train, st.session_state.y_train)
-                            y_pred = model.predict(st.session_state.X_test)
-                            mse = mean_squared_error(st.session_state.y_test, y_pred)
-                            r2 = r2_score(st.session_state.y_test, y_pred)
-                            individual_scores_mse[name] = mse
-                            individual_scores_r2[name] = r2
-                        
-                        # Create meta-model
-                        if meta_model == "Linear Regression":
-                            final_estimator = LinearRegression()
-                        else:
-                            final_estimator = RandomForestRegressor(n_estimators=100)
-                        
-                        # Create and train stacking model
-                        stacking_model = StackingRegressor(
-                            estimators=estimators,
-                            final_estimator=final_estimator,
-                            cv=cv_folds,
-                            n_jobs=-1
-                        )
-                        
-                        stacking_model.fit(st.session_state.X_train, st.session_state.y_train)
-                        stacking_pred = stacking_model.predict(st.session_state.X_test)
-                        stacking_mse = mean_squared_error(st.session_state.y_test, stacking_pred)
-                        stacking_r2 = r2_score(st.session_state.y_test, stacking_pred)
-                        
-                        # Store results
-                        st.session_state.model_results["stacking"] = {
-                            "individual_scores_mse": individual_scores_mse,
-                            "individual_scores_r2": individual_scores_r2,
-                            "stacking_mse": stacking_mse,
-                            "stacking_r2": stacking_r2
-                        }
-                
-                st.success("✅ Stacking ensemble trained successfully!")
-            st.markdown('</div>', unsafe_allow_html=True)
+            render_stacking_controls(col1)
         
         with col2:
-            if "stacking" in st.session_state.model_results:
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                
-                results = st.session_state.model_results["stacking"]
-                
-                if st.session_state.task_type == 'classification':
-                    # Add stacking to individual scores for comparison
-                    all_scores = results["individual_scores"].copy()
-                    all_scores["stacking"] = results["stacking_score"]
-                    
-                    # Create bar chart for model comparison
-                    models = list(all_scores.keys())
-                    scores = list(all_scores.values())
-                    
-                    # Highlight stacking model with different color
-                    colors = [AWS_COLORS["light_blue"] if model != "stacking" else AWS_COLORS["green"] for model in models]
-                    
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=models,
-                        y=[score * 100 for score in scores],
-                        marker_color=colors,
-                        text=[f'{score:.2%}' for score in scores],
-                        textposition='auto'
-                    ))
-                    fig.update_layout(
-                        title='Model Accuracy Comparison',
-                        xaxis_title='Model',
-                        yaxis_title='Accuracy (%)',
-                        yaxis=dict(range=[0, 100]),
-                        height=400
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Display confusion matrix
-                    st.subheader("Confusion Matrix (Stacking Model)")
-                    cm = results["conf_matrix"]
-                    fig = px.imshow(
-                        cm, 
-                        text_auto=True,
-                        color_continuous_scale=px.colors.sequential.Greens,
-                        labels=dict(x="Predicted Label", y="True Label"),
-                        x=['Class 0', 'Class 1'],
-                        y=['Class 0', 'Class 1']
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                else:  # regression
-                    # Add stacking to individual scores for comparison
-                    all_scores_mse = results["individual_scores_mse"].copy()
-                    all_scores_mse["stacking"] = results["stacking_mse"]
-                    
-                    all_scores_r2 = results["individual_scores_r2"].copy()
-                    all_scores_r2["stacking"] = results["stacking_r2"]
-                    
-                    # Create bar charts for model comparison
-                    models = list(all_scores_mse.keys())
-                    mse_scores = list(all_scores_mse.values())
-                    r2_scores = list(all_scores_r2.values())
-                    
-                    # Highlight stacking model with different color
-                    colors = [AWS_COLORS["light_blue"] if model != "stacking" else AWS_COLORS["green"] for model in models]
-                    
-                    # MSE comparison
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=models,
-                        y=mse_scores,
-                        marker_color=colors,
-                        text=[f'{score:.4f}' for score in mse_scores],
-                        textposition='auto'
-                    ))
-                    fig.update_layout(
-                        title='Mean Squared Error Comparison (Lower is better)',
-                        xaxis_title='Model',
-                        yaxis_title='MSE',
-                        height=350
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # R² comparison
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=models,
-                        y=r2_scores,
-                        marker_color=colors,
-                        text=[f'{score:.4f}' for score in r2_scores],
-                        textposition='auto'
-                    ))
-                    fig.update_layout(
-                        title='R² Score Comparison (Higher is better)',
-                        xaxis_title='Model',
-                        yaxis_title='R²',
-                        height=350
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-                # Insights section
-                st.markdown("""
-                <div class="card">
-                    <h3>Key Insights:</h3>
-                    <ul>
-                        <li>Stacking often outperforms individual models by leveraging their strengths</li>
-                        <li>The meta-model learns which base model performs best in different situations</li>
-                        <li>Diverse base models typically lead to better stacking performance</li>
-                        <li>Cross-validation prevents overfitting in the stacking process</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.info("Train the ensemble to see the results!")
+            render_stacking_results(col2)
     else:
         st.warning("Please generate a dataset first using the sidebar options.")
 
@@ -1322,11 +1099,348 @@ with tabs[3]:
         </div>
         """, unsafe_allow_html=True)
 
-# Footer
-st.markdown("---")
-st.markdown("""
-<div style="text-align: center">
-    <p>© 2023 Ensemble Learning Explorer | Created with Streamlit</p>
-    <p><small>For educational purposes only</small></p>
-</div>
-""", unsafe_allow_html=True)
+
+def render_stacking_controls(container):
+    """Render the controls for the Stacking demo."""
+    with container:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        
+        # Model selection
+        st.subheader("Select Base Models")
+        
+        if st.session_state.task_type == 'classification':
+            use_rf = st.checkbox("Random Forest", value=True, key="stacking_use_rf")
+            use_svm = st.checkbox("Support Vector Machine", value=True, key="stacking_use_svm")
+            use_lr = st.checkbox("Logistic Regression", value=True, key="stacking_use_lr")
+            use_gb = st.checkbox("Gradient Boosting", value=True, key="stacking_use_gb")
+            
+            st.subheader("Meta-Model")
+            meta_model = st.selectbox(
+                "Choose Meta-Model",
+                ["Logistic Regression", "Random Forest"],
+                key="stacking_meta_model"
+            )
+        else:
+            use_rf = st.checkbox("Random Forest", value=True, key="stacking_use_rf")
+            use_svr = st.checkbox("SVR", value=True, key="stacking_use_svr")
+            use_lr = st.checkbox("Linear Regression", value=True, key="stacking_use_lr")
+            use_gb = st.checkbox("Gradient Boosting", value=True, key="stacking_use_gb")
+            
+            st.subheader("Meta-Model")
+            meta_model = st.selectbox(
+                "Choose Meta-Model",
+                ["Linear Regression", "Random Forest"],
+                key="stacking_meta_model"
+            )
+        
+        cv_folds = st.slider(
+            "Cross-Validation Folds", 
+            min_value=2, 
+            max_value=10, 
+            value=5,
+            key="stacking_cv_folds"
+        )
+        
+        if st.button("Train Stacking Ensemble", key="train_stacking"):
+            if st.session_state.task_type == 'classification':
+                models_selected = [use_rf, use_svm, use_lr, use_gb]
+            else:
+                models_selected = [use_rf, use_svr, use_lr, use_gb]
+                
+            if not any(models_selected):
+                st.error("Please select at least one base model!")
+            else:
+                train_stacking_model(meta_model, cv_folds)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+def train_stacking_model(meta_model, cv_folds):
+    """Train the Stacking model with the given parameters."""
+    with st.spinner("Training stacking ensemble..."):
+        if st.session_state.task_type == 'classification':
+            # Create list of base models
+            estimators = []
+            if st.session_state.get('stacking_use_rf', False):
+                estimators.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
+            if st.session_state.get('stacking_use_svm', False):
+                estimators.append(('svm', SVC(probability=True, random_state=42)))
+            if st.session_state.get('stacking_use_lr', False):
+                estimators.append(('lr', LogisticRegression(max_iter=1000, random_state=42)))
+            if st.session_state.get('stacking_use_gb', False):
+                estimators.append(('gb', GradientBoostingClassifier(n_estimators=10, random_state=42)))
+            
+            # Create and train individual models for comparison
+            individual_scores = {}
+            for name, model in estimators:
+                model.fit(st.session_state.X_train, st.session_state.y_train)
+                y_pred = model.predict(st.session_state.X_test)
+                score = accuracy_score(st.session_state.y_test, y_pred)
+                individual_scores[name] = score
+            
+            # Create meta-model
+            if meta_model == "Logistic Regression":
+                final_estimator = LogisticRegression(max_iter=1000)
+            else:
+                final_estimator = RandomForestClassifier(n_estimators=100)
+            
+            # Create and train stacking model
+            stacking_model = StackingClassifier(
+                estimators=estimators,
+                final_estimator=final_estimator,
+                cv=cv_folds,
+                stack_method='predict_proba',
+                n_jobs=-1,
+                passthrough=True
+            )
+            
+            stacking_model.fit(st.session_state.X_train, st.session_state.y_train)
+            stacking_pred = stacking_model.predict(st.session_state.X_test)
+            stacking_score = accuracy_score(st.session_state.y_test, stacking_pred)
+            
+            # Store results
+            st.session_state.model_results["stacking"] = {
+                "individual_scores": individual_scores,
+                "stacking_score": stacking_score,
+                "conf_matrix": confusion_matrix(st.session_state.y_test, stacking_pred),
+                "classification_report": classification_report(st.session_state.y_test, stacking_pred, output_dict=True)
+            }
+            
+        else:  # regression
+            # Create list of base models
+            estimators = []
+            if st.session_state.get('stacking_use_rf', False):
+                estimators.append(('rf', RandomForestRegressor(n_estimators=100, random_state=42)))
+            if st.session_state.get('stacking_use_svr', False):
+                estimators.append(('svr', SVR()))
+            if st.session_state.get('stacking_use_lr', False):
+                estimators.append(('lr', LinearRegression()))
+            if st.session_state.get('stacking_use_gb', False):
+                estimators.append(('gb', GradientBoostingRegressor(n_estimators=100, random_state=42)))
+            
+            # Create and train individual models for comparison
+            individual_scores_mse = {}
+            individual_scores_r2 = {}
+            for name, model in estimators:
+                model.fit(st.session_state.X_train, st.session_state.y_train)
+                y_pred = model.predict(st.session_state.X_test)
+                mse = mean_squared_error(st.session_state.y_test, y_pred)
+                r2 = r2_score(st.session_state.y_test, y_pred)
+                individual_scores_mse[name] = mse
+                individual_scores_r2[name] = r2
+            
+            # Create meta-model
+            if meta_model == "Linear Regression":
+                final_estimator = LinearRegression()
+            else:
+                final_estimator = RandomForestRegressor(n_estimators=100)
+            
+            # Create and train stacking model
+            stacking_model = StackingRegressor(
+                estimators=estimators,
+                final_estimator=final_estimator,
+                cv=cv_folds,
+                n_jobs=-1
+            )
+            
+            stacking_model.fit(st.session_state.X_train, st.session_state.y_train)
+            stacking_pred = stacking_model.predict(st.session_state.X_test)
+            stacking_mse = mean_squared_error(st.session_state.y_test, stacking_pred)
+            stacking_r2 = r2_score(st.session_state.y_test, stacking_pred)
+            
+            # Store results
+            st.session_state.model_results["stacking"] = {
+                "individual_scores_mse": individual_scores_mse,
+                "individual_scores_r2": individual_scores_r2,
+                "stacking_mse": stacking_mse,
+                "stacking_r2": stacking_r2
+            }
+    
+    st.success("✅ Stacking ensemble trained successfully!")
+
+
+def render_stacking_results(container):
+    """Render the results of the Stacking model."""
+    with container:
+        if "stacking" in st.session_state.model_results:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            
+            results = st.session_state.model_results["stacking"]
+            
+            if st.session_state.task_type == 'classification':
+                # Add stacking to individual scores for comparison
+                all_scores = results["individual_scores"].copy()
+                all_scores["stacking"] = results["stacking_score"]
+                
+                # Create bar chart for model comparison
+                models = list(all_scores.keys())
+                scores = list(all_scores.values())
+                
+                # Highlight stacking model with different color
+                colors = [AWS_COLORS["light_blue"] if model != "stacking" else AWS_COLORS["green"] for model in models]
+                
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=models,
+                    y=[score * 100 for score in scores],
+                    marker_color=colors,
+                    text=[f'{score:.2%}' for score in scores],
+                    textposition='auto'
+                ))
+                fig.update_layout(
+                    title='Model Accuracy Comparison',
+                    xaxis_title='Model',
+                    yaxis_title='Accuracy (%)',
+                    yaxis=dict(range=[0, 100]),
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Display confusion matrix
+                st.subheader("Confusion Matrix (Stacking Model)")
+                cm = results["conf_matrix"]
+                fig = px.imshow(
+                    cm, 
+                    text_auto=True,
+                    color_continuous_scale=px.colors.sequential.Greens,
+                    labels=dict(x="Predicted Label", y="True Label"),
+                    x=['Class 0', 'Class 1'],
+                    y=['Class 0', 'Class 1']
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+            else:  # regression
+                # Add stacking to individual scores for comparison
+                all_scores_mse = results["individual_scores_mse"].copy()
+                all_scores_mse["stacking"] = results["stacking_mse"]
+                
+                all_scores_r2 = results["individual_scores_r2"].copy()
+                all_scores_r2["stacking"] = results["stacking_r2"]
+                
+                # Create bar charts for model comparison
+                models = list(all_scores_mse.keys())
+                mse_scores = list(all_scores_mse.values())
+                r2_scores = list(all_scores_r2.values())
+                
+                # Highlight stacking model with different color
+                colors = [AWS_COLORS["light_blue"] if model != "stacking" else AWS_COLORS["green"] for model in models]
+                
+                # MSE comparison
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=models,
+                    y=mse_scores,
+                    marker_color=colors,
+                    text=[f'{score:.4f}' for score in mse_scores],
+                    textposition='auto'
+                ))
+                fig.update_layout(
+                    title='Mean Squared Error Comparison (Lower is better)',
+                    xaxis_title='Model',
+                    yaxis_title='MSE',
+                    height=350
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # R² comparison
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=models,
+                    y=r2_scores,
+                    marker_color=colors,
+                    text=[f'{score:.4f}' for score in r2_scores],
+                    textposition='auto'
+                ))
+                fig.update_layout(
+                    title='R² Score Comparison (Higher is better)',
+                    xaxis_title='Model',
+                    yaxis_title='R²',
+                    height=350
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Insights section
+            st.markdown("""
+            <div class="card">
+                <h3>Key Insights:</h3>
+                <ul>
+                    <li>Stacking often outperforms individual models by leveraging their strengths</li>
+                    <li>The meta-model learns which base model performs best in different situations</li>
+                    <li>Diverse base models typically lead to better stacking performance</li>
+                    <li>Cross-validation prevents overfitting in the stacking process</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("Train the ensemble to see the results!")
+
+
+def render_footer():
+    """Render the page footer."""
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center">
+        <p>© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def main():
+    """Main application function."""
+    # Set up page
+    apply_custom_styling()
+    initialize_session_state()
+    common.initialize_session_state()
+    
+    # Set up sidebar
+    setup_sidebar()
+    
+    # Main content
+    st.title("Ensemble Learning")
+    
+    st.markdown("""
+    <div class="card">
+    <p>Ensemble learning is a powerful machine learning paradigm where multiple models (often called "weak learners") 
+    are trained to solve the same problem and combined to get better results. This approach frequently produces more 
+    accurate solutions than a single model would.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create tabs
+    tabs = st.tabs([
+        "📊 Overview", 
+        "🌲 Bagging", 
+        "🚀 Boosting", 
+        "🏗️ Stacking"
+    ])
+    
+    # Tab 1: Overview
+    with tabs[0]:
+        render_overview_tab()
+    
+    # Tab 2: Bagging
+    with tabs[1]:
+        render_bagging_tab()
+    
+    # Tab 3: Boosting
+    with tabs[2]:
+        render_boosting_tab()
+    
+    # Tab 4: Stacking
+    with tabs[3]:
+        render_stacking_tab()
+    
+    # Footer
+    render_footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
