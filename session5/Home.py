@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,6 +6,9 @@ import seaborn as sns
 from PIL import Image
 import base64
 import io
+import utils.common as common
+import utils.authenticate as authenticate
+
 
 # Set page config
 st.set_page_config(
@@ -16,207 +18,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state variables
-if 'quiz_score' not in st.session_state:
-    st.session_state['quiz_score'] = 0
-if 'quiz_attempted' not in st.session_state:
-    st.session_state['quiz_attempted'] = False
-if 'name' not in st.session_state:
-    st.session_state['name'] = ""
-if 'visited_Drift_Detection' not in st.session_state:
-    st.session_state['visited_Drift_Detection'] = False
-if 'visited_Model_Testing' not in st.session_state:
-    st.session_state['visited_Model_Testing'] = False
-if 'visited_Cost_Optimization' not in st.session_state:
-    st.session_state['visited_Cost_Optimization'] = False
-if 'visited_Security_VPC' not in st.session_state:
-    st.session_state['visited_Security_VPC'] = False
-if 'visited_Security_Governance' not in st.session_state:
-    st.session_state['visited_Security_Governance'] = False
 
-# Custom CSS for styling - same as Domain 1
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #FF9900;
-        margin-bottom: 1rem;
-    }
-    .sub-header {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-    }
-    .section-header {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 0.8rem;
-        margin-bottom: 0.3rem;
-    }
-    .info-box {
-        background-color: #F0F2F6;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .success-box {
-        background-color: #D1FAE5;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .warning-box {
-        background-color: #FEF3C7;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .tip-box {
-        background-color: #E0F2FE;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-left: 5px solid #0EA5E9;
-    }
-    .step-box {
-        background-color: #FFFFFF;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    .card {
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        background-color: white;
-        transition: transform 0.3s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-    }
-    .aws-orange {
-        color: #FF9900;
-    }
-    .aws-blue {
-        color: #232F3E;
-    }
-    hr {
-        margin-top: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    /* Make the tab content container take full height */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #F8F9FA;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-left: 16px;
-        padding-right: 16px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .definition {
-        background-color: #EFF6FF;
-        border-left: 5px solid #3B82F6;
-        padding: 10px 15px;
-        margin: 15px 0;
-        border-radius: 0 5px 5px 0;
-    }
-    .code-box {
-        background-color: #F8F9FA;
-        padding: 15px;
-        border-radius: 5px;
-        font-family: monospace;
-        margin: 15px 0;
-        border: 1px solid #E5E7EB;
-    }
-    .model-diagram {
-        text-align: center;
-        margin: 20px;
-    }
-    .metric-card {
-        background-color: #FFFFFF;
-        border-radius: 8px;
-        border-left: 4px solid #FF9900;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-    .comparison-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .comparison-table th {
-        background-color: #FF9900;
-        color: white;
-        padding: 10px;
-        text-align: left;
-    }
-    .comparison-table td {
-        padding: 8px;
-        border-bottom: 1px solid #ddd;
-    }
-    .comparison-table tr:nth-child(even) {
-        background-color: #f9f9f9;
-    }
-    .feature-list {
-        list-style-type: none;
-        padding-left: 0;
-    }
-    .feature-list li {
-        margin-bottom: 8px;
-        padding-left: 25px;
-        position: relative;
-    }
-    .feature-list li:before {
-        content: "✓";
-        color: #FF9900;
-        position: absolute;
-        left: 0;
-        font-weight: bold;
-    }
-    .security-card {
-        border: 1px solid #ddd;
-        border-left: 4px solid #FF9900;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-        background-color: white;
-        transition: transform 0.2s;
-    }
-    .security-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .drift-type {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        background-color: white;
-    }
-    .drift-type h4 {
-        color: #FF9900;
-        margin-top: 0;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Function to display custom header - same as Domain 1
 def custom_header(text, level="main"):
+    """Display custom header with styling."""
     if level == "main":
         st.markdown(f'<div class="main-header">{text}</div>', unsafe_allow_html=True)
     elif level == "sub":
@@ -224,43 +28,26 @@ def custom_header(text, level="main"):
     elif level == "section":
         st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
 
-# Function to create custom info box - same as Domain 1
 def info_box(text, box_type="info"):
-    if box_type == "info":
-        st.markdown(f"""
-            <div class="info-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "success":
-        st.markdown(f"""
-            <div class="success-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "warning":
-        st.markdown(f"""
-            <div class="warning-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "tip":
-        st.markdown(f"""
-            <div class="tip-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
+    """Create custom info box with specific styling."""
+    box_class = f"{box_type}-box"
+    st.markdown(f"""
+        <div class="{box_class}">
+            <div markdown="1">
+                {text}
+        </div>
+    """, unsafe_allow_html=True)
 
-# Function for definition box - same as Domain 1
 def definition_box(term, definition):
+    """Create a styled definition box."""
     st.markdown(f"""
     <div class="definition">
         <strong>{term}:</strong> {definition}
     </div>
     """, unsafe_allow_html=True)
 
-# Function to create security card
 def security_card(title, description, link=None):
+    """Create a styled security card with optional link."""
     link_html = f'<a href="{link}" target="_blank">Learn more</a>' if link else ''
     st.markdown(f"""
     <div class="security-card">
@@ -270,15 +57,15 @@ def security_card(title, description, link=None):
     </div>
     """, unsafe_allow_html=True)
 
-# Function to create drift type card
 def drift_type_card(title, description):
+    """Create a styled drift type card."""
     st.markdown(f"""<div class="drift-type">
         <h4>{title}</h4>
         <p>{description}</p>
     </div>""", unsafe_allow_html=True)
 
-# Function to reset session - same as Domain 1
 def reset_session():
+    """Reset all session state variables."""
     st.session_state['quiz_score'] = 0
     st.session_state['quiz_attempted'] = False
     st.session_state['name'] = ""
@@ -289,67 +76,221 @@ def reset_session():
     st.session_state['visited_Security_Governance'] = False
     st.rerun()
 
-# Sidebar for session management - similar to Domain 1
-with st.sidebar:
-    st.image("images/mla_badge.png", width=150)
-    st.markdown("### ML Engineer - Associate")
-    st.markdown("#### Domain 4: ML Solution Monitoring, Maintenance, and Security")
-    
-    # If user has provided their name, greet them
-    if st.session_state['name']:
-        st.success(f"Welcome, {st.session_state['name']}! 👋")
-    else:
-        name = st.text_input("Enter your name:")
-        if name:
-            st.session_state['name'] = name
-            st.rerun()
-    
-    # Reset button
-    if st.button("Reset Session 🔄"):
-        reset_session()
-    
-    # Progress tracking
-    if st.session_state['name']:
-        st.markdown("---")
-        st.markdown("### Your Progress")
-        
-        # Track visited pages
-        visited_pages = [page for page in ["Drift_Detection", "Model_Testing", "Cost_Optimization", "Security_VPC", "Security_Governance"] 
-                         if st.session_state.get(f"visited_{page}", False)]
-        
-        progress = len(visited_pages) / 5
-        st.progress(progress)
-        st.markdown(f"**{len(visited_pages)}/5 sections completed**")
-        
-        # Track quiz score if attempted
-        if st.session_state['quiz_attempted']:
-            st.markdown(f"**Quiz Score: {st.session_state['quiz_score']}/5**")
-        
-        # Learning outcomes reminder
-        st.markdown("---")
-        st.markdown("### Learning Outcomes")
-        st.markdown("""
-        - Understand model monitoring and drift detection
-        - Implement model testing strategies
-        - Optimize ML infrastructure and costs
-        - Secure ML resources in a VPC
-        - Implement security governance for ML
-        """)
+def set_custom_styles():
+    """Set up custom CSS styles for the app."""
+    st.markdown("""
+    <style>
+        .main-header {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #FF9900;
+            margin-bottom: 1rem;
+        }
+        .sub-header {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 0.8rem;
+            margin-bottom: 0.3rem;
+        }
+        .info-box {
+            background-color: #F0F2F6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .success-box {
+            background-color: #D1FAE5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .warning-box {
+            background-color: #FEF3C7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .tip-box {
+            background-color: #E0F2FE;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #0EA5E9;
+        }
+        .step-box {
+            background-color: #FFFFFF;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .aws-orange {
+            color: #FF9900;
+        }
+        .aws-blue {
+            color: #232F3E;
+        }
+        hr {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        /* Make the tab content container take full height */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #F8F9FA;
+            border-radius: 4px 4px 0px 0px;
+            gap: 1px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .definition {
+            background-color: #EFF6FF;
+            border-left: 5px solid #3B82F6;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .code-box {
+            background-color: #F8F9FA;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 15px 0;
+            border: 1px solid #E5E7EB;
+        }
+        .model-diagram {
+            text-align: center;
+            margin: 20px;
+        }
+        .metric-card {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            border-left: 4px solid #FF9900;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .comparison-table th {
+            background-color: #FF9900;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        .comparison-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .feature-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .feature-list li {
+            margin-bottom: 8px;
+            padding-left: 25px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "✓";
+            color: #FF9900;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        .security-card {
+            border: 1px solid #ddd;
+            border-left: 4px solid #FF9900;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: white;
+            transition: transform 0.2s;
+        }
+        .security-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .drift-type {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: white;
+        }
+        .drift-type h4 {
+            color: #FF9900;
+            margin-top: 0;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Main content with tabs
-tabs = st.tabs([
-    "🏠 Home", 
-    "📊 Drift Detection", 
-    "🧪 Model Testing", 
-    "💰 Cost Optimization", 
-    "🔒 Security & VPC", 
-    "📋 Security Governance",
-    "❓ Quiz", 
-    "📚 Resources"
-])
+def initialize_session_state():
+    """Initialize session state variables if they don't exist."""
+    # Initialize session state variables
+    common.initialize_session_state()
 
-# Home tab
-with tabs[0]:
+    if 'quiz_score' not in st.session_state:
+        st.session_state['quiz_score'] = 0
+    if 'quiz_attempted' not in st.session_state:
+        st.session_state['quiz_attempted'] = False
+    if 'name' not in st.session_state:
+        st.session_state['name'] = ""
+    if 'visited_Drift_Detection' not in st.session_state:
+        st.session_state['visited_Drift_Detection'] = False
+    if 'visited_Model_Testing' not in st.session_state:
+        st.session_state['visited_Model_Testing'] = False
+    if 'visited_Cost_Optimization' not in st.session_state:
+        st.session_state['visited_Cost_Optimization'] = False
+    if 'visited_Security_VPC' not in st.session_state:
+        st.session_state['visited_Security_VPC'] = False
+    if 'visited_Security_Governance' not in st.session_state:
+        st.session_state['visited_Security_Governance'] = False
+
+def setup_sidebar():
+    """Set up the sidebar with navigation elements."""
+    with st.sidebar:
+        st.image("images/mla_badge.png", width=150)
+        st.markdown("### ML Engineer - Associate")
+        st.markdown("#### Domain 4: ML Solution Monitoring, Maintenance, and Security")
+        
+        common.render_sidebar()
+
+def display_home_tab():
+    """Display content for the Home tab."""
     custom_header("AWS Partner Certification Readiness")
     st.markdown("## Machine Learning Engineer - Associate")
     
@@ -470,8 +411,8 @@ with tabs[0]:
         - Implement governance and compliance
         """)
 
-# Drift Detection tab
-with tabs[1]:
+def display_drift_detection_tab():
+    """Display content for the Drift Detection tab."""
     # Mark as visited
     st.session_state['visited_Drift_Detection'] = True
     
@@ -749,8 +690,8 @@ with tabs[1]:
         - Feature correlations
         """)
 
-# Model Testing tab
-with tabs[2]:
+def display_model_testing_tab():
+    """Display content for the Model Testing tab."""
     # Mark as visited
     st.session_state['visited_Model_Testing'] = True
     
@@ -1000,8 +941,8 @@ with tabs[2]:
     7. **Consider seasonality** - Account for time-based variations in traffic
     """, "success")
 
-# Cost Optimization tab
-with tabs[3]:
+def display_cost_optimization_tab():
+    """Display content for the Cost Optimization tab."""
     # Mark as visited
     st.session_state['visited_Cost_Optimization'] = True
     
@@ -1322,8 +1263,8 @@ with tabs[3]:
     7. **Clean up unused resources** - Remove endpoints, notebooks, and other resources when not needed
     """, "success")
 
-# Security & VPC tab
-with tabs[4]:
+def display_security_vpc_tab():
+    """Display content for the Security & VPC tab."""
     # Mark as visited
     st.session_state['visited_Security_VPC'] = True
     
@@ -1523,8 +1464,8 @@ with tabs[4]:
         - com.amazonaws.region.logs
         """, "tip")
 
-# Security Governance tab
-with tabs[5]:
+def display_security_governance_tab():
+    """Display content for the Security Governance tab."""
     # Mark as visited
     st.session_state['visited_Security_Governance'] = True
     
@@ -1771,8 +1712,8 @@ with tabs[5]:
         7. **Automate compliance** - Use tools to enforce governance policies
         """, "success")
 
-# Quiz tab
-with tabs[6]:
+def display_quiz_tab():
+    """Display content for the Quiz tab."""
     custom_header("Test Your Knowledge")
     
     st.markdown("""
@@ -1929,8 +1870,8 @@ with tabs[6]:
             st.session_state['quiz_attempted'] = False
             st.rerun()
 
-# Resources tab
-with tabs[7]:
+def display_resources_tab():
+    """Display content for the Resources tab."""
     custom_header("Additional Resources")
     
     st.markdown("""
@@ -2017,47 +1958,73 @@ with tabs[7]:
     - [AWS Security Blog](https://aws.amazon.com/blogs/security/)
     """)
 
-# Footer
-st.markdown("---")
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.image("images/aws_logo.png", width=70)
-with col2:
-    st.markdown("**AWS Machine Learning Engineer - Associate | Domain 4: ML Solution Monitoring, Maintenance, and Security**")
-    st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
-# ```
+def display_footer():
+    """Display footer with AWS copyright information."""
+    st.markdown("---")
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        st.image("images/aws_logo.png", width=70)
+    with col2:
+        st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
 
-# To use this application, you would need to create the following directory structure:
+def main():
+    """Main function to run the application."""
 
-# ```
-# - app.py (the main file with the code above)
-# - images/
-#   - mla_badge.png
-#   - mla_badge_big.png
-#   - aws_logo.png
-#   - model_drift.png
-#   - sagemaker_model_monitor.png
-#   - shadow_testing.png
-#   - ab_testing.png
-#   - traffic_distribution.png
-#   - inference_recommender.png
-#   - cpu_instances.png
-#   - gpu_instances.png
-#   - inferentia.png
-#   - cost_explorer.png
-#   - aws_budgets.png
-#   - cost_usage_report.png
-#   - trusted_advisor.png
-#   - sagemaker_security.png
-#   - vpc_config.png
-#   - endpoint_vpc.png
-#   - sagemaker_studio_vpc.png
-#   - iam_policies.png
-#   - permissions_evaluation.png
-#   - role_manager.png
-#   - model_cards.png
-#   - model_dashboard.png
-#   - model_cards_workflow.png
-# ```
+    
+    # Apply custom styles
+    set_custom_styles()
+    
+    # Initialize session state variables
+    initialize_session_state()
 
-# This application follows the same UI/UX styling as the Domain 1 code, with consistent components like custom headers, info boxes, definition boxes, and expandable sections. I've organized the content into tabs covering Drift Detection, Model Testing, Cost Optimization, Security & VPC, Security Governance, plus a quiz to test knowledge and a resources section for further learning.
+    # Set up sidebar navigation
+    setup_sidebar()
+
+    # Create tabs for content organization
+    tabs = st.tabs([
+        "🏠 Home", 
+        "📊 Drift Detection", 
+        "🧪 Model Testing", 
+        "💰 Cost Optimization", 
+        "🔒 Security & VPC", 
+        "📋 Security Governance",
+        "❓ Quiz", 
+        "📚 Resources"
+    ])
+
+    # Display content in each tab
+    with tabs[0]:
+        display_home_tab()
+    
+    with tabs[1]:
+        display_drift_detection_tab()
+    
+    with tabs[2]:
+        display_model_testing_tab()
+    
+    with tabs[3]:
+        display_cost_optimization_tab()
+    
+    with tabs[4]:
+        display_security_vpc_tab()
+    
+    with tabs[5]:
+        display_security_governance_tab()
+    
+    with tabs[6]:
+        display_quiz_tab()
+    
+    with tabs[7]:
+        display_resources_tab()
+    
+    # Display footer with copyright information
+    display_footer()
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

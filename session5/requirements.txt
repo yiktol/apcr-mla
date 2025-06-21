@@ -1,4 +1,5 @@
 streamlit
+boto3
 streamlit_lottie
 pandas
 numpy
