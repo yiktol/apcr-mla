@@ -10,6 +10,8 @@ import io
 import json
 import math
 import numpy as np
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Set page configuration
 st.set_page_config(
@@ -18,26 +20,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# Initialize session state
-def init_session_state():
-    if "session_id" not in st.session_state:
-        st.session_state["session_id"] = str(uuid.uuid4())
     
-    if "quiz_attempted" not in st.session_state:
-        st.session_state["quiz_attempted"] = False
-    
-    if "quiz_score" not in st.session_state:
-        st.session_state["quiz_score"] = 0
-    
-    if "quiz_answers" not in st.session_state:
-        st.session_state["quiz_answers"] = []
-
-# Initialize session state
-init_session_state()
-
-# Apply AWS Style
 def apply_aws_style():
+    """Apply AWS styling to the Streamlit app."""
     st.markdown("""
     <style>
     .main {background-color: #F8F8F8;}
@@ -71,58 +56,56 @@ def apply_aws_style():
         color: #FFFFFF !important;
         border: 1px solid #FF9900 !important;
     }
+    
+    .footer {
+        position: relative;
+        margin-top: 40px;
+        padding: 10px 0;
+        text-align: center;
+        color: #555;
+        font-size: 0.8em;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 
-apply_aws_style()
-
-
-
-
-
-# Sidebar
-with st.sidebar:
-
-    st.subheader("Session Management")
-    st.info(f"User ID: {st.session_state.session_id}")
-        
-    # Reset session
-    if st.button("Reset Session"):
-        # Clear all session state
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        init_session_state()
-        st.rerun()
-
-    st.divider()
-    # About this App (collapsible)
-    with st.expander("About this App", expanded=False):
-        st.write("""
-        This interactive e-learning application focuses on AWS SageMaker Performance & Optimization.
-        
-        Learn about:
-        - Cost analysis tools
-        - Cost optimization strategies
-        
-        Complete knowledge checks to test your understanding!
-        """)
+def init_session_state():
+    """Initialize session state variables."""
+    common.initialize_session_state()
     
+    if "session_id" not in st.session_state:
+        st.session_state["session_id"] = str(uuid.uuid4())
+    
+    if "quiz_attempted" not in st.session_state:
+        st.session_state["quiz_attempted"] = False
+    
+    if "quiz_score" not in st.session_state:
+        st.session_state["quiz_score"] = 0
+    
+    if "quiz_answers" not in st.session_state:
+        st.session_state["quiz_answers"] = []
 
 
-# Main content area
-st.title("🚀 SageMaker Performance & Optimization")
-st.markdown("---")
+def setup_sidebar():
+    """Set up the sidebar content."""
+    with st.sidebar:
+        common.render_sidebar()
+        
+        # About this App (collapsible)
+        with st.expander("About this App", expanded=False):
+            st.write("""
+            This interactive e-learning application focuses on AWS SageMaker Performance & Optimization.
+            
+            Learn about:
+            - Cost analysis tools
+            - Cost optimization strategies
+            
+            Complete knowledge checks to test your understanding!
+            """)
 
-# Create tabs for navigation
-tabs = st.tabs([
-    "💰 Cost Analysis Tools", 
-    "⚙️ Optimization Strategies",
-    "✅ Knowledge Check"
-])
 
-# Tab 1: Cost Analysis Tools
-with tabs[0]:
+def show_cost_analysis_tools():
+    """Display the cost analysis tools tab content."""
     st.header("Cost Analysis Tools")
     
     st.markdown("""
@@ -414,8 +397,9 @@ for resource in response['result']['flaggedResources']:
     metrics_df = pd.DataFrame(metrics_data)
     st.table(metrics_df)
 
-# Tab 2: Optimization Strategies
-with tabs[1]:
+
+def show_optimization_strategies():
+    """Display the optimization strategies tab content."""
     st.header("SageMaker Cost Optimization Strategies")
     
     st.markdown("""
@@ -963,8 +947,19 @@ predictor = model.deploy(
        - No → Use standard SageMaker endpoints with right-sized instances
     """)
 
-# Tab 3: Knowledge Check
-with tabs[2]:
+
+def custom_header(text, level="main"):
+    """Display custom header with specified styling."""
+    if level == "main":
+        st.markdown(f'<div class="main-header">{text}</div>', unsafe_allow_html=True)
+    elif level == "sub":
+        st.markdown(f'<div class="sub-header">{text}</div>', unsafe_allow_html=True)
+    elif level == "section":
+        st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
+
+
+def show_knowledge_check():
+    """Display the knowledge check tab content."""
     st.markdown("""
     <style>
         .main-header {
@@ -989,15 +984,6 @@ with tabs[2]:
         }
     </style>
     """, unsafe_allow_html=True)
-    
-    # Function to display custom header
-    def custom_header(text, level="main"):
-        if level == "main":
-            st.markdown(f'<div class="main-header">{text}</div>', unsafe_allow_html=True)
-        elif level == "sub":
-            st.markdown(f'<div class="sub-header">{text}</div>', unsafe_allow_html=True)
-        elif level == "section":
-            st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
     
     custom_header("Test Your Knowledge")
     
@@ -1116,3 +1102,61 @@ with tabs[2]:
         if st.button("Retake Quiz"):
             st.session_state['quiz_attempted'] = False
             st.rerun()
+
+
+def add_footer():
+    """Add a footer to the app."""
+    st.markdown("""
+    <div class="footer">
+        © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def main():
+    """Main function to run the Streamlit app."""
+    
+    # Initialize session state
+    init_session_state()
+    
+    # Apply AWS styling
+    apply_aws_style()
+    
+    # Setup sidebar
+    setup_sidebar()
+    
+    # Main content area
+    st.title("🚀 SageMaker Performance & Optimization")
+    st.markdown("---")
+    
+    # Create tabs for navigation
+    tabs = st.tabs([
+        "💰 Cost Analysis Tools", 
+        "⚙️ Optimization Strategies",
+        "✅ Knowledge Check"
+    ])
+    
+    # Tab 1: Cost Analysis Tools
+    with tabs[0]:
+        show_cost_analysis_tools()
+    
+    # Tab 2: Optimization Strategies
+    with tabs[1]:
+        show_optimization_strategies()
+    
+    # Tab 3: Knowledge Check
+    with tabs[2]:
+        show_knowledge_check()
+    
+    # Add footer
+    add_footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

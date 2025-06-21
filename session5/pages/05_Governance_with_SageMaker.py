@@ -19,12 +19,25 @@ import requests
 import plotly.graph_objects as go
 import plotly.express as px
 from streamlit.components.v1 import html
+import utils.common as common
+import utils.authenticate as authenticate
+
+
+# Set page configuration
+st.set_page_config(
+    page_title="ML Governance with Amazon SageMaker",
+    page_icon="🔐",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 
 def initialize_session_state():
     """
     Initialize session state variables
     """
+    common.initialize_session_state()
+    
     if 'user_id' not in st.session_state:
         st.session_state.user_id = str(uuid.uuid4())
     
@@ -1788,13 +1801,7 @@ def get_fairness_explanation(metric_name, status):
 
 # Main application
 def main():
-    # Set page configuration
-    st.set_page_config(
-        page_title="ML Governance with Amazon SageMaker",
-        page_icon="🔐",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
+
     
     # Initialize session state
     initialize_session_state()
@@ -1954,14 +1961,8 @@ def main():
     
     # Sidebar content
     with st.sidebar:
-        st.title("Session Management")
-        st.info(f"User ID: {st.session_state.user_id}")
+        common.render_sidebar()
         
-        if st.button("Reset Session"):
-            reset_session()
-            st.rerun()
-        
-        st.divider()
         # Information about the application
         with st.expander("About this application", expanded=False):
             st.markdown("""
@@ -2714,5 +2715,11 @@ print(f"Model monitoring scheduled for endpoint {predictor.endpoint_name}")
     """, unsafe_allow_html=True)
 
 
+# Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

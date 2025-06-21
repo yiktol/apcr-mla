@@ -11,6 +11,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from PIL import Image
 import base64
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Set page configuration
 st.set_page_config(
@@ -22,8 +24,7 @@ st.set_page_config(
 
 # Initialize session state
 def init_session_state():
-    if 'session_id' not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())
+    common.initialize_session_state()
     
     if 'knowledge_check_responses' not in st.session_state:
         st.session_state.knowledge_check_responses = {}
@@ -44,15 +45,6 @@ def init_session_state():
     if 'quiz_answers' not in st.session_state:
         st.session_state['quiz_answers'] = []
 
-
-# Reset session state
-def reset_session():
-    st.session_state.knowledge_check_responses = {}
-    st.session_state.knowledge_check_completed = False
-    st.session_state.knowledge_check_submitted = False
-    st.session_state.correct_answers = 0
-    st.session_state.session_id = str(uuid.uuid4())
-    st.rerun()
 
 # Apply AWS Style
 def apply_aws_style():
@@ -1775,12 +1767,8 @@ def main():
     # Sidebar
     with st.sidebar:
         
-        st.subheader("Session Management")
-        st.info(f"User ID: {st.session_state.session_id}")
-            
-        if st.button("Reset Session"):
-                reset_session()
-        st.divider()
+        common.render_sidebar()
+        
         # About this App (collapsible)
         with st.expander("About this App"):
             st.markdown("""
@@ -1826,50 +1814,12 @@ def main():
     with tabs[5]:
         render_knowledge_check()
 
+# Main execution flow
 if __name__ == "__main__":
-    main()
-# ```
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
 
-# ## requirements.txt
-# ```
-# streamlit==1.22.0
-# pandas==1.5.3
-# numpy==1.24.3
-# matplotlib==3.7.1
-# seaborn==0.12.2
-# plotly==5.14.1
-# Pillow==9.5.0
-# ```
-
-# This Streamlit application creates a comprehensive e-learning experience focused on AWS monitoring and observability tools for ML Engineers. The application includes:
-
-# 1. **Five main content tabs with interactive components:**
-#    - CloudWatch - Real-time monitoring of ML models with metric visualization and alarm creation
-#    - X-Ray - End-to-end tracing for distributed ML applications with service maps
-#    - CloudTrail - Security auditing and compliance for ML operations
-#    - EventBridge - Event-driven architectures for ML workflows
-#    - QuickSight - Business intelligence dashboards for ML metrics
-
-# 2. **Knowledge Check tab with five questions:**
-#    - Single-answer (radio button) questions
-#    - Multi-answer (checkbox) questions
-#    - Detailed explanations for both correct and incorrect answers
-#    - Score tracking and feedback
-
-# 3. **Interactive elements in each tab:**
-#    - Sample code with Python examples
-#    - Interactive visualizations using Plotly
-#    - Demo interfaces with controls and sample outputs
-#    - Best practices and use cases specific to ML workloads
-
-# 4. **Session management:**
-#    - Unique session ID generation
-#    - Reset functionality
-#    - Progress tracking for knowledge check
-
-# 5. **AWS-themed styling:**
-#    - AWS color scheme (navy blue #232F3E and orange #FF9900)
-#    - Clean and responsive layout
-#    - Consistent formatting throughout the application
-
-# The application is designed to help ML engineers understand the importance of monitoring and observability in their ML workflows, with practical examples and interactive components that reinforce learning.

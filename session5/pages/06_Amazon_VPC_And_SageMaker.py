@@ -14,11 +14,13 @@ import re
 import os
 import requests
 from streamlit_lottie import st_lottie
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Initialize session state variables
 def init_session_state():
-    if "session_id" not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())
+    common.initialize_session_state()
+    
     if "knowledge_check_answers" not in st.session_state:
         st.session_state.knowledge_check_answers = [None] * 5
     if "knowledge_check_score" not in st.session_state:
@@ -28,13 +30,7 @@ def init_session_state():
     if "current_tab" not in st.session_state:
         st.session_state.current_tab = 0
 
-# Function to reset session state
-def reset_session():
-    st.session_state.session_id = str(uuid.uuid4())
-    st.session_state.knowledge_check_answers = [None] * 5
-    st.session_state.knowledge_check_score = 0
-    st.session_state.knowledge_check_submitted = False
-    st.success("Session has been reset!")
+
 
 # Function to load Lottie animations from URL or file
 def load_lottie(url_or_path):
@@ -1088,21 +1084,17 @@ def main():
     
     # Sidebar
     # Session management
-    st.sidebar.subheader("Session Management")
-    st.sidebar.info(f"User ID: {st.session_state.session_id}")
-    if st.sidebar.button("Reset Session"):
-        reset_session()
-    
-    st.sidebar.divider()
-    # Resources section
-    with st.sidebar.expander("About this application", expanded=False):
-        st.subheader("Additional Resources")
-        st.markdown("""
-        - [SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
-        - [Amazon VPC Documentation](https://docs.aws.amazon.com/vpc/)
-        - [AWS PrivateLink Documentation](https://docs.aws.amazon.com/vpc/latest/privatelink/)
-        - [SageMaker Studio Security](https://docs.aws.amazon.com/sagemaker/latest/dg/security.html)
-        """)
+    with st.sidebar:
+        common.render_sidebar()
+        # Resources section
+        with st.expander("About this application", expanded=False):
+            st.subheader("Additional Resources")
+            st.markdown("""
+            - [SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
+            - [Amazon VPC Documentation](https://docs.aws.amazon.com/vpc/)
+            - [AWS PrivateLink Documentation](https://docs.aws.amazon.com/vpc/latest/privatelink/)
+            - [SageMaker Studio Security](https://docs.aws.amazon.com/sagemaker/latest/dg/security.html)
+            """)
     
     # Create tabs
     tabs = st.tabs([
@@ -1134,5 +1126,12 @@ def main():
         unsafe_allow_html=True
     )
 
+# Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
+

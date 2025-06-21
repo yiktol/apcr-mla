@@ -18,12 +18,24 @@ from streamlit_lottie import st_lottie
 import requests
 import plotly.graph_objects as go
 import plotly.express as px
+import utils.common as common
+import utils.authenticate as authenticate
+
+# Set page configuration
+st.set_page_config(
+    page_title="Amazon SageMaker Inference Recommender",
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 
 def initialize_session_state():
     """
     Initialize session state variables
     """
+    common.initialize_session_state()
+    
     if 'user_id' not in st.session_state:
         st.session_state.user_id = str(uuid.uuid4())
     
@@ -47,16 +59,6 @@ def initialize_session_state():
         
     if 'recommendation_results' not in st.session_state:
         st.session_state.recommendation_results = None
-
-
-def reset_session():
-    """
-    Reset the session state
-    """
-    # Keep only user_id and reset all other state
-    user_id = st.session_state.user_id
-    st.session_state.clear()
-    st.session_state.user_id = user_id
 
 
 # Data generation functions
@@ -1061,13 +1063,7 @@ def draw_architecture_diagram(G, pos):
 
 # Main application
 def main():
-    # Set page configuration
-    st.set_page_config(
-        page_title="Amazon SageMaker Inference Recommender",
-        page_icon="🚀",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
+
     
     # Initialize session state
     initialize_session_state()
@@ -1292,14 +1288,8 @@ def main():
     
     # Sidebar content
     with st.sidebar:
-        st.title("Session Management")
-        st.info(f"User ID: {st.session_state.user_id}")
+        common.render_sidebar()
         
-        if st.button("Reset Session"):
-            reset_session()
-            st.rerun()
-        
-        st.divider()
         # Information about the application
         with st.expander("About this application", expanded=False):
             st.markdown("""
@@ -2515,5 +2505,11 @@ print(f"Model deployed to {top_instance} with autoscaling configured")
     """, unsafe_allow_html=True)
 
 
+# Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
