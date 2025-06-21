@@ -16,9 +16,21 @@ import requests
 import boto3
 import uuid
 from typing import Dict, List, Any, Union
+import utils.common as common
+import utils.authenticate as authenticate
+
+
+
+st.set_page_config(
+      page_title="AWS ML Deployment Infrastructure",
+      page_icon="🚀",
+      layout="wide",
+      initial_sidebar_state="expanded"
+  )
 
 # Initialize session state
 def init_session_state():
+    common.initialize_session_state()
     if 'initialized_infra' not in st.session_state:
         st.session_state.quiz_scores = {
             "autoscaling": 0,
@@ -2249,12 +2261,7 @@ def show_knowledge_check():
 
 def main():
     """Main function to render the Streamlit application."""
-    st.set_page_config(
-        page_title="AWS ML Deployment Infrastructure",
-        page_icon="🚀",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
+
     
     # Initialize session state
     init_session_state()
@@ -2271,12 +2278,7 @@ def main():
     
     # Sidebar
     with st.sidebar:        
-        st.markdown("### Session Management")
-        st.info(f"User ID: {st.session_state.user_id}")
-        if st.button("🔄 Reset Session"):
-            reset_session()
-        
-        st.sidebar.divider()
+        common.render_sidebar()
         
         with st.expander("📚 About This App", expanded=False):
           st.markdown("### Resources")
@@ -2312,5 +2314,12 @@ def main():
     
     render_footer()
 
+# Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
+

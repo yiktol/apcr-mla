@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -15,16 +14,11 @@ import base64
 from streamlit_lottie import st_lottie
 import requests
 from datetime import datetime
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page configuration for wider layout
-st.set_page_config(
-    page_title="SageMaker Optimization Tools Explorer",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# AWS Color Scheme
+# Set the AWS color scheme
 AWS_COLORS = {
     "orange": "#FF9900",
     "teal": "#00A1C9", 
@@ -37,159 +31,615 @@ AWS_COLORS = {
     "red": "#D13212"
 }
 
-# Load animation from URL
+
 def load_lottieurl(url: str):
+    """Load animation from URL."""
     r = requests.get(url)
     if r.status_code != 200:
         return None
     return r.json()
 
-# Initialize session state
-if 'init_opt' not in st.session_state:
-    st.session_state.init_opt = True
-    st.session_state.user_id = str(uuid.uuid4())
-    st.session_state.debugger_stage = 0
-    st.session_state.current_model = "ResNet"
-    st.session_state.learning_rate = 0.01
-    st.session_state.batch_size = 64
-    st.session_state.epochs = 25
-    st.session_state.automl_objective = "Accuracy"
-    st.session_state.compiler_model = "BERT"
-    st.session_state.distributed_training_strategy = "Data Parallel"
-    st.session_state.num_instances = 2
-    st.session_state.spot_training_enabled = True
-    st.session_state.max_wait_time = 1  # hours
 
-# Custom CSS for styling
-st.markdown("""
-<style>
-    .main {
-        background-color: #F8F9FA;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #F8F9FA;
-        border-radius: 8px;
-        padding: 10px;
-        margin-bottom: 15px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 60px;
-        white-space: pre-wrap;
-        border-radius: 6px;
-        font-weight: 600;
-        background-color: #FFFFFF;
-        color: #232F3E;
-        border: 1px solid #E9ECEF;
-        padding: 5px 15px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #FF9900 !important;
-    }
-    .stButton button {
-        background-color: #FF9900;
-        color: white;
-        border-radius: 4px;
-        border: none;
-        padding: 8px 16px;
-    }
-    .stButton button:hover {
-        background-color: #EC7211;
-    }
-    .info-box {
-        background-color: #E6F2FF;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        border-left: 5px solid #00A1C9;
-    }
-    .code-box {
-        background-color: #232F3E;
-        color: #FFFFFF;
-        padding: 15px;
-        border-radius: 8px;
-        font-family: 'Courier New', monospace;
-        overflow-x: auto;
-        margin: 15px 0;
-    }
-    .card {
-        background-color: white;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
-    }
-    .metric-card {
-        background-color: white;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
-        text-align: center;
-    }
-    .footer {
-        position: fixed;
-        bottom: 0;
-        right: 0;
-        left: 0;
-        background-color: #232F3E;
-        color: white;
-        text-align: center;
-        padding: 10px;
-        font-size: 12px;
-    }
-    h1, h2, h3 {
-        color: #232F3E;
-    }
-</style>
-""", unsafe_allow_html=True)
+def initialize_session_state():
+    """Initialize all session state variables."""
+    common.initialize_session_state()
+    if 'init_opt' not in st.session_state:
+        st.session_state.init_opt = True
+        st.session_state.user_id = str(uuid.uuid4())
+        st.session_state.debugger_stage = 0
+        st.session_state.current_model = "ResNet"
+        st.session_state.learning_rate = 0.01
+        st.session_state.batch_size = 64
+        st.session_state.epochs = 25
+        st.session_state.automl_objective = "Accuracy"
+        st.session_state.compiler_model = "BERT"
+        st.session_state.distributed_training_strategy = "Data Parallel"
+        st.session_state.num_instances = 2
+        st.session_state.spot_training_enabled = True
+        st.session_state.max_wait_time = 1  # hours
 
-# Sidebar for session management
-with st.sidebar:
-    st.title("Session Management")
-    st.info(f"User ID: {st.session_state.user_id}")
-    
-    if st.button("🔄 Reset Session"):
-        st.session_state.clear()
-        st.rerun()
-    
-    st.divider()
-    
-    # Information about the application
-    with st.expander(label='About this application' ,expanded=False):
-        st.markdown("""
-            This interactive learning application demonstrates the powerful optimization 
-            tools available in Amazon SageMaker. Explore each tab to learn about different 
-            capabilities and see them in action with interactive examples.
-        """)
+
+def set_page_config():
+    """Configure the page settings."""
+    st.set_page_config(
+        page_title="SageMaker Optimization Tools Explorer",
+        page_icon="🚀",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+set_page_config()
+
+def apply_custom_css():
+    """Apply custom CSS styling."""
+    st.markdown("""
+    <style>
+        .main {
+            background-color: #F8F9FA;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: #F8F9FA;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 60px;
+            white-space: pre-wrap;
+            border-radius: 6px;
+            font-weight: 600;
+            background-color: #FFFFFF;
+            color: #232F3E;
+            border: 1px solid #E9ECEF;
+            padding: 5px 15px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #FF9900 !important;
+        }
+        .stButton button {
+            background-color: #FF9900;
+            color: white;
+            border-radius: 4px;
+            border: none;
+            padding: 8px 16px;
+        }
+        .stButton button:hover {
+            background-color: #EC7211;
+        }
+        .info-box {
+            background-color: #E6F2FF;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #00A1C9;
+        }
+        .code-box {
+            background-color: #232F3E;
+            color: #FFFFFF;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .metric-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            background-color: #232F3E;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+        }
+        h1, h2, h3 {
+            color: #232F3E;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def render_sidebar():
+    """Render the sidebar with session management and app info."""
+    with st.sidebar:
+        common.render_sidebar()
         
-        # AWS learning resources
-        st.subheader("Additional Resources")
-        st.markdown("""
-            - [SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
-            - [AWS ML Blog](https://aws.amazon.com/blogs/machine-learning/)
-            - [AWS Training and Certification](https://aws.amazon.com/training/)
-        """)
+        # Information about the application
+        with st.expander(label='About this application', expanded=False):
+            st.markdown("""
+                This interactive learning application demonstrates the powerful optimization 
+                tools available in Amazon SageMaker. Explore each tab to learn about different 
+                capabilities and see them in action with interactive examples.
+            """)
+            
+            # AWS learning resources
+            st.subheader("Additional Resources")
+            st.markdown("""
+                - [SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
+                - [AWS ML Blog](https://aws.amazon.com/blogs/machine-learning/)
+                - [AWS Training and Certification](https://aws.amazon.com/training/)
+            """)
 
-# Main app header
-st.title("Amazon SageMaker Tools for Optimization")
-st.markdown("Explore the powerful tools that SageMaker offers for optimizing and accelerating your machine learning workflows.")
+
+def simulate_training_data(epochs, learning_rate, has_issues=False, issue_type=None):
+    """Simulates training data for visualization in the debugger tab."""
+    np.random.seed(42)
+    train_loss = []
+    val_loss = []
+    gradients = []
+    weights = []
+    
+    # Starting point
+    train_val = 2.0
+    val_val = 2.2
+    grad_val = 0.5
+    weight_val = np.random.normal(0, 0.1, 5)
+    
+    # Generate data with simulated issues
+    for i in range(epochs):
+        # Decrease with some noise
+        decay_factor = np.exp(-learning_rate * i / 20)
+        train_val = max(0.1, train_val * decay_factor + np.random.normal(0, 0.05))
+        val_val = max(0.15, val_val * decay_factor + np.random.normal(0, 0.07))
+        
+        # Add issues after certain point if specified
+        if has_issues and i > epochs // 2:
+            if issue_type == "vanishing_gradients":
+                # Simulate vanishing gradients
+                grad_val = grad_val * 0.7
+            elif issue_type == "overfitting":
+                # Simulate overfitting
+                train_val = max(0.05, train_val * 0.9)
+                val_val = min(3.0, val_val * 1.1)
+            elif issue_type == "exploding_gradients":
+                # Simulate exploding gradients
+                if i % 5 == 0:  # occasional spikes
+                    grad_val = min(10, grad_val * 2.0)
+                else:
+                    grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
+            else:
+                grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
+        else:
+            grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
+        
+        # Update weights with some drift
+        weight_val = weight_val - learning_rate * grad_val * np.random.normal(1, 0.1, 5)
+        
+        train_loss.append(train_val)
+        val_loss.append(val_val)
+        gradients.append(grad_val)
+        weights.append(weight_val.copy())
+        
+    return {
+        'train_loss': train_loss,
+        'val_loss': val_loss,
+        'gradients': gradients,
+        'weights': weights,
+        'epochs': list(range(1, epochs + 1))
+    }
 
 
-# Tab-based navigation with emoji
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🐞 SageMaker Debugger", 
-    "🎯 Automatic Model Tuning", 
-    "🚀 Training Compiler",
-    "🔄 Distributed Training",
-    "💰 Spot Training"
-])
+def generate_compiler_performance_data(model_name, batch_size, precision):
+    """Generate training performance data for compiler comparison."""
+    # Base times in seconds per epoch (without compiler)
+    base_times = {
+        "BERT": 980,
+        "ResNet": 650,
+        "GPT-2": 1450,
+        "Vision Transformer": 1100
+    }
+    
+    # Base memory usage in GB (without compiler)
+    base_memory = {
+        "BERT": 14.2,
+        "ResNet": 9.8,
+        "GPT-2": 16.5,
+        "Vision Transformer": 12.6
+    }
+    
+    # Speedup factors for compiler
+    # Models like BERT and GPT-2 typically see bigger gains from compiler
+    compiler_speedup = {
+        "BERT": 1.4,
+        "ResNet": 1.25,
+        "GPT-2": 1.5,
+        "Vision Transformer": 1.3
+    }
+    
+    # Memory efficiency improvement
+    memory_improvement = {
+        "BERT": 0.85,
+        "ResNet": 0.9,
+        "GPT-2": 0.8,
+        "Vision Transformer": 0.85
+    }
+    
+    # Batch size effect (larger batch sizes generally show better relative improvement)
+    batch_factor = {
+        8: 0.9,
+        16: 0.95,
+        32: 1.0,
+        64: 1.05,
+        128: 1.1
+    }
+    
+    # Precision effect (lower precision shows better relative improvement)
+    precision_factor = {
+        "float32": 1.0,
+        "float16": 1.15,
+        "bfloat16": 1.12
+    }
+    
+    # Calculate performance metrics
+    base_time = base_times[model_name]
+    base_mem = base_memory[model_name]
+    
+    # Apply factors
+    compiler_time = base_time / (compiler_speedup[model_name] * batch_factor[batch_size] * precision_factor[precision])
+    compiler_mem = base_mem * memory_improvement[model_name]
+    
+    # Add a small random variation
+    np.random.seed(42)
+    compiler_time *= (1 + np.random.normal(0, 0.05))
+    base_time *= (1 + np.random.normal(0, 0.05))
+    
+    # Throughput (samples/sec)
+    samples_per_epoch = 50000  # Assuming a dataset of this size
+    base_throughput = samples_per_epoch / base_time
+    compiler_throughput = samples_per_epoch / compiler_time
+    
+    # Return results
+    return {
+        "base_time": base_time,
+        "compiler_time": compiler_time,
+        "base_memory": base_mem,
+        "compiler_memory": compiler_mem,
+        "base_throughput": base_throughput,
+        "compiler_throughput": compiler_throughput,
+        "time_reduction_percent": (base_time - compiler_time) / base_time * 100,
+        "memory_reduction_percent": (base_mem - compiler_mem) / base_mem * 100,
+        "throughput_increase_percent": (compiler_throughput - base_throughput) / base_throughput * 100
+    }
 
-# TAB 1: SAGEMAKER DEBUGGER
-with tab1:
+
+def generate_distributed_scaling_data(strategy, model_size_m, num_instances, gpus_per_instance):
+    """Generate data for distributed training scaling visualization."""
+    np.random.seed(42)
+    total_gpus = num_instances * gpus_per_instance
+    
+    # Base time in minutes for single-GPU training
+    if model_size_m < 200:
+        base_time = 120  # 2 hours for small models
+    elif model_size_m < 500:
+        base_time = 240  # 4 hours for medium models
+    else:
+        base_time = 480  # 8 hours for large models
+    
+    # Scaling efficiency depends on strategy and number of GPUs
+    if strategy == "Data Parallel":
+        # Good scaling for moderate GPU counts, diminishing returns at higher counts
+        efficiency = {}
+        for i in range(1, total_gpus + 1):
+            if i == 1:
+                efficiency[i] = 1.0
+            elif i <= 8:
+                efficiency[i] = 0.9 - (i-1) * 0.01
+            elif i <= 16:
+                efficiency[i] = 0.82 - (i-8) * 0.015
+            else:
+                efficiency[i] = 0.7 - (i-16) * 0.02
+    
+    elif strategy == "Model Parallel":
+        # Less efficient at low GPU counts, better for larger models
+        efficiency = {}
+        for i in range(1, total_gpus + 1):
+            if i == 1:
+                efficiency[i] = 1.0
+            elif i <= 4:
+                efficiency[i] = 0.7  # Initial overhead of model parallelism
+            elif i <= 8:
+                efficiency[i] = 0.7 + (i-4) * 0.02  # Improving as model parts distributed
+            elif i <= 16:
+                efficiency[i] = 0.78 + (i-8) * 0.01
+            else:
+                efficiency[i] = 0.86 + (i-16) * 0.005
+    
+    else:  # Hybrid Parallel
+        # Balance between the two approaches
+        efficiency = {}
+        for i in range(1, total_gpus + 1):
+            if i == 1:
+                efficiency[i] = 1.0
+            elif i <= 8:
+                efficiency[i] = 0.85 - (i-1) * 0.005
+            elif i <= 16:
+                efficiency[i] = 0.815 - (i-8) * 0.01
+            else:
+                efficiency[i] = 0.735 - (i-16) * 0.015
+    
+    # Calculate actual speedup and time with the selected number of GPUs
+    perfect_speedup = total_gpus
+    actual_speedup = total_gpus * efficiency[total_gpus]
+    
+    # Add some small random variation
+    actual_speedup *= (1 + np.random.normal(0, 0.03))
+    
+    distributed_time = base_time / actual_speedup
+    
+    # Calculate speedup for various GPU counts
+    gpu_counts = list(range(1, min(total_gpus + 5, 41)))
+    speedups = []
+    times = []
+    efficiencies = []
+    
+    for count in gpu_counts:
+        if count <= total_gpus:
+            eff = efficiency[count]
+        else:
+            # Extrapolate efficiency for higher GPU counts (for chart visualization)
+            last_eff = efficiency[total_gpus]
+            decline_rate = (1.0 - last_eff) / total_gpus
+            eff = max(0.5, last_eff - decline_rate * (count - total_gpus))
+            
+        speedup = count * eff
+        time_mins = base_time / speedup
+        
+        speedups.append(speedup)
+        times.append(time_mins)
+        efficiencies.append(eff * 100)  # Convert to percentage
+    
+    # Communication overhead data (as percentage of total time)
+    comm_overhead = []
+    for count in gpu_counts:
+        if count == 1:
+            comm_overhead.append(0)  # No communication overhead with 1 GPU
+        else:
+            if strategy == "Data Parallel":
+                # Communication increases with more GPUs
+                overhead = 5 + (count - 1) * 2
+            elif strategy == "Model Parallel":
+                # Higher initial overhead, increases but then stabilizes
+                overhead = 15 + min(25, (count - 1) * 1.5)
+            else:  # Hybrid
+                overhead = 10 + min(20, (count - 1) * 1.2)
+            
+            comm_overhead.append(min(50, overhead))  # Cap at 50%
+    
+    return {
+        "strategy": strategy,
+        "model_size_m": model_size_m,
+        "num_instances": num_instances,
+        "gpus_per_instance": gpus_per_instance,
+        "total_gpus": total_gpus,
+        "base_time_mins": base_time,
+        "distributed_time_mins": distributed_time,
+        "perfect_speedup": perfect_speedup,
+        "actual_speedup": actual_speedup,
+        "scaling_efficiency": efficiency[total_gpus] * 100,  # as percentage
+        "gpu_counts": gpu_counts,
+        "speedups": speedups,
+        "times": times,
+        "efficiencies": efficiencies,
+        "comm_overhead": comm_overhead
+    }
+
+
+def calculate_spot_costs_and_simulation(
+    instance_type, instance_count, training_hours, 
+    use_spot, max_wait, checkpoint_interval, interruption_probability):
+    """Calculate costs and generate spot training simulation data."""
+    
+    # On-demand prices (per hour)
+    on_demand_prices = {
+        "ml.c5.xlarge": 0.19,
+        "ml.c5.2xlarge": 0.38,
+        "ml.m5.xlarge": 0.23,
+        "ml.m5.2xlarge": 0.46,
+        "ml.p3.2xlarge": 3.06,
+        "ml.p3.8xlarge": 12.24
+    }
+    
+    # Spot prices (average discount of 70% off on-demand)
+    spot_discount = 0.7
+    spot_prices = {k: v * (1-spot_discount) for k, v in on_demand_prices.items()}
+    
+    # Calculate base costs
+    on_demand_price = on_demand_prices.get(instance_type, 1.0)
+    spot_price = spot_prices.get(instance_type, 0.3)
+    
+    on_demand_cost = on_demand_price * instance_count * training_hours
+    potential_spot_cost = spot_price * instance_count * training_hours
+    
+    # Simulate spot interruptions
+    np.random.seed(42)
+    
+    # Convert times to minutes for simulation
+    training_minutes = training_hours * 60
+    max_wait_minutes = max_wait * 60
+    
+    # Simulate training
+    if not use_spot:
+        # No interruptions with on-demand
+        actual_runtime = training_minutes
+        completed = True
+        interruptions = 0
+        time_lost = 0
+        checkpoints = []
+        
+        # Generate checkpoints every checkpoint_interval minutes
+        for t in range(0, int(actual_runtime), checkpoint_interval):
+            checkpoints.append({"time": t, "progress": t / training_minutes})
+            
+        events = []
+        
+    else:
+        # Simulate with potential interruptions
+        current_time = 0
+        remaining_training = training_minutes
+        interruptions = 0
+        time_lost = 0
+        checkpoints = []
+        events = []
+        
+        while current_time < max_wait_minutes and remaining_training > 0:
+            # Add starting event
+            if current_time == 0:
+                events.append({
+                    "time": current_time,
+                    "event": "start",
+                    "detail": "Training started"
+                })
+            
+            # How long until next event (checkpoint or interruption)
+            next_checkpoint = checkpoint_interval
+            
+            # Probability of interruption in this interval
+            p_interrupt = interruption_probability / 100
+            
+            # Check if interruption happens before next checkpoint
+            will_interrupt = np.random.random() < p_interrupt
+            
+            if will_interrupt:
+                # Interruption happens at random time before next checkpoint
+                time_to_interrupt = np.random.randint(1, next_checkpoint)
+                
+                # Training proceeds until interruption
+                work_done = time_to_interrupt
+                current_time += time_to_interrupt
+                remaining_training -= work_done
+                
+                # Record interruption event
+                events.append({
+                    "time": current_time,
+                    "event": "interruption",
+                    "detail": "Spot instance reclaimed"
+                })
+                
+                interruptions += 1
+                
+                # Time to recover (5-15 minutes)
+                recovery_time = np.random.randint(5, 16)
+                time_lost += recovery_time
+                current_time += recovery_time
+                
+                # Record recovery event
+                events.append({
+                    "time": current_time,
+                    "event": "recovery",
+                    "detail": f"Recovered from last checkpoint (lost {work_done} min of progress)"
+                })
+                
+                # Resume from last checkpoint - add time since last checkpoint to remaining
+                if checkpoints:
+                    last_checkpoint_time = checkpoints[-1]["time"]
+                    time_since_checkpoint = work_done - (current_time - last_checkpoint_time - recovery_time)
+                    if time_since_checkpoint > 0:
+                        remaining_training += time_since_checkpoint
+                        time_lost += time_since_checkpoint
+                
+            else:
+                # No interruption, proceed to checkpoint
+                work_done = min(next_checkpoint, remaining_training)
+                current_time += work_done
+                remaining_training -= work_done
+                
+                # Create checkpoint
+                progress = (training_minutes - remaining_training) / training_minutes
+                checkpoints.append({
+                    "time": current_time,
+                    "progress": progress
+                })
+                
+                # Record checkpoint event
+                if remaining_training > 0:  # Don't log checkpoint at the very end
+                    events.append({
+                        "time": current_time,
+                        "event": "checkpoint",
+                        "detail": f"Created checkpoint ({progress*100:.0f}% complete)"
+                    })
+        
+        # Check if training completed within max wait time
+        completed = remaining_training <= 0
+        
+        if completed:
+            events.append({
+                "time": current_time,
+                "event": "complete",
+                "detail": "Training completed successfully"
+            })
+            actual_runtime = current_time
+        else:
+            events.append({
+                "time": current_time,
+                "event": "timeout",
+                "detail": f"Exceeded maximum wait time of {max_wait} hours"
+            })
+            actual_runtime = current_time
+        
+        # Calculate actual cost
+        actual_spot_time = actual_runtime / 60  # Convert back to hours
+        potential_spot_cost = spot_price * instance_count * actual_spot_time
+    
+    # Final cost comparison
+    if use_spot and completed:
+        actual_cost = potential_spot_cost
+        savings_amount = on_demand_cost - actual_cost
+        savings_percentage = (savings_amount / on_demand_cost) * 100
+    elif use_spot and not completed:
+        # If not completed, fall back to on-demand cost
+        actual_cost = on_demand_cost
+        savings_amount = 0
+        savings_percentage = 0
+    else:
+        # On-demand training
+        actual_cost = on_demand_cost
+        savings_amount = 0
+        savings_percentage = 0
+    
+    return {
+        "instance_type": instance_type,
+        "instance_count": instance_count,
+        "training_hours": training_hours,
+        "use_spot": use_spot,
+        "max_wait_hours": max_wait,
+        "checkpoint_interval": checkpoint_interval,
+        "on_demand_price": on_demand_price,
+        "spot_price": spot_price,
+        "on_demand_cost": on_demand_cost,
+        "spot_cost": potential_spot_cost,
+        "actual_cost": actual_cost,
+        "savings_amount": savings_amount,
+        "savings_percentage": savings_percentage,
+        "completed": completed,
+        "interruptions": interruptions,
+        "time_lost_minutes": time_lost,
+        "actual_runtime_minutes": actual_runtime,
+        "checkpoints": checkpoints,
+        "events": events
+    }
+
+
+def render_sagemaker_debugger_tab():
+    """Render the SageMaker Debugger tab."""
     st.header("Amazon SageMaker Debugger")
     
     col1, col2 = st.columns([3, 2])
@@ -213,63 +663,6 @@ with tab1:
     # Interactive debugger demo
     st.subheader("Interactive Demo: Debug a Training Process")
     
-    # Simulated model training visualization
-    def simulate_training_data(epochs, learning_rate, has_issues=False, issue_type=None):
-        np.random.seed(42)
-        train_loss = []
-        val_loss = []
-        gradients = []
-        weights = []
-        
-        # Starting point
-        train_val = 2.0
-        val_val = 2.2
-        grad_val = 0.5
-        weight_val = np.random.normal(0, 0.1, 5)
-        
-        # Generate data with simulated issues
-        for i in range(epochs):
-            # Decrease with some noise
-            decay_factor = np.exp(-learning_rate * i / 20)
-            train_val = max(0.1, train_val * decay_factor + np.random.normal(0, 0.05))
-            val_val = max(0.15, val_val * decay_factor + np.random.normal(0, 0.07))
-            
-            # Add issues after certain point if specified
-            if has_issues and i > epochs // 2:
-                if issue_type == "vanishing_gradients":
-                    # Simulate vanishing gradients
-                    grad_val = grad_val * 0.7
-                elif issue_type == "overfitting":
-                    # Simulate overfitting
-                    train_val = max(0.05, train_val * 0.9)
-                    val_val = min(3.0, val_val * 1.1)
-                elif issue_type == "exploding_gradients":
-                    # Simulate exploding gradients
-                    if i % 5 == 0:  # occasional spikes
-                        grad_val = min(10, grad_val * 2.0)
-                    else:
-                        grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
-                else:
-                    grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
-            else:
-                grad_val = max(0.05, grad_val * 0.95 + np.random.normal(0, 0.02))
-            
-            # Update weights with some drift
-            weight_val = weight_val - learning_rate * grad_val * np.random.normal(1, 0.1, 5)
-            
-            train_loss.append(train_val)
-            val_loss.append(val_val)
-            gradients.append(grad_val)
-            weights.append(weight_val.copy())
-            
-        return {
-            'train_loss': train_loss,
-            'val_loss': val_loss,
-            'gradients': gradients,
-            'weights': weights,
-            'epochs': list(range(1, epochs + 1))
-        }
-
     # Training parameters    
     col1, col2, col3 = st.columns(3)
     
@@ -292,7 +685,7 @@ with tab1:
     
     # Issue selection
     issue_type = st.selectbox("Simulate Issue", 
-                       ["None", "Vanishing Gradients", "Overfitting", "Exploding Gradients"])
+                    ["None", "Vanishing Gradients", "Overfitting", "Exploding Gradients"])
     
     has_issues = issue_type != "None"
     issue_mapping = {
@@ -600,8 +993,9 @@ estimator.fit()
           - Check for bottlenecks in data loading
         """)
 
-# TAB 2: AUTOMATIC MODEL TUNING
-with tab2:
+
+def render_automatic_model_tuning_tab():
+    """Render the Automatic Model Tuning tab."""
     st.header("Amazon SageMaker Automatic Model Tuning")
     
     col1, col2 = st.columns([3, 2])
@@ -742,8 +1136,12 @@ with tab2:
                         score_adjust += 0.02
                         
                     # Better with more trees (up to a point)
-                    if job_hyperparams["n_estimators"].all() >= 200:
-                        score_adjust += 0.01
+                    if isinstance(job_hyperparams["n_estimators"], np.ndarray):
+                        if job_hyperparams["n_estimators"].item() >= 200:
+                            score_adjust += 0.01
+                    else:
+                        if job_hyperparams["n_estimators"] >= 200:
+                            score_adjust += 0.01
                         
                 elif algorithm == "Random Forest":
                     job_hyperparams = {
@@ -754,8 +1152,12 @@ with tab2:
                     
                     score_adjust = 0
                     # Random Forest generally improves with more trees
-                    if job_hyperparams["n_estimators"] >= 100:
-                        score_adjust += 0.02
+                    if isinstance(job_hyperparams["n_estimators"], np.ndarray):
+                        if job_hyperparams["n_estimators"].item() >= 100:
+                            score_adjust += 0.02
+                    else:
+                        if job_hyperparams["n_estimators"] >= 100:
+                            score_adjust += 0.02
                         
                     # Moderate depth often works well
                     if 10 <= job_hyperparams["max_depth"] <= 20:
@@ -1129,9 +1531,10 @@ predictor = best_model.deploy(
         - **Linear Learner**: learning_rate, l1, wd
         - **Neural Networks**: learning_rate, batch_size, layer_size
         """)
-    
-# TAB 3: TRAINING COMPILER
-with tab3:
+
+
+def render_training_compiler_tab():
+    """Render the Training Compiler tab."""
     st.header("Amazon SageMaker Training Compiler")
     
     col1, col2 = st.columns([3, 2])
@@ -1172,88 +1575,6 @@ with tab3:
         
     with col3:
         precision = st.selectbox("Training Precision", ["float32", "float16", "bfloat16"])
-    
-    # Function to generate training performance data
-    def generate_compiler_performance_data(model_name, batch_size, precision):
-        # Base times in seconds per epoch (without compiler)
-        base_times = {
-            "BERT": 980,
-            "ResNet": 650,
-            "GPT-2": 1450,
-            "Vision Transformer": 1100
-        }
-        
-        # Base memory usage in GB (without compiler)
-        base_memory = {
-            "BERT": 14.2,
-            "ResNet": 9.8,
-            "GPT-2": 16.5,
-            "Vision Transformer": 12.6
-        }
-        
-        # Speedup factors for compiler
-        # Models like BERT and GPT-2 typically see bigger gains from compiler
-        compiler_speedup = {
-            "BERT": 1.4,
-            "ResNet": 1.25,
-            "GPT-2": 1.5,
-            "Vision Transformer": 1.3
-        }
-        
-        # Memory efficiency improvement
-        memory_improvement = {
-            "BERT": 0.85,
-            "ResNet": 0.9,
-            "GPT-2": 0.8,
-            "Vision Transformer": 0.85
-        }
-        
-        # Batch size effect (larger batch sizes generally show better relative improvement)
-        batch_factor = {
-            8: 0.9,
-            16: 0.95,
-            32: 1.0,
-            64: 1.05,
-            128: 1.1
-        }
-        
-        # Precision effect (lower precision shows better relative improvement)
-        precision_factor = {
-            "float32": 1.0,
-            "float16": 1.15,
-            "bfloat16": 1.12
-        }
-        
-        # Calculate performance metrics
-        base_time = base_times[model_name]
-        base_mem = base_memory[model_name]
-        
-        # Apply factors
-        compiler_time = base_time / (compiler_speedup[model_name] * batch_factor[batch_size] * precision_factor[precision])
-        compiler_mem = base_mem * memory_improvement[model_name]
-        
-        # Add a small random variation
-        np.random.seed(42)
-        compiler_time *= (1 + np.random.normal(0, 0.05))
-        base_time *= (1 + np.random.normal(0, 0.05))
-        
-        # Throughput (samples/sec)
-        samples_per_epoch = 50000  # Assuming a dataset of this size
-        base_throughput = samples_per_epoch / base_time
-        compiler_throughput = samples_per_epoch / compiler_time
-        
-        # Return results
-        return {
-            "base_time": base_time,
-            "compiler_time": compiler_time,
-            "base_memory": base_mem,
-            "compiler_memory": compiler_mem,
-            "base_throughput": base_throughput,
-            "compiler_throughput": compiler_throughput,
-            "time_reduction_percent": (base_time - compiler_time) / base_time * 100,
-            "memory_reduction_percent": (base_mem - compiler_mem) / base_mem * 100,
-            "throughput_increase_percent": (compiler_throughput - base_throughput) / base_throughput * 100
-        }
     
     # Run compiler analysis button
     if st.button("Run Performance Analysis"):
@@ -1641,130 +1962,9 @@ huggingface_estimator.fit({'train': train_data_uri, 'validation': validation_dat
     6. **Monitor metrics**: Check both training time and accuracy metrics
     """)
 
-# TAB 4: DISTRIBUTED TRAINING
 
-# Function to generate distributed scaling data
-def generate_distributed_scaling_data(strategy, model_size_m, num_instances, gpus_per_instance):
-    np.random.seed(42)
-    total_gpus = num_instances * gpus_per_instance
-    
-    # Base time in minutes for single-GPU training
-    if model_size_m < 200:
-        base_time = 120  # 2 hours for small models
-    elif model_size_m < 500:
-        base_time = 240  # 4 hours for medium models
-    else:
-        base_time = 480  # 8 hours for large models
-    
-    # Scaling efficiency depends on strategy and number of GPUs
-    if strategy == "Data Parallel":
-        # Good scaling for moderate GPU counts, diminishing returns at higher counts
-        efficiency = {}
-        for i in range(1, total_gpus + 1):
-            if i == 1:
-                efficiency[i] = 1.0
-            elif i <= 8:
-                efficiency[i] = 0.9 - (i-1) * 0.01
-            elif i <= 16:
-                efficiency[i] = 0.82 - (i-8) * 0.015
-            else:
-                efficiency[i] = 0.7 - (i-16) * 0.02
-    
-    elif strategy == "Model Parallel":
-        # Less efficient at low GPU counts, better for larger models
-        efficiency = {}
-        for i in range(1, total_gpus + 1):
-            if i == 1:
-                efficiency[i] = 1.0
-            elif i <= 4:
-                efficiency[i] = 0.7  # Initial overhead of model parallelism
-            elif i <= 8:
-                efficiency[i] = 0.7 + (i-4) * 0.02  # Improving as model parts distributed
-            elif i <= 16:
-                efficiency[i] = 0.78 + (i-8) * 0.01
-            else:
-                efficiency[i] = 0.86 + (i-16) * 0.005
-    
-    else:  # Hybrid Parallel
-        # Balance between the two approaches
-        efficiency = {}
-        for i in range(1, total_gpus + 1):
-            if i == 1:
-                efficiency[i] = 1.0
-            elif i <= 8:
-                efficiency[i] = 0.85 - (i-1) * 0.005
-            elif i <= 16:
-                efficiency[i] = 0.815 - (i-8) * 0.01
-            else:
-                efficiency[i] = 0.735 - (i-16) * 0.015
-    
-    # Calculate actual speedup and time with the selected number of GPUs
-    perfect_speedup = total_gpus
-    actual_speedup = total_gpus * efficiency[total_gpus]
-    
-    # Add some small random variation
-    actual_speedup *= (1 + np.random.normal(0, 0.03))
-    
-    distributed_time = base_time / actual_speedup
-    
-    # Calculate speedup for various GPU counts
-    gpu_counts = list(range(1, min(total_gpus + 5, 41)))
-    speedups = []
-    times = []
-    efficiencies = []
-    
-    for count in gpu_counts:
-        if count <= total_gpus:
-            eff = efficiency[count]
-        else:
-            # Extrapolate efficiency for higher GPU counts (for chart visualization)
-            last_eff = efficiency[total_gpus]
-            decline_rate = (1.0 - last_eff) / total_gpus
-            eff = max(0.5, last_eff - decline_rate * (count - total_gpus))
-            
-        speedup = count * eff
-        time_mins = base_time / speedup
-        
-        speedups.append(speedup)
-        times.append(time_mins)
-        efficiencies.append(eff * 100)  # Convert to percentage
-    
-    # Communication overhead data (as percentage of total time)
-    comm_overhead = []
-    for count in gpu_counts:
-        if count == 1:
-            comm_overhead.append(0)  # No communication overhead with 1 GPU
-        else:
-            if strategy == "Data Parallel":
-                # Communication increases with more GPUs
-                overhead = 5 + (count - 1) * 2
-            elif strategy == "Model Parallel":
-                # Higher initial overhead, increases but then stabilizes
-                overhead = 15 + min(25, (count - 1) * 1.5)
-            else:  # Hybrid
-                overhead = 10 + min(20, (count - 1) * 1.2)
-            
-            comm_overhead.append(min(50, overhead))  # Cap at 50%
-    
-    return {
-        "strategy": strategy,
-        "model_size_m": model_size_m,
-        "num_instances": num_instances,
-        "gpus_per_instance": gpus_per_instance,
-        "total_gpus": total_gpus,
-        "base_time_mins": base_time,
-        "distributed_time_mins": distributed_time,
-        "perfect_speedup": perfect_speedup,
-        "actual_speedup": actual_speedup,
-        "scaling_efficiency": efficiency[total_gpus] * 100,  # as percentage
-        "gpu_counts": gpu_counts,
-        "speedups": speedups,
-        "times": times,
-        "efficiencies": efficiencies,
-        "comm_overhead": comm_overhead
-    }
-
-with tab4:
+def render_distributed_training_tab():
+    """Render the Distributed Training tab."""
     st.header("Amazon SageMaker Distributed Training")
     
     col1, col2 = st.columns([3, 2])
@@ -1867,8 +2067,6 @@ with tab4:
                 st.session_state.scaling_data = scaling_data
                 
             st.success("Analysis complete! See results below.")
-    
-
     
     # Display scaling results
     if 'scaling_data' in st.session_state:
@@ -2356,203 +2554,9 @@ pytorch_estimator = PyTorch(
 pytorch_estimator.fit({'train': train_data, 'val': val_data})
     ''')
 
-# TAB 5: SPOT TRAINING
 
-# Function to calculate costs and generate spot training simulation
-def calculate_spot_costs_and_simulation(
-    instance_type, instance_count, training_hours, 
-    use_spot, max_wait, checkpoint_interval, interruption_probability):
-    
-    # On-demand prices (per hour)
-    on_demand_prices = {
-        "ml.c5.xlarge": 0.19,
-        "ml.c5.2xlarge": 0.38,
-        "ml.m5.xlarge": 0.23,
-        "ml.m5.2xlarge": 0.46,
-        "ml.p3.2xlarge": 3.06,
-        "ml.p3.8xlarge": 12.24
-    }
-    
-    # Spot prices (average discount of 70% off on-demand)
-    spot_discount = 0.7
-    spot_prices = {k: v * (1-spot_discount) for k, v in on_demand_prices.items()}
-    
-    # Calculate base costs
-    on_demand_price = on_demand_prices.get(instance_type, 1.0)
-    spot_price = spot_prices.get(instance_type, 0.3)
-    
-    on_demand_cost = on_demand_price * instance_count * training_hours
-    potential_spot_cost = spot_price * instance_count * training_hours
-    
-    # Simulate spot interruptions
-    np.random.seed(42)
-    
-    # Convert times to minutes for simulation
-    training_minutes = training_hours * 60
-    max_wait_minutes = max_wait * 60
-    
-    # Simulate training
-    if not use_spot:
-        # No interruptions with on-demand
-        actual_runtime = training_minutes
-        completed = True
-        interruptions = 0
-        time_lost = 0
-        checkpoints = []
-        
-        # Generate checkpoints every checkpoint_interval minutes
-        for t in range(0, int(actual_runtime), checkpoint_interval):
-            checkpoints.append({"time": t, "progress": t / training_minutes})
-            
-        events = []
-        
-    else:
-        # Simulate with potential interruptions
-        current_time = 0
-        remaining_training = training_minutes
-        interruptions = 0
-        time_lost = 0
-        checkpoints = []
-        events = []
-        
-        while current_time < max_wait_minutes and remaining_training > 0:
-            # Add starting event
-            if current_time == 0:
-                events.append({
-                    "time": current_time,
-                    "event": "start",
-                    "detail": "Training started"
-                })
-            
-            # How long until next event (checkpoint or interruption)
-            next_checkpoint = checkpoint_interval
-            
-            # Probability of interruption in this interval
-            p_interrupt = interruption_probability / 100
-            
-            # Check if interruption happens before next checkpoint
-            will_interrupt = np.random.random() < p_interrupt
-            
-            if will_interrupt:
-                # Interruption happens at random time before next checkpoint
-                time_to_interrupt = np.random.randint(1, next_checkpoint)
-                
-                # Training proceeds until interruption
-                work_done = time_to_interrupt
-                current_time += time_to_interrupt
-                remaining_training -= work_done
-                
-                # Record interruption event
-                events.append({
-                    "time": current_time,
-                    "event": "interruption",
-                    "detail": "Spot instance reclaimed"
-                })
-                
-                interruptions += 1
-                
-                # Time to recover (5-15 minutes)
-                recovery_time = np.random.randint(5, 16)
-                time_lost += recovery_time
-                current_time += recovery_time
-                
-                # Record recovery event
-                events.append({
-                    "time": current_time,
-                    "event": "recovery",
-                    "detail": f"Recovered from last checkpoint (lost {work_done} min of progress)"
-                })
-                
-                # Resume from last checkpoint - add time since last checkpoint to remaining
-                if checkpoints:
-                    last_checkpoint_time = checkpoints[-1]["time"]
-                    time_since_checkpoint = work_done - (current_time - last_checkpoint_time - recovery_time)
-                    if time_since_checkpoint > 0:
-                        remaining_training += time_since_checkpoint
-                        time_lost += time_since_checkpoint
-                
-            else:
-                # No interruption, proceed to checkpoint
-                work_done = min(next_checkpoint, remaining_training)
-                current_time += work_done
-                remaining_training -= work_done
-                
-                # Create checkpoint
-                progress = (training_minutes - remaining_training) / training_minutes
-                checkpoints.append({
-                    "time": current_time,
-                    "progress": progress
-                })
-                
-                # Record checkpoint event
-                if remaining_training > 0:  # Don't log checkpoint at the very end
-                    events.append({
-                        "time": current_time,
-                        "event": "checkpoint",
-                        "detail": f"Created checkpoint ({progress*100:.0f}% complete)"
-                    })
-        
-        # Check if training completed within max wait time
-        completed = remaining_training <= 0
-        
-        if completed:
-            events.append({
-                "time": current_time,
-                "event": "complete",
-                "detail": "Training completed successfully"
-            })
-            actual_runtime = current_time
-        else:
-            events.append({
-                "time": current_time,
-                "event": "timeout",
-                "detail": f"Exceeded maximum wait time of {max_wait} hours"
-            })
-            actual_runtime = current_time
-        
-        # Calculate actual cost
-        actual_spot_time = actual_runtime / 60  # Convert back to hours
-        potential_spot_cost = spot_price * instance_count * actual_spot_time
-    
-    # Final cost comparison
-    if use_spot and completed:
-        actual_cost = potential_spot_cost
-        savings_amount = on_demand_cost - actual_cost
-        savings_percentage = (savings_amount / on_demand_cost) * 100
-    elif use_spot and not completed:
-        # If not completed, fall back to on-demand cost
-        actual_cost = on_demand_cost
-        savings_amount = 0
-        savings_percentage = 0
-    else:
-        # On-demand training
-        actual_cost = on_demand_cost
-        savings_amount = 0
-        savings_percentage = 0
-    
-    return {
-        "instance_type": instance_type,
-        "instance_count": instance_count,
-        "training_hours": training_hours,
-        "use_spot": use_spot,
-        "max_wait_hours": max_wait,
-        "checkpoint_interval": checkpoint_interval,
-        "on_demand_price": on_demand_price,
-        "spot_price": spot_price,
-        "on_demand_cost": on_demand_cost,
-        "spot_cost": potential_spot_cost,
-        "actual_cost": actual_cost,
-        "savings_amount": savings_amount,
-        "savings_percentage": savings_percentage,
-        "completed": completed,
-        "interruptions": interruptions,
-        "time_lost_minutes": time_lost,
-        "actual_runtime_minutes": actual_runtime,
-        "checkpoints": checkpoints,
-        "events": events
-    }
-
-with tab5:
+def render_spot_training_tab():
+    """Render the Spot Training tab."""
     st.header("Amazon SageMaker Spot Training")
     
     col1, col2 = st.columns([3, 2])
@@ -2629,8 +2633,6 @@ with tab5:
                 st.session_state.spot_results = spot_results
                 
             st.success("Calculation complete!")
-    
-
     
     # Display spot training results
     if 'spot_results' in st.session_state:
@@ -3007,9 +3009,66 @@ if __name__ == '__main__':
     decision_df = pd.DataFrame(decision_data)
     st.table(decision_df)
 
-# Add footer
-st.markdown("""
-<div class="footer">
-© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
-</div>
-""", unsafe_allow_html=True)
+
+def render_footer():
+    """Render the footer."""
+    st.markdown("""
+    <div class="footer">
+    © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def main():
+    """Main function to render the application."""
+    
+    # Apply custom CSS
+    apply_custom_css()
+    
+    # Initialize session state
+    initialize_session_state()
+    
+    # Render sidebar
+    render_sidebar()
+    
+    # Main app header
+    st.title("Amazon SageMaker Tools for Optimization")
+    st.markdown("Explore the powerful tools that SageMaker offers for optimizing and accelerating your machine learning workflows.")
+
+    # Tab-based navigation
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🐞 SageMaker Debugger", 
+        "🎯 Automatic Model Tuning", 
+        "🚀 Training Compiler",
+        "🔄 Distributed Training",
+        "💰 Spot Training"
+    ])
+    
+    # Render each tab content
+    with tab1:
+        render_sagemaker_debugger_tab()
+    
+    with tab2:
+        render_automatic_model_tuning_tab()
+    
+    with tab3:
+        render_training_compiler_tab()
+    
+    with tab4:
+        render_distributed_training_tab()
+    
+    with tab5:
+        render_spot_training_tab()
+    
+    # Add footer
+    render_footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

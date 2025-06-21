@@ -18,6 +18,8 @@ from PIL import Image
 import base64
 import altair as alt
 from streamlit_option_menu import option_menu
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Set page configuration
 st.set_page_config(
@@ -29,6 +31,7 @@ st.set_page_config(
 
 # Initialize session state
 def init_session_state():
+    common.initialize_session_state()
     if "initialized_mlops" not in st.session_state:
         st.session_state.initialized_mlops = True
         st.session_state.current_page = "Home"
@@ -189,17 +192,7 @@ def load_lottie_url(url):
 def render_sidebar():
     with st.sidebar:
         
-        st.markdown("### Session Management")
-
-        st.info(f"User ID: {st.session_state.user_id}")
-        
-        if st.button("🔄 Reset Session", key="reset_session"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-    
-
-        st.divider()
+        common.render_sidebar()
 
         with st.expander("📚 About This App", expanded=False):
            st.markdown("""
@@ -7243,5 +7236,12 @@ def main():
     # Add footer
     st.markdown('<div class="footer">© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>', unsafe_allow_html=True)
 
+# Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
+

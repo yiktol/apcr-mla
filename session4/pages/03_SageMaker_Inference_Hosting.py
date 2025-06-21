@@ -19,7 +19,19 @@ from streamlit_lottie import st_lottie
 import requests
 import networkx as nx
 from typing import Dict, List, Any, Optional, Tuple, Union
+import utils.common as common
+import utils.authenticate as authenticate
 
+
+
+# Set page configuration
+st.set_page_config(
+    page_title="SageMaker Inference Hosting",
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+    
 
 # Custom utility functions
 def load_lottieurl(url: str) -> Dict:
@@ -1025,6 +1037,9 @@ def initialize_session_state():
     """
     Initialize session state variables
     """
+    
+    common.initialize_session_state()
+    
     if 'user_id' not in st.session_state:
         st.session_state.user_id = str(uuid.uuid4())
     
@@ -1059,14 +1074,7 @@ def reset_session():
 
 # Main application
 def main():
-    # Set page configuration
-    st.set_page_config(
-        page_title="SageMaker Inference Hosting",
-        page_icon="🚀",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
+
     # Initialize session state
     initialize_session_state()
     
@@ -1225,14 +1233,7 @@ def main():
     
     # Sidebar for session management
     with st.sidebar:
-        st.markdown("### Session Management")
-        st.info(f"User ID: {st.session_state.user_id}")
-        
-        if st.button("🔄 Reset Session"):
-            reset_session()
-            st.rerun()
-        
-        st.divider()
+        common.render_sidebar()
         
         # Information about the application
         with st.expander("📚 About This App", expanded=False):
@@ -2600,6 +2601,11 @@ def main():
     """, unsafe_allow_html=True)
 
 
-# Run the application
+# Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()

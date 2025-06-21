@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,203 +6,12 @@ import seaborn as sns
 from PIL import Image
 import base64
 import io
+import utils.common as common
+import utils.authenticate as authenticate
 
-# Set page config
-st.set_page_config(
-    page_title="ML Engineer - Associate Learning",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# Initialize session state variables
-if 'quiz_score' not in st.session_state:
-    st.session_state['quiz_score'] = 0
-if 'quiz_attempted' not in st.session_state:
-    st.session_state['quiz_attempted'] = False
-if 'name' not in st.session_state:
-    st.session_state['name'] = ""
-if 'visited_Model_Registry' not in st.session_state:
-    st.session_state['visited_Model_Registry'] = False
-if 'visited_Inference_Options' not in st.session_state:
-    st.session_state['visited_Inference_Options'] = False
-if 'visited_Infrastructure' not in st.session_state:
-    st.session_state['visited_Infrastructure'] = False
-if 'visited_Pipelines' not in st.session_state:
-    st.session_state['visited_Pipelines'] = False
-if 'visited_MLOps' not in st.session_state:
-    st.session_state['visited_MLOps'] = False
-
-# Custom CSS for styling - same as Domain 1
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #FF9900;
-        margin-bottom: 1rem;
-    }
-    .sub-header {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-    }
-    .section-header {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #232F3E;
-        margin-top: 0.8rem;
-        margin-bottom: 0.3rem;
-    }
-    .info-box {
-        background-color: #F0F2F6;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .success-box {
-        background-color: #D1FAE5;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .warning-box {
-        background-color: #FEF3C7;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .tip-box {
-        background-color: #E0F2FE;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-left: 5px solid #0EA5E9;
-    }
-    .step-box {
-        background-color: #FFFFFF;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    .card {
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        background-color: white;
-        transition: transform 0.3s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-    }
-    .aws-orange {
-        color: #FF9900;
-    }
-    .aws-blue {
-        color: #232F3E;
-    }
-    hr {
-        margin-top: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    /* Make the tab content container take full height */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #F8F9FA;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-left: 16px;
-        padding-right: 16px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    .definition {
-        background-color: #EFF6FF;
-        border-left: 5px solid #3B82F6;
-        padding: 10px 15px;
-        margin: 15px 0;
-        border-radius: 0 5px 5px 0;
-    }
-    .code-box {
-        background-color: #F8F9FA;
-        padding: 15px;
-        border-radius: 5px;
-        font-family: monospace;
-        margin: 15px 0;
-        border: 1px solid #E5E7EB;
-    }
-    .model-diagram {
-        text-align: center;
-        margin: 20px;
-    }
-    .metric-card {
-        background-color: #FFFFFF;
-        border-radius: 8px;
-        border-left: 4px solid #FF9900;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-    .comparison-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .comparison-table th {
-        background-color: #FF9900;
-        color: white;
-        padding: 10px;
-        text-align: left;
-    }
-    .comparison-table td {
-        padding: 8px;
-        border-bottom: 1px solid #ddd;
-    }
-    .comparison-table tr:nth-child(even) {
-        background-color: #f9f9f9;
-    }
-    .feature-list {
-        list-style-type: none;
-        padding-left: 0;
-    }
-    .feature-list li {
-        margin-bottom: 8px;
-        padding-left: 25px;
-        position: relative;
-    }
-    .feature-list li:before {
-        content: "✓";
-        color: #FF9900;
-        position: absolute;
-        left: 0;
-        font-weight: bold;
-    }
-    .deployment-option {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        background-color: white;
-    }
-    .deployment-option h4 {
-        color: #FF9900;
-        margin-top: 0;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Function to display custom header - same as Domain 1
 def custom_header(text, level="main"):
+    """Display custom header with styling based on level."""
     if level == "main":
         st.markdown(f'<div class="main-header">{text}</div>', unsafe_allow_html=True)
     elif level == "sub":
@@ -211,43 +19,33 @@ def custom_header(text, level="main"):
     elif level == "section":
         st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
 
-# Function to create custom info box - same as Domain 1
-def info_box(text, box_type="info"):
-    if box_type == "info":
-        st.markdown(f"""
-            <div class="info-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "success":
-        st.markdown(f"""
-            <div class="success-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "warning":
-        st.markdown(f"""
-            <div class="warning-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
-    elif box_type == "tip":
-        st.markdown(f"""
-            <div class="tip-box">
-                <div markdown="1">
-                    {text}
-            """, unsafe_allow_html=True)
 
-# Function for definition box - same as Domain 1
+def info_box(text, box_type="info"):
+    """Create custom info box with styled appearance."""
+    css_class = f"{box_type}-box"
+    st.markdown(f"""
+        <div class="{css_class}">
+            <div markdown="1">
+                {text}
+        </div>
+    """, unsafe_allow_html=True)
+
+
 def definition_box(term, definition):
+    """Display a styled box showing term definition."""
     st.markdown(f"""
     <div class="definition">
         <strong>{term}:</strong> {definition}
     </div>
     """, unsafe_allow_html=True)
 
-# Function to display deployment option
+
 def deployment_option(title, description, use_cases, limitations=None):
+    """Display a deployment option with details."""
+    limitations_html = ""
+    if limitations:
+        limitations_html = f"<strong>Limitations:</strong><ul>{''.join([f'<li>{limit}</li>' for limit in limitations])}</ul>"
+    
     st.markdown(f"""
     <div class="deployment-option">
         <h4>{title}</h4>
@@ -256,12 +54,13 @@ def deployment_option(title, description, use_cases, limitations=None):
         <ul>
             {"".join([f"<li>{case}</li>" for case in use_cases])}
         </ul>
-        {f"<strong>Limitations:</strong><ul>{''.join([f'<li>{limit}</li>' for limit in limitations])}</ul>" if limitations else ""}
+        {limitations_html}
     </div>
     """, unsafe_allow_html=True)
 
-# Function to reset session - same as Domain 1
+
 def reset_session():
+    """Reset all session state variables."""
     st.session_state['quiz_score'] = 0
     st.session_state['quiz_attempted'] = False
     st.session_state['name'] = ""
@@ -272,67 +71,221 @@ def reset_session():
     st.session_state['visited_MLOps'] = False
     st.rerun()
 
-# Sidebar for session management - similar to Domain 1
-with st.sidebar:
-    st.image("images/mla_badge.png", width=150)
-    st.markdown("### ML Engineer - Associate")
-    st.markdown("#### Domain 3: Deployment and Orchestration")
-    
-    # If user has provided their name, greet them
-    if st.session_state['name']:
-        st.success(f"Welcome, {st.session_state['name']}! 👋")
-    else:
-        name = st.text_input("Enter your name:")
-        if name:
-            st.session_state['name'] = name
-            st.rerun()
-    
-    # Reset button
-    if st.button("🔄 Reset Session"):
-        reset_session()
-    
-    # Progress tracking
-    if st.session_state['name']:
-        st.markdown("---")
-        st.markdown("### Your Progress")
-        
-        # Track visited pages
-        visited_pages = [page for page in ["Model_Registry", "Inference_Options", "Infrastructure", "Pipelines", "MLOps"] 
-                         if st.session_state.get(f"visited_{page}", False)]
-        
-        progress = len(visited_pages) / 5
-        st.progress(progress)
-        st.markdown(f"**{len(visited_pages)}/5 sections completed**")
-        
-        # Track quiz score if attempted
-        if st.session_state['quiz_attempted']:
-            st.markdown(f"**Quiz Score: {st.session_state['quiz_score']}/5**")
-        
-        # Learning outcomes reminder
-        st.markdown("---")
-        st.markdown("### Learning Outcomes")
-        st.markdown("""
-        - Understand SageMaker Model Registry
-        - Compare different inference options
-        - Create infrastructure using IaC
-        - Implement MLOps practices with CI/CD
-        - Design automated ML pipelines
-        """)
 
-# Main content with tabs
-tabs = st.tabs([
-    "🏠 Home", 
-    "📦 SageMaker Model Registry", 
-    "🚀 Inference Options", 
-    "🏗️ Infrastructure", 
-    "🔄 SageMaker Pipelines", 
-    "⚙️ MLOps",
-    "❓ Quiz", 
-    "📚 Resources"
-])
+def set_page_configuration():
+    """Configure the Streamlit page."""
+    st.set_page_config(
+        page_title="ML Engineer - Associate Learning",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
-# Home tab
-with tabs[0]:
+
+def set_custom_css():
+    """Add custom CSS styling."""
+    st.markdown("""
+    <style>
+        .main-header {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #FF9900;
+            margin-bottom: 1rem;
+        }
+        .sub-header {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 0.8rem;
+            margin-bottom: 0.3rem;
+        }
+        .info-box {
+            background-color: #F0F2F6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .success-box {
+            background-color: #D1FAE5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .warning-box {
+            background-color: #FEF3C7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .tip-box {
+            background-color: #E0F2FE;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #0EA5E9;
+        }
+        .step-box {
+            background-color: #FFFFFF;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .aws-orange {
+            color: #FF9900;
+        }
+        .aws-blue {
+            color: #232F3E;
+        }
+        hr {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        /* Make the tab content container take full height */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: #F8F9FA;
+            border-radius: 4px 4px 0px 0px;
+            gap: 1px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: white !important;
+        }
+        .definition {
+            background-color: #EFF6FF;
+            border-left: 5px solid #3B82F6;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .code-box {
+            background-color: #F8F9FA;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 15px 0;
+            border: 1px solid #E5E7EB;
+        }
+        .model-diagram {
+            text-align: center;
+            margin: 20px;
+        }
+        .metric-card {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            border-left: 4px solid #FF9900;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .comparison-table th {
+            background-color: #FF9900;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        .comparison-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .feature-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .feature-list li {
+            margin-bottom: 8px;
+            padding-left: 25px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "✓";
+            color: #FF9900;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        .deployment-option {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: white;
+        }
+        .deployment-option h4 {
+            color: #FF9900;
+            margin-top: 0;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def initialize_session_state():
+    """Initialize all session state variables if not already present."""
+    common.initialize_session_state()
+    
+    if 'quiz_score' not in st.session_state:
+        st.session_state['quiz_score'] = 0
+    if 'quiz_attempted' not in st.session_state:
+        st.session_state['quiz_attempted'] = False
+    if 'name' not in st.session_state:
+        st.session_state['name'] = ""
+    if 'visited_Model_Registry' not in st.session_state:
+        st.session_state['visited_Model_Registry'] = False
+    if 'visited_Inference_Options' not in st.session_state:
+        st.session_state['visited_Inference_Options'] = False
+    if 'visited_Infrastructure' not in st.session_state:
+        st.session_state['visited_Infrastructure'] = False
+    if 'visited_Pipelines' not in st.session_state:
+        st.session_state['visited_Pipelines'] = False
+    if 'visited_MLOps' not in st.session_state:
+        st.session_state['visited_MLOps'] = False
+
+
+def render_sidebar():
+    """Render the sidebar content."""
+    with st.sidebar:
+        st.image("images/mla_badge.png", width=150)
+        st.markdown("### ML Engineer - Associate")
+        st.markdown("#### Domain 3: Deployment and Orchestration")
+        
+        common.render_sidebar()
+
+
+def render_home_tab():
+    """Render content for the home tab."""
     custom_header("AWS Partner Certification Readiness")
     st.markdown("## Machine Learning Engineer - Associate")
     
@@ -453,8 +406,9 @@ with tabs[0]:
         - Configure model deployment automations
         """)
 
-# Model Registry tab
-with tabs[1]:
+
+def render_model_registry_tab():
+    """Render content for the model registry tab."""
     # Mark as visited
     st.session_state['visited_Model_Registry'] = True
     
@@ -671,8 +625,6 @@ with tabs[1]:
         while maintaining governance through the approval workflow.
         """)
     
-    # st.image("images/model_registry_mlops.png", caption="Model Registry in MLOps Workflow")
-    
     info_box("""
     **Best Practices for Model Registry:**
     
@@ -685,8 +637,9 @@ with tabs[1]:
     7. **Standardize model tags** for better searchability
     """, "tip")
 
-# Inference Options tab
-with tabs[2]:
+
+def render_inference_options_tab():
+    """Render content for the inference options tab."""
     # Mark as visited
     st.session_state['visited_Inference_Options'] = True
     
@@ -1145,8 +1098,9 @@ with tabs[2]:
         response = predictor.predict(data)
         """, language="python")
 
-# Infrastructure tab
-with tabs[3]:
+
+def render_infrastructure_tab():
+    """Render content for the infrastructure tab."""
     # Mark as visited
     st.session_state['visited_Infrastructure'] = True
     
@@ -1505,8 +1459,9 @@ with tabs[3]:
     - **Multi-environment support**: Easily deploy to dev, test, and production
     """, "success")
 
-# Pipelines tab
-with tabs[4]:
+
+def render_pipelines_tab():
+    """Render content for the pipelines tab."""
     # Mark as visited
     st.session_state['visited_Pipelines'] = True
     
@@ -1852,8 +1807,9 @@ with tabs[4]:
         - **Use caching** to speed up iterative development
         """, "success")
 
-# MLOps tab
-with tabs[5]:
+
+def render_mlops_tab():
+    """Render content for the MLOps tab."""
     # Mark as visited
     st.session_state['visited_MLOps'] = True
     
@@ -2187,8 +2143,9 @@ with tabs[5]:
     7. **Gradually increase traffic** to new models for important use cases
     """, "tip")
 
-# Quiz tab
-with tabs[6]:
+
+def render_quiz_tab():
+    """Render content for the quiz tab."""
     custom_header("Test Your Knowledge")
     
     st.markdown("""
@@ -2375,8 +2332,9 @@ with tabs[6]:
             st.session_state['quiz_attempted'] = False
             st.rerun()
 
-# Resources tab
-with tabs[7]:
+
+def render_resources_tab():
+    """Render content for the resources tab."""
     custom_header("Additional Resources")
     
     st.markdown("""
@@ -2462,51 +2420,75 @@ with tabs[7]:
     - [SageMaker Studio Workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/63069e26-921c-4ce1-9cc7-dd882ff62575/en-US)
     """)
 
-# Footer
-st.markdown("---")
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.image("images/aws_logo.png", width=70)
-with col2:
-    st.markdown("**AWS Machine Learning Engineer - Associate | Domain 3: Deployment and Orchestration**")
-    st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
-# ```
 
-# To use this application, you would need to create the following directory structure:
+def render_footer():
+    """Render the footer."""
+    st.markdown("---")
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        st.image("images/aws_logo.png", width=70)
+    with col2:
+        st.markdown("**AWS Machine Learning Engineer - Associate | Domain 3: Deployment and Orchestration**")
+        st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
 
-# ```
-# - app.py (the main file with the code above)
-# - images/
-#   - mla_badge.png
-#   - mla_badge_big.png
-#   - aws_logo.png
-#   - model_registry.png
-#   - model_registry_structure.png
-#   - model_registry_mlops.png
-#   - realtime_inference.png
-#   - async_inference.png
-#   - batch_transform.png
-#   - serverless_inference.png
-#   - inference_decision_flow.png
-#   - multi_model.png
-#   - multi_container.png
-#   - inference_pipeline.png
-#   - cloudformation.png
-#   - cdk.png
-#   - ecr.png
-#   - ecs_eks.png
-#   - ec2_fargate.png
-#   - sagemaker_pipelines.png
-#   - pipeline_example.png
-#   - pipelines_studio.png
-#   - eventbridge.png
-#   - mlops_workflow.png
-#   - mlops_practices.png
-#   - sagemaker_mlops_features.png
-#   - small_mlops_architecture.png
-#   - medium_mlops_architecture.png
-#   - blue_green.png
-#   - traffic_shifting.png
-# ```
 
-# The application follows the same UI/UX styling as the Domain 1 code, with consistent components like custom headers, info boxes, definition boxes, and expandable sections. It organizes the content into tabs covering SageMaker Model Registry, Inference Options, Infrastructure, SageMaker Pipelines, MLOps, plus a quiz to test knowledge and a resources section for further learning.
+def main():
+    """Main function to run the Streamlit app."""
+    # Set up the page
+    
+    set_custom_css()
+    initialize_session_state()
+    
+    # Render sidebar
+    render_sidebar()
+    
+    # Create tabs
+    tabs = st.tabs([
+        "🏠 Home", 
+        "📦 SageMaker Model Registry", 
+        "🚀 Inference Options", 
+        "🏗️ Infrastructure", 
+        "🔄 SageMaker Pipelines", 
+        "⚙️ MLOps",
+        "❓ Quiz", 
+        "📚 Resources"
+    ])
+    
+    # Render content for each tab
+    with tabs[0]:
+        render_home_tab()
+    
+    with tabs[1]:
+        render_model_registry_tab()
+    
+    with tabs[2]:
+        render_inference_options_tab()
+    
+    with tabs[3]:
+        render_infrastructure_tab()
+    
+    with tabs[4]:
+        render_pipelines_tab()
+    
+    with tabs[5]:
+        render_mlops_tab()
+    
+    with tabs[6]:
+        render_quiz_tab()
+    
+    with tabs[7]:
+        render_resources_tab()
+    
+    # Render footer
+    render_footer()
+
+
+# Main execution flow
+if __name__ == "__main__":
+    set_page_configuration()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
