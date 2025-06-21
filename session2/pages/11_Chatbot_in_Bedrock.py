@@ -6,7 +6,8 @@ import uuid
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationChain
 from langchain_aws import ChatBedrockConverse
-
+import utils.common as common
+import utils.authenticate as authenticate
 
 # Configure the page
 st.set_page_config(
@@ -17,25 +18,27 @@ st.set_page_config(
 )
 
 def model_selection_panel():
-    """Model selection and parameters in the side panel"""
+    """Model selection and parameters panel"""
     st.markdown("<h4>Model Selection</h4>", unsafe_allow_html=True)
     
     MODEL_CATEGORIES = {
         "Amazon": ["amazon.nova-micro-v1:0", "amazon.nova-lite-v1:0", "amazon.nova-pro-v1:0"],
-        "Anthropic": ["anthropic.claude-v2:1", "anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-haiku-20240307-v1:0"],
+        "Anthropic": ["anthropic.claude-v2:1", "anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-haiku-20240307-v1:0", "anthropic.claude-3-5-sonnet-20240620-v1:0"],
         "Cohere": ["cohere.command-r-plus-v1:0", "cohere.command-r-v1:0"],
-        "Meta": ["meta.llama3-70b-instruct-v1:0", "meta.llama3-8b-instruct-v1:0"],
+        "Meta": ["meta.llama3-70b-instruct-v1:0", "meta.llama3-8b-instruct-v1:0","us.meta.llama4-maverick-17b-instruct-v1:0"],
         "Mistral": ["mistral.mistral-small-2402-v1:0", "mistral.mistral-large-2402-v1:0", "mistral.mixtral-8x7b-instruct-v0:1", 
-                   "mistral.mistral-7b-instruct-v0:2"],
-        "AI21":["ai21.jamba-1-5-large-v1:0", "ai21.jamba-1-5-mini-v1:0"]
+                   "mistral.mistral-7b-instruct-v0:2","us.mistral.pixtral-large-2502-v1:0"],
+        "AI21":["ai21.jamba-1-5-large-v1:0", "ai21.jamba-1-5-mini-v1:0"],
+        "DeepSeek": ["us.deepseek.r1-v1:0"]
+
     }
     
 
     # Create selectbox for provider first
-    provider = st.selectbox("Select Provider", options=list(MODEL_CATEGORIES.keys()), key="side_provider")
+    provider = st.selectbox("Select Provider", options=list(MODEL_CATEGORIES.keys()), key="control_provider")
     
     # Then create selectbox for models from that provider
-    model_id = st.selectbox("Select Model", options=MODEL_CATEGORIES[provider], key="side_model")
+    model_id = st.selectbox("Select Model", options=MODEL_CATEGORIES[provider], key="control_model")
     
     st.markdown("<h4>API Method</h4>", unsafe_allow_html=True)
     api_method = st.radio(
@@ -43,7 +46,7 @@ def model_selection_panel():
         ["Streaming", "Synchronous"], 
         index=0,
         help="Streaming provides real-time responses, while Synchronous waits for complete response",
-        key="side_api_method"
+        key="control_api_method"
     )
     st.markdown("<h4>Parameter Tuning</h4>", unsafe_allow_html=True)
 
@@ -53,7 +56,7 @@ def model_selection_panel():
         max_value=1.0, 
         value=0.1, 
         step=0.05,
-        key="side_temperature",
+        key="control_temperature",
         help="Higher values make output more random, lower values more deterministic"
     )
         
@@ -63,7 +66,7 @@ def model_selection_panel():
         max_value=1.0, 
         value=0.9, 
         step=0.05,
-        key="side_top_p",
+        key="control_top_p",
         help="Controls diversity via nucleus sampling"
     )
 
@@ -74,7 +77,7 @@ def model_selection_panel():
         max_value=4096, 
         value=1024, 
         step=50,
-        key="side_max_tokens",
+        key="control_max_tokens",
         help="Maximum number of tokens in the response"
     )
           
@@ -86,7 +89,7 @@ def model_selection_panel():
     }
     
     
-    return model_id, params, api_method
+    return provider, model_id, params, api_method
 
 def init_styles():
     """Apply custom styling to the app."""
@@ -110,10 +113,10 @@ def init_styles():
         .chat-header {
             position: sticky;
             background: linear-gradient(to right, #4776E6, #8E54E9);
-            padding: 1.5rem;
+            padding: 1rem;
             border-radius: 10px;
             color: white;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             text-align: center;
             top: 0;
         }
@@ -166,6 +169,13 @@ def init_styles():
             margin-bottom: 20px;
             border-radius: 5px;
         }
+        /* Controls container */
+        .controls-container {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -176,6 +186,9 @@ def init_session_state():
         
     if 'memory_enabled' not in st.session_state:
         st.session_state.memory_enabled = True
+
+    if 'provider' not in st.session_state:
+        st.session_state.provider = "Amazon"
     
     if 'model_id' not in st.session_state:
         st.session_state.model_id = "amazon.nova-micro-v1:0"
@@ -253,17 +266,9 @@ def reset_session():
 
 def render_sidebar():
     """Render the sidebar content."""
-    
-    # Add model selection panel
-    model_id, params, api_method = model_selection_panel()
-    
-    # Update session state with model selection
-    if model_id != st.session_state.model_id or params != st.session_state.model_params or api_method != st.session_state.api_method:
-        st.session_state.model_id = model_id
-        st.session_state.model_params = params
-        st.session_state.api_method = api_method
-        st.session_state.memory = get_memory()  # Refresh memory with new model
-    
+
+    common.render_sidebar()
+
     clear_chat_btn = st.sidebar.button("🧹 Clear Chat History", key="clear_chat")
     
     if clear_chat_btn:
@@ -403,8 +408,11 @@ def render_chat_area():
     memory_status = "with Memory" if st.session_state.memory_enabled else "without Memory"
     model_info = st.session_state.model_id.split('.')[0].capitalize()
     model_name = st.session_state.model_id.split('.')[1].replace('-', ' ').title()
+    if st.session_state.model_id.split('.')[0] == 'us':
+        model_name += f" {st.session_state.model_id.split('.')[2].replace('-', ' ').title()}"
+
     
-    st.markdown(f"<div class='chat-header'><h1>{model_info} {model_name} ({memory_status})</h1><p>Ask me anything and I'll do my best to help!</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='chat-header'><h1>AI Assistant ({memory_status})</h1><p>{model_info} {model_name}</p></div>", unsafe_allow_html=True)
 
     # Display chat messages
     render_chat_messages()
@@ -413,11 +421,12 @@ def render_chat_area():
     render_chat_input()
 
 def render_control_panel():
-    """Render the control panel for memory controls."""
+    """Render the control panel for memory controls and model settings."""
     with st.container(border=True):
-        st.markdown("<div class='sidebar-title'>Chat Controls</div>", unsafe_allow_html=True)
+        # st.markdown("<div class='sidebar-title'>Chat Controls</div>", unsafe_allow_html=True)
         
-        st.markdown("### Memory Settings")
+        # Memory Settings Section
+        st.markdown("#### Memory Settings")
         
         # Memory toggle
         memory_enabled = st.toggle("Enable Conversation Memory", value=st.session_state.memory_enabled)
@@ -430,6 +439,20 @@ def render_control_panel():
         else:
             st.markdown("<div class='memory-status memory-disabled'>Memory: DISABLED</div>", unsafe_allow_html=True)
             st.markdown("<div class='info-box'>Bot will respond to each message independently without context.</div>", unsafe_allow_html=True)
+        
+        # st.divider()
+        
+        # Model Selection and Parameters - MOVED FROM SIDEBAR
+        provider, model_id, params, api_method = model_selection_panel()
+        
+        # Update session state with model selection
+        if model_id != st.session_state.model_id or params != st.session_state.model_params or api_method != st.session_state.api_method:
+            st.session_state.provider = provider
+            st.session_state.model_id = model_id
+            st.session_state.model_params = params
+            st.session_state.api_method = api_method
+            st.session_state.memory = get_memory()  # Refresh memory with new model
+            st.rerun()
 
 def main():
     """Main application function."""   
