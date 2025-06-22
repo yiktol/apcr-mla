@@ -23,12 +23,12 @@ def model_selection_panel():
     
     MODEL_CATEGORIES = {
         "Amazon": ["amazon.nova-micro-v1:0", "amazon.nova-lite-v1:0", "amazon.nova-pro-v1:0"],
-        "Anthropic": ["anthropic.claude-v2:1", "anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-haiku-20240307-v1:0", "anthropic.claude-3-5-sonnet-20240620-v1:0"],
-        "Cohere": ["cohere.command-r-plus-v1:0", "cohere.command-r-v1:0"],
-        "Meta": ["meta.llama3-70b-instruct-v1:0", "meta.llama3-8b-instruct-v1:0","us.meta.llama4-maverick-17b-instruct-v1:0"],
+        "Anthropic": ["anthropic.claude-v2:1", "anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-haiku-20240307-v1:0"],
+        "Cohere": ["cohere.command-r-v1:0","cohere.command-r-plus-v1:0"],
+        "Meta": ["meta.llama3-8b-instruct-v1:0","meta.llama3-70b-instruct-v1:0"],
         "Mistral": ["mistral.mistral-small-2402-v1:0", "mistral.mistral-large-2402-v1:0", "mistral.mixtral-8x7b-instruct-v0:1", 
-                   "mistral.mistral-7b-instruct-v0:2","us.mistral.pixtral-large-2502-v1:0"],
-        "AI21":["ai21.jamba-1-5-large-v1:0", "ai21.jamba-1-5-mini-v1:0"],
+                   "mistral.mistral-7b-instruct-v0:2"],
+        "AI21":["ai21.jamba-1-5-mini-v1:0","ai21.jamba-1-5-large-v1:0"],
         "DeepSeek": ["us.deepseek.r1-v1:0"]
 
     }
@@ -81,6 +81,36 @@ def model_selection_panel():
         help="Maximum number of tokens in the response"
     )
           
+                 
+    # Toggle switch for enabling/disabling guardrails
+    st.markdown("<h4>Bedrock Guardrails</h4>", unsafe_allow_html=True)
+    enable_guardrails = st.toggle("Enable Guardrails", value=True, key="enable_guardrails")
+    
+    guardrail_id = ""
+    guardrail_version = ""
+    trace_enabled = False
+    stream_mode = "sync"
+    
+    if enable_guardrails:
+        guardrail_id = st.text_input("Guardrail ID", value="wibfn4fa6ifg", key="guardrail_id")
+        guardrail_version = st.text_input("Guardrail Version", value="DRAFT", key="guardrail_version")
+        
+        trace_enabled = st.checkbox("Enable Trace", value=True, key="trace_enabled")
+        stream_mode = st.radio(
+            "Stream Processing Mode",
+            ["sync", "async"],
+            index=0,
+            key="stream_mode"
+        )
+    
+    guardrail_config = None
+    if enable_guardrails:
+        guardrail_config = {
+            "guardrailIdentifier": guardrail_id,
+            "guardrailVersion": guardrail_version,
+            "trace": "enabled" if trace_enabled else "disabled",
+            "streamProcessingMode": stream_mode
+        }
         
     params = {
         "temperature": temperature,
@@ -89,7 +119,7 @@ def model_selection_panel():
     }
     
     
-    return provider, model_id, params, api_method
+    return provider, model_id, params, api_method, guardrail_config
 
 def init_styles():
     """Apply custom styling to the app."""
@@ -192,6 +222,9 @@ def init_session_state():
     
     if 'model_id' not in st.session_state:
         st.session_state.model_id = "amazon.nova-micro-v1:0"
+        
+    if "guardrail_config" not in st.session_state:
+        st.session_state.guardrail_config = None
     
     if 'model_params' not in st.session_state:
         st.session_state.model_params = {
@@ -228,6 +261,7 @@ def get_llm():
         temperature=model_kwargs["temperature"],
         top_p=model_kwargs["top_p"],
         max_tokens=model_kwargs["max_tokens"],
+        guardrail_config=st.session_state.guardrail_config
     )
     
     return llm
@@ -443,14 +477,15 @@ def render_control_panel():
         # st.divider()
         
         # Model Selection and Parameters - MOVED FROM SIDEBAR
-        provider, model_id, params, api_method = model_selection_panel()
+        provider, model_id, params, api_method, guardrail_config = model_selection_panel()
         
         # Update session state with model selection
-        if model_id != st.session_state.model_id or params != st.session_state.model_params or api_method != st.session_state.api_method:
+        if model_id != st.session_state.model_id or params != st.session_state.model_params or api_method != st.session_state.api_method or guardrail_config != st.session_state.guardrail_config:
             st.session_state.provider = provider
             st.session_state.model_id = model_id
             st.session_state.model_params = params
             st.session_state.api_method = api_method
+            st.session_state.guardrail_config = guardrail_config
             st.session_state.memory = get_memory()  # Refresh memory with new model
             st.rerun()
 
@@ -477,4 +512,9 @@ def main():
 
 # Main execution flow
 if __name__ == "__main__":
-    main()
+    # First check authentication
+    is_authenticated = authenticate.login()
+    
+    # If authenticated, show the main app content
+    if is_authenticated:
+        main()
