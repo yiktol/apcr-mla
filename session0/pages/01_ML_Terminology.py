@@ -21,7 +21,7 @@ import os
 import utils.authenticate as authenticate
 
 
-from utils.common import render_sidebar as render_sidebar_common
+import utils.common as common
 from utils.styles import load_css
 
 
@@ -2083,7 +2083,7 @@ def render_sidebar():
             st.session_state.selected_term = 'Dataset'
         
         # Session management
-        render_sidebar_common()
+        common.render_sidebar()
         
         st.divider()
         with st.expander("📚 About this App", expanded=False):
@@ -2103,6 +2103,8 @@ def main():
     
     # Load CSS
     load_css()
+    
+    render_sidebar()
     
     # Load datasets
     datasets = load_datasets()
@@ -2272,7 +2274,6 @@ if __name__ == "__main__":
     
     # If authenticated, show the main app content
     if is_authenticated:
-        render_sidebar()
         main()
 
 

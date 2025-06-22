@@ -18,13 +18,7 @@ def render_sidebar():
     if 'auth_code' not in st.session_state:
         st.caption(f"**Session ID:** {st.session_state.session_id[:8]}")
     else:
-        st.caption(f"**Session ID:** {st.session_state['auth_code'][:8]}")
-
-    if st.button("🔄 Reset Session", key='common_reset',use_container_width=True):
-        reset_session()
-        st.success("Session has been reset successfully!")
-        st.rerun()  # Force a rerun to refresh the page
-    
+        st.caption(f"**Session ID:** {st.session_state['auth_code'][:8]}") 
 
     if st.button("🔄 Reset Session",use_container_width=True):
         reset_session()
