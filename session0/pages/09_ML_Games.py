@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 import random
 from utils.styles import load_css
-from utils.common import initialize_session_state, reset_session, render_sidebar
+from utils.common import initialize_session_state, render_sidebar
 from utils.game_ai_ml_genai import ai_ml_genai_game
 from utils.game_traditional_vs_ml import traditional_vs_ml_game
 from utils.game_ml_or_not import ml_or_not_game
@@ -20,7 +20,8 @@ def main():
     
     # Initialize session state variables
     initialize_session_state()
-
+    
+    
     # Page title
     st.markdown("<h1>🎮 ML Learning Games</h1>", unsafe_allow_html=True)
     st.markdown("""<div class='info-box'>
@@ -31,7 +32,7 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        
+        render_sidebar()
         with st.expander("ℹ️ About this App", expanded=False):
             st.markdown("""
             This interactive application helps you prepare for the AWS AI Practitioner certification by testing your knowledge through fun games covering:
@@ -96,8 +97,6 @@ def main():
     st.caption("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
 
 if __name__ == "__main__":
-    with st.sidebar:
-        render_sidebar()
     # First check authentication
     is_authenticated = authenticate.login()
     

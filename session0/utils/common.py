@@ -3,13 +3,14 @@ import uuid
 from datetime import datetime
 import utils.authenticate as authenticate
 
-
-
 def reset_session():
     """Reset the session state"""
     for key in st.session_state.keys():
         if key not in ["authenticated", "user_cognito_groups", "auth_code","user_info"]:
-            del st.session_state[key]  
+            del st.session_state[key]
+    st.rerun()
+
+    
     
 def render_sidebar():
     """Render the sidebar with session information and reset button"""
@@ -19,10 +20,17 @@ def render_sidebar():
     else:
         st.caption(f"**Session ID:** {st.session_state['auth_code'][:8]}")
 
-    if st.button("🔄 Reset Session", use_container_width=True):
+    if st.button("🔄 Reset Session", key='common_reset',use_container_width=True):
         reset_session()
         st.success("Session has been reset successfully!")
         st.rerun()  # Force a rerun to refresh the page
+    
+
+    if st.button("🔄 Reset Session",use_container_width=True):
+        reset_session()
+        st.success("Session has been reset successfully!")
+        st.rerun()  # Force a rerun to refresh the page
+
 
 def initialize_session_state():
     """Initialize session state variables if they don't exist."""
@@ -32,7 +40,54 @@ def initialize_session_state():
     
     if "start_time" not in st.session_state:
         st.session_state.start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Game 1: AI vs ML vs GenAI
+    if "game1_score" not in st.session_state:
+        st.session_state.game1_score = 0
+    if "game1_submitted" not in st.session_state:
+        st.session_state.game1_submitted = [False] * 5
 
+    # Game 2: Traditional Programming vs ML
+    if "game2_score" not in st.session_state:
+        st.session_state.game2_score = 0
+    if "game2_submitted" not in st.session_state:
+        st.session_state.game2_submitted = [False] * 5
+    
+    # Game 3: ML or Not?
+    if "game3_score" not in st.session_state:
+        st.session_state.game3_score = 0
+    if "game3_submitted" not in st.session_state:
+        st.session_state.game3_submitted = [False] * 5
+    
+    # Game 4: Traditional ML vs GenAI
+    if "game4_score" not in st.session_state:
+        st.session_state.game4_score = 0
+    if "game4_submitted" not in st.session_state:
+        st.session_state.game4_submitted = [False] * 5
+    
+    # Game 5: ML Terms
+    if "game5_score" not in st.session_state:
+        st.session_state.game5_score = 0
+    if "game5_submitted" not in st.session_state:
+        st.session_state.game5_submitted = [False] * 5
+    
+    # Game 6: Learning Types
+    if "game6_score" not in st.session_state:
+        st.session_state.game6_score = 0
+    if "game6_submitted" not in st.session_state:
+        st.session_state.game6_submitted = [False] * 5
+    
+    # Game 7: ML Process
+    if "game7_score" not in st.session_state:
+        st.session_state.game7_score = 0
+    if "game7_submitted" not in st.session_state:
+        st.session_state.game7_submitted = [False] * 5
+    
+    # Game 8: AWS Services
+    if "game8_score" not in st.session_state:
+        st.session_state.game8_score = 0
+    if "game8_submitted" not in st.session_state:
+        st.session_state.game8_submitted = [False] * 5
 
 # def reset_session():
 #     """Reset all session state variables."""
@@ -46,6 +101,25 @@ def initialize_session_state():
 #         st.session_state[f"game{i}_score"] = 0
 #         st.session_state[f"game{i}_submitted"] = [False] * 5
 
+def display_progress(game_number):
+    """Display progress for the specified game."""
+    
+    completed = st.session_state[f"game{game_number}_submitted"].count(True)
+    total = len(st.session_state[f"game{game_number}_submitted"])
+    
+    progress_text = f"Progress: {completed}/{total} scenarios completed"
+    st.progress(completed / total)
+    st.text(progress_text)
+    
+    score_percentage = (st.session_state[f"game{game_number}_score"] / total) * 100 if total > 0 else 0
+    score_text = f"Current Score: {st.session_state[f'game{game_number}_score']}/{total} ({score_percentage:.1f}%)"
+    
+    st.markdown(f"""
+    <div class="score-display">
+        {score_text}
+    </div>
+    """, unsafe_allow_html=True)
+
 def show_tip(tip_text):
     """Display a formatted tip box with the provided text."""
     
@@ -55,7 +129,14 @@ def show_tip(tip_text):
     </div>
     """, unsafe_allow_html=True)
 
-       
+def reset_game_button(game_number):
+    """Create a reset button for the specified game."""
+    
+    if st.button(f"🔄 Reset Game {game_number}", key=f"reset_game_{game_number}"):
+        st.session_state[f"game{game_number}_score"] = 0
+        st.session_state[f"game{game_number}_submitted"] = [False] * 5
+        st.rerun()
+        
 def apply_styles():
     """Apply custom styling to the Streamlit app."""
     
@@ -68,125 +149,38 @@ def apply_styles():
     # CSS for styling
     st.markdown(f"""
     <style>
-        .main-header {{
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #FF9900;
-            margin-bottom: 1rem;
-        }}
-        .sub-header {{
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #232F3E;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-        }}
-        .section-header {{
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #232F3E;
-            margin-top: 0.8rem;
-            margin-bottom: 0.3rem;
-        }}
-        .info-box {{
-            background-color: #F0F2F6;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }}
-        .success-box {{
-            background-color: #D1FAE5;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }}
-        .warning-box {{
-            background-color: #FEF3C7;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }}
-        .tip-box {{
-            background-color: #E0F2FE;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-left: 5px solid #0EA5E9;
-        }}
-        .step-box {{
-            background-color: #FFFFFF;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #E5E7EB;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }}
-        .card {{
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            background-color: white;
-            transition: transform 0.3s;
-        }}
-        .card:hover {{
-            transform: translateY(-5px);
-        }}
-        .aws-orange {{
-            color: #FF9900;
-        }}
-        .aws-blue {{
-            color: #232F3E;
-        }}
-        hr {{
-            margin-top: 1.5rem;
-            margin-bottom: 1.5rem;
-        }}
-        /* Make the tab content container take full height */
-        .stTabs [data-baseweb="tab-list"] {{
-            gap: 8px;
-        }}
-        .stTabs [data-baseweb="tab"] {{
-            height: 50px;
-            white-space: pre-wrap;
-            background-color: #F8F9FA;
-            border-radius: 4px 4px 0px 0px;
-            gap: 1px;
-            padding-left: 16px;
-            padding-right: 16px;
-        }}
-        .stTabs [aria-selected="true"] {{
-            background-color: #FF9900 !important;
-            color: white !important;
-        }}
-        .definition {{
-            background-color: #EFF6FF;
-            border-left: 5px solid #3B82F6;
-            padding: 10px 15px;
-            margin: 15px 0;
-            border-radius: 0 5px 5px 0;
-        }}
-        .code-box {{
-            background-color: #F8F9FA;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: monospace;
-            margin: 15px 0;
-            border: 1px solid #E5E7EB;
-        }}
-        .stButton>button {{
-            background-color: #FF9900;
-            color: white;
-        }}
-        .stButton>button:hover {{
-            background-color: #FFAC31;
-        }}    
+    
         .stApp {{
             color: {aws_dark};
             background-color: {aws_background};
             font-family: 'Amazon Ember', Arial, sans-serif;
         }}
         
+        /* Tabs styling */
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 8px;
+        }}
+        
+        .stTabs [data-baseweb="tab"] {{
+            padding: 8px 16px;
+            background-color: #f8f9fa;
+            border-radius: 4px 4px 0 0;
+        }}
+        
+        .stTabs [aria-selected="true"] {{
+            background-color: {aws_orange} !important;
+            color: white !important;
+        }}
+        
+        /* AWS themed styling */
+        .stButton>button {{
+            background-color: {aws_blue};
+            color: white;
+        }}
+        
+        .stButton>button:hover {{
+            background-color: {aws_dark};
+        }}
         
         /* Success styling */
         .correct-answer {{
