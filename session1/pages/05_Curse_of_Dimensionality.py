@@ -390,10 +390,8 @@ def main():
     # Main content
     st.title("The Curse of Dimensionality in Machine Learning")
     st.markdown("""
-    ### What you'll learn
     How having too many features (dimensions) can make machine learning harder, and what to do about it.
     
-    This app is designed to be beginner-friendly. We'll explain everything step by step!
     """)
     
     # Create tabs for different sections
