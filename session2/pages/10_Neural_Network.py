@@ -1238,7 +1238,11 @@ def render_advanced_concepts_tab():
             l2_z = X**2 + Y**2
             l2_contour = ax.contour(X, Y, l2_z, levels=[1], colors='red', linestyles='solid', linewidths=2)
             
-            ax.legend([l1_contour.collections[0], l2_contour.collections[0]], ['L1 Norm', 'L2 Norm'])
+            # Fixed legend creation
+            blue_line = plt.Line2D([], [], color='blue', linewidth=2)
+            red_line = plt.Line2D([], [], color='red', linewidth=2)
+            ax.legend([blue_line, red_line], ['L1 Norm', 'L2 Norm'])
+            
             ax.set_aspect('equal')
             ax.grid(True, alpha=0.3)
             ax.set_title('L1 vs L2 Regularization')
@@ -1594,3 +1598,6 @@ if __name__ == "__main__":
     # If authenticated, show the main app content
     if is_authenticated:
         main()
+
+# if __name__ == "__main__":
+#     main()

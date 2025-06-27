@@ -318,7 +318,7 @@ def render_learning_rate_tab():
         if lottie_lr:
             st_lottie(lottie_lr, height=200, key="lr_animation")
         else:
-            st.image("https://miro.medium.com/v2/resize:fit:1400/format:webp/1*QzmFkZ3pyoKR5OHA4OX5bg.jpeg", caption="Learning rate concept")
+            st.image("https://www.jeremyjordan.me/content/images/2018/02/Screen-Shot-2018-02-24-at-11.47.09-AM.png", caption="Learning rate concept")
 
     st.markdown("---")
     st.markdown("<div class='subtitle'>Interactive Demo: Finding the Optimal Learning Rate</div>", unsafe_allow_html=True)
@@ -478,7 +478,7 @@ def render_learning_rate_tab():
     
     with col1:
         st.markdown("<div class='subtitle'>Learning Rate Effects</div>", unsafe_allow_html=True)
-        st.image("https://miro.medium.com/v2/resize:fit:1400/format:webp/1*XJXa-PEkH85rwcG2xFXI7g.png", caption="How learning rate affects convergence")
+        st.image("images/Effect-of-various-learning-rates-on-convergence.png", caption="How learning rate affects convergence")
         
     with col2:
         st.markdown("<div class='subtitle'>Learning Rate Schedules</div>", unsafe_allow_html=True)
@@ -551,7 +551,7 @@ def render_early_stopping_tab():
         if lottie_es:
             st_lottie(lottie_es, height=200, key="es_animation")
         else:
-            st.image("https://machinelearningmastery.com/wp-content/uploads/2019/09/Example-of-a-Learning-Curve-Showing-an-Overfit-Model.png", caption="Early stopping concept")
+            st.image("https://miro.medium.com/v2/resize:fit:720/format:webp/1*iAK5uMoOlX1gZu-cSh1nZw.png", caption="Early stopping concept")
 
     st.markdown("---")
     st.markdown("<div class='subtitle'>Interactive Demo: Early Stopping in Action</div>", unsafe_allow_html=True)
@@ -858,10 +858,12 @@ def main():
     render_footer()
 
 # Main execution flow
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+if __name__ == "__main__":
+    main()

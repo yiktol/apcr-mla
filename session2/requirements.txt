@@ -23,3 +23,4 @@ langchain-community
 langchain-aws
 faiss-cpu
 wordcloud
+pypdf

@@ -870,7 +870,7 @@ def render_random_search_tab():
                         param_columns[param] = pd.to_numeric(results_df[col_name])
                     else:
                         # Handle max_depth specially
-                        param_columns[param] = results_df[col_name].map(lambda x: 1000 if x == 'None' else float(x))
+                        param_columns[param] = results_df[col_name].map(lambda x: 1000 if x == 'None' or x is None else float(x))
             
             # Create dataframe for correlation
             corr_df = pd.DataFrame(param_columns)
@@ -924,7 +924,7 @@ def render_random_search_tab():
                         params_to_plot[param] = pd.to_numeric(results_df[col_name])
                     else:
                         # Special handling for max_depth
-                        params_to_plot[param] = results_df[col_name].map(lambda x: 1000 if x == 'None' else float(x))
+                        params_to_plot[param] = results_df[col_name].map(lambda x: 1000 if x == 'None' or x is None else float(x))
             
             # Create dataframe for parallel coordinates
             plot_df = pd.DataFrame(params_to_plot)
@@ -1943,7 +1943,7 @@ def main():
     render_sidebar()
     
     # Main content
-    st.title("Hyperparameter Tuning Explorer")
+    st.title("Hyperparameter Tuning")
     
     st.markdown("""
     <div class="card">
@@ -1982,10 +1982,12 @@ def main():
     render_footer()
 
 # Main execution flow
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+if __name__ == "__main__":
+    main()

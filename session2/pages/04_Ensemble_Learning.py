@@ -1444,3 +1444,7 @@ if __name__ == "__main__":
     # If authenticated, show the main app content
     if is_authenticated:
         main()
+
+
+# if __name__ == "__main__":
+#     main()

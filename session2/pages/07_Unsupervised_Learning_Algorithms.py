@@ -1663,43 +1663,51 @@ recommendations = object2vec_predictor.predict(user_input)
         <h3>Amazon SageMaker Implementation for Word Embeddings</h3>
         <p>Here's how you can implement word embeddings using Object2Vec in Amazon SageMaker:</p>
         <pre>
-import boto3
-import sagemaker
-from sagemaker.object2vec.estimator import Object2Vec
+        
+        # Set the algorithm parameters for word embeddings
+        <code>
+        import boto3
+        import sagemaker
+        from sagemaker.object2vec.estimator import Object2Vec
+        session = sagemaker.Session()
+        bucket = session.default_bucket()
+        role = sagemaker.get_execution_role()
 
-# Set up the SageMaker session
-session = sagemaker.Session()
-bucket = session.default_bucket()
-role = sagemaker.get_execution_role()
+        object2vec = Object2Vec(
+            role=role,
+            instance_count=1,
+            instance_type='ml.m4.xlarge',
+            enc_dim=100,  # Size of word embeddings
+            num_epochs=20,
+            optimizer='adam',
+            token_dim=300,  # Input token dimension
+            enc0_network='bilstm',  # Use BiLSTM for capturing word context
+            enc1_network='bilstm',
+            enc0_max_seq_len=50,  # Max sequence length
+            enc1_max_seq_len=50,
+            output_layer='mean',
+            mini_batch_size=64
+        )
+        </code>
+        
+        # Train the model
+        <code>
+        object2vec.fit({'train': word_sequence_data_s3_path})
+        </code>
+        
+        # Deploy the model
+        <code>
+        word_embedding_predictor = object2vec.deploy(
+            initial_instance_count=1,
+            instance_type='ml.m4.xlarge'
+        )
+        </code>
 
-# Set the algorithm parameters for word embeddings
-object2vec = Object2Vec(
-    role=role,
-    instance_count=1,
-    instance_type='ml.m4.xlarge',
-    enc_dim=100,  # Size of word embeddings
-    num_epochs=20,
-    optimizer='adam',
-    token_dim=300,  # Input token dimension
-    enc0_network='bilstm',  # Use BiLSTM for capturing word context
-    enc1_network='bilstm',
-    enc0_max_seq_len=50,  # Max sequence length
-    enc1_max_seq_len=50,
-    output_layer='mean',
-    mini_batch_size=64
-)
+        # Use model to get word embeddings
 
-# Train the model
-object2vec.fit({'train': word_sequence_data_s3_path})
-
-# Deploy the model
-word_embedding_predictor = object2vec.deploy(
-    initial_instance_count=1,
-    instance_type='ml.m4.xlarge'
-)
-
-# Use model to get word embeddings
-word_vectors = word_embedding_predictor.predict(words)
+        <code>
+        word_vectors = word_embedding_predictor.predict(words)\
+        </code>
         </pre>
         </div>
         """, unsafe_allow_html=True)
@@ -2281,38 +2289,49 @@ def render_rcf_tab():
         <h3>Amazon SageMaker Implementation</h3>
         <p>Here's how you can implement Random Cut Forest in Amazon SageMaker:</p>
         <pre>
-import boto3
-import sagemaker
-from sagemaker import RandomCutForest
+        
+        # Set up the SageMaker session
+        <code>
+        import boto3
+        import sagemaker
+        from sagemaker import RandomCutForest
 
-# Set up the SageMaker session
-session = sagemaker.Session()
-bucket = session.default_bucket()
-role = sagemaker.get_execution_role()
+        session = sagemaker.Session()
+        bucket = session.default_bucket()
+        role = sagemaker.get_execution_role()
+        </code>
+        
+        
+        # Set the algorithm parameters
+        <code>
+        rcf = RandomCutForest(
+            role=role,
+            instance_count=1,
+            instance_type='ml.m4.xlarge',
+            num_samples_per_tree=512,
+            num_trees=50,
+            feature_dim=data.shape[1]  # Number of features in your data
+        )
+        </code>
+        
+        # Train the model
+        <code>
+        rcf.fit({'train': train_data_s3_path})
+        </code>
+        
+        # Deploy the model for inference
+        <code>
+        rcf_predictor = rcf.deploy(
+            initial_instance_count=1,
+            instance_type='ml.m4.xlarge'
+        )
+        </code>
 
-# Set the algorithm parameters
-rcf = RandomCutForest(
-    role=role,
-    instance_count=1,
-    instance_type='ml.m4.xlarge',
-    num_samples_per_tree=512,
-    num_trees=50,
-    feature_dim=data.shape[1]  # Number of features in your data
-)
-
-# Train the model
-rcf.fit({'train': train_data_s3_path})
-
-# Deploy the model for inference
-rcf_predictor = rcf.deploy(
-    initial_instance_count=1,
-    instance_type='ml.m4.xlarge'
-)
-
-# Get anomaly scores
-anomaly_scores = rcf_predictor.predict(test_data)
-
-# Analyze anomaly scores (higher scores indicate anomalies)
+        # Get anomaly scores
+        <code>
+        anomaly_scores = rcf_predictor.predict(test_data)
+        </code>
+        # Analyze anomaly scores (higher scores indicate anomalies)
         </pre>
         </div>
         """, unsafe_allow_html=True)
@@ -2863,51 +2882,65 @@ def render_ip_insights_tab():
         <h3>Amazon SageMaker Implementation</h3>
         <p>Here's how you can implement IP Insights in Amazon SageMaker:</p>
         <pre>
-import boto3
-import sagemaker
-from sagemaker.amazon.amazon_estimator import get_image_uri
+        
+        # Set up the SageMaker session
+        <code>
+        import boto3
+        import sagemaker
+        from sagemaker.amazon.amazon_estimator import get_image_uri
 
-# Set up the SageMaker session
-session = sagemaker.Session()
-bucket = session.default_bucket()
-role = sagemaker.get_execution_role()
+        session = sagemaker.Session()
+        bucket = session.default_bucket()
+        role = sagemaker.get_execution_role()
+        </code>
 
-# Get the IP Insights container
-container = get_image_uri(region_name, 'ipinsights')
+        # Get the IP Insights container
+        <code>
+        container = get_image_uri(region_name, 'ipinsights')
+        </code>
 
-# Set the algorithm parameters
-ipinsights = sagemaker.estimator.Estimator(
-    container,
-    role, 
-    instance_count=1, 
-    instance_type='ml.c4.xlarge',
-    train_volume_size=20,
-    output_path=f"s3://{bucket}/ip-insights-output",
-    sagemaker_session=session
-)
+        # Set the algorithm parameters
+        <code>
+        ipinsights = sagemaker.estimator.Estimator(
+            container,
+            role, 
+            instance_count=1, 
+            instance_type='ml.c4.xlarge',
+            train_volume_size=20,
+            output_path=f"s3://{bucket}/ip-insights-output",
+            sagemaker_session=session
+        )
+        </code>
 
-# Set hyperparameters
-ipinsights.set_hyperparameters(
-    num_entity_vectors=ip_n_users,  # Number of unique users or accounts
-    vector_dim=128,                # Size of embedding vectors
-    epochs=20,                    # Number of training epochs
-    batch_metrics="true",         # Report metrics
-    mini_batch_size=1000,         # Mini-batch size for SGD
-    learning_rate=0.1,            # Learning rate
-    negative_samples=20           # Number of negative samples
-)
+        # Set hyperparameters
+        <code>
+        ipinsights.set_hyperparameters(
+            num_entity_vectors=ip_n_users,  # Number of unique users or accounts
+            vector_dim=128,                # Size of embedding vectors
+            epochs=20,                    # Number of training epochs
+            batch_metrics="true",         # Report metrics
+            mini_batch_size=1000,         # Mini-batch size for SGD
+            learning_rate=0.1,            # Learning rate
+            negative_samples=20           # Number of negative samples
+        )</code>
 
-# Train the model
-ipinsights.fit({'train': train_data_s3_path})
+        # Train the model
+        <code>
+        ipinsights.fit({'train': train_data_s3_path})
+        </code>
 
-# Deploy the model
-predictor = ipinsights.deploy(
-    initial_instance_count=1,
-    instance_type='ml.m4.xlarge'
-)
+        # Deploy the model
+        <code>
+        predictor = ipinsights.deploy(
+            initial_instance_count=1,
+            instance_type='ml.m4.xlarge'
+        )
+        </code>
 
-# Get compatibility scores
-scores = predictor.predict(test_data)
+        # Get compatibility scores
+        <code>
+        scores = predictor.predict(test_data)
+        </code>
         </pre>
         </div>
         """, unsafe_allow_html=True)
@@ -3483,43 +3516,54 @@ def render_pca_tab():
         <h3>Amazon SageMaker Implementation</h3>
         <p>Here's how you can implement PCA in Amazon SageMaker:</p>
         <pre>
-import boto3
-import sagemaker
-from sagemaker import PCA
+        
+        # Set up the SageMaker session
+        <code>
+        import boto3
+        import sagemaker
+        from sagemaker import PCA
 
-# Set up the SageMaker session
-session = sagemaker.Session()
-bucket = session.default_bucket()
-role = sagemaker.get_execution_role()
+        session = sagemaker.Session()
+        bucket = session.default_bucket()
+        role = sagemaker.get_execution_role()
+        </code>
 
-# Set the algorithm parameters
-pca = PCA(
-    role=role,
-    instance_count=1,
-    instance_type='ml.c4.xlarge',
-    num_components=10,  # Number of principal components
-    feature_dim=data.shape[1],  # Number of features in your data
-    subtract_mean=True,  # Center the data
-    algorithm_mode='randomized'  # 'regular' or 'randomized'
-)
+        # Set the algorithm parameters
+        <code>
+        pca = PCA(
+            role=role,
+            instance_count=1,
+            instance_type='ml.c4.xlarge',
+            num_components=10,  # Number of principal components
+            feature_dim=data.shape[1],  # Number of features in your data
+            subtract_mean=True,  # Center the data
+            algorithm_mode='randomized'  # 'regular' or 'randomized'
+        )
+        </code>
 
-# Train the model
-pca.fit({'train': train_data_s3_path})
+        # Train the model
+        <code>
+        pca.fit({'train': train_data_s3_path})
+        </code>
 
-# Transform the data
-transformer = pca.transformer(
-    instance_count=1,
-    instance_type='ml.m4.xlarge'
-)
+        # Transform the data
+        <code>
+        transformer = pca.transformer(
+            instance_count=1,
+            instance_type='ml.m4.xlarge'
+        )
 
-transformer.transform(
-    data_s3_path,
-    content_type='text/csv',
-    split_type='line'
-)
+        transformer.transform(
+            data_s3_path,
+            content_type='text/csv',
+            split_type='line'
+        )
+        </code>
 
-# Get results
-transformed_data = transformer.output_path
+        # Get results
+        <code>
+        transformed_data = transformer.output_path
+        </code>
         </pre>
         </div>
         """, unsafe_allow_html=True)
@@ -3590,11 +3634,13 @@ def main():
 
 
 # Main execution flow
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+if __name__ == "__main__":
+    main()
 
