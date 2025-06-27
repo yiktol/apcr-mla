@@ -10,7 +10,6 @@ def reset_session():
     for key in st.session_state.keys():
         if key not in ["authenticated", "user_cognito_groups", "auth_code","user_info"]:
             del st.session_state[key]  
-    st.rerun()
     
 def render_sidebar():
     """Render the sidebar with session information and reset button"""
