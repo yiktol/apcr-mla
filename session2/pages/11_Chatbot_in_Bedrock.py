@@ -626,70 +626,71 @@ def render_rag_panel():
         st.markdown("<div class='rag-status rag-disabled'>RAG: DISABLED</div>", unsafe_allow_html=True)
         st.markdown("<div class='info-box'>Bot will respond based on its general knowledge without using your documents.</div>", unsafe_allow_html=True)
     
-    # Document upload section
-    st.markdown("#### Document Upload")
-    
-    with st.container(border=True, key="upload_container"):
-        uploaded_files = st.file_uploader(
-            "Upload documents for RAG", 
-            accept_multiple_files=True,
-            type=["pdf", "docx", "txt", "csv", "md"],
-            help="Supported file types: PDF, DOCX, TXT, CSV, MD"
-        )
+    if rag_enabled:
+        # Document upload section
+        st.markdown("#### Document Upload")
         
-        # Process uploaded files
-        if uploaded_files:
-            process_btn = st.button("Process Documents", type="primary")
+        with st.container(border=True, key="upload_container"):
+            uploaded_files = st.file_uploader(
+                "Upload documents for RAG", 
+                accept_multiple_files=True,
+                type=["pdf", "docx", "txt", "csv", "md"],
+                help="Supported file types: PDF, DOCX, TXT, CSV, MD"
+            )
             
-            if process_btn:
-                with st.spinner("Processing documents..."):
-                    all_documents = []
-                    
-                    for file in uploaded_files:
-                        docs, error = process_document(file)
-                        if error:
-                            st.error(f"Error processing {file.name}: {error}")
-                        else:
-                            all_documents.extend(docs)
-                            st.success(f"Successfully processed {file.name}")
-                    
-                    if all_documents:
-                        st.session_state.documents = all_documents
+            # Process uploaded files
+            if uploaded_files:
+                process_btn = st.button("Process Documents", type="primary")
+                
+                if process_btn:
+                    with st.spinner("Processing documents..."):
+                        all_documents = []
                         
-                        # Create vector store
-                        with st.spinner("Creating vector store..."):
-                            vector_store = initialize_vector_store(all_documents)
-                            if vector_store:
-                                st.session_state.vector_store = vector_store
-                                st.session_state.retrieval_qa = get_retrieval_qa()
-                                st.success(f"Vector store created with {len(all_documents)} documents")
-                                st.session_state.rag_enabled = True
+                        for file in uploaded_files:
+                            docs, error = process_document(file)
+                            if error:
+                                st.error(f"Error processing {file.name}: {error}")
                             else:
-                                st.error("Failed to create vector store")
-    
-    # Display currently loaded documents
-    if st.session_state.documents:
-        st.markdown("#### Loaded Documents")
-        for i, doc in enumerate(st.session_state.documents):
-            source = doc.metadata.get('source', 'Unknown source')
-            if isinstance(source, str) and len(source) > 30:
-                # Get just the filename if it's a path
-                source = os.path.basename(source)
-            
-            st.markdown(f"""
-            <div class="document-box">
-                <b>Document {i+1}:</b> {source}<br>
-                <small>Length: {len(doc.page_content)} chars</small>
-            </div>
-            """, unsafe_allow_html=True)
+                                all_documents.extend(docs)
+                                st.success(f"Successfully processed {file.name}")
+                        
+                        if all_documents:
+                            st.session_state.documents = all_documents
+                            
+                            # Create vector store
+                            with st.spinner("Creating vector store..."):
+                                vector_store = initialize_vector_store(all_documents)
+                                if vector_store:
+                                    st.session_state.vector_store = vector_store
+                                    st.session_state.retrieval_qa = get_retrieval_qa()
+                                    st.success(f"Vector store created with {len(all_documents)} documents")
+                                    st.session_state.rag_enabled = True
+                                else:
+                                    st.error("Failed to create vector store")
         
-        clear_docs = st.button("🗑️ Clear All Documents")
-        if clear_docs:
-            st.session_state.documents = []
-            st.session_state.vector_store = None
-            st.session_state.retrieval_qa = None
-            st.success("All documents cleared")
-            st.rerun()
+        # Display currently loaded documents
+        if st.session_state.documents:
+            st.markdown("#### Loaded Documents")
+            for i, doc in enumerate(st.session_state.documents):
+                source = doc.metadata.get('source', 'Unknown source')
+                if isinstance(source, str) and len(source) > 30:
+                    # Get just the filename if it's a path
+                    source = os.path.basename(source)
+                
+                st.markdown(f"""
+                <div class="document-box">
+                    <b>Document {i+1}:</b> {source}<br>
+                    <small>Length: {len(doc.page_content)} chars</small>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            clear_docs = st.button("🗑️ Clear All Documents")
+            if clear_docs:
+                st.session_state.documents = []
+                st.session_state.vector_store = None
+                st.session_state.retrieval_qa = None
+                st.success("All documents cleared")
+                st.rerun()
 
 def render_control_panel():
     """Render the control panel for memory controls and model settings."""
