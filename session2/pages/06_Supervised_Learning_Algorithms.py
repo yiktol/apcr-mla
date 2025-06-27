@@ -170,6 +170,13 @@ def apply_custom_css():
             border-top: 1px solid #D5DBDB;
             margin-top: 40px;
         }
+        code {
+        font-family: Consolas,"courier new";
+        color: crimson;
+        background-color: #f1f1f1;
+        padding: 2px;
+        font-size: 105%;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -376,9 +383,13 @@ def display_linear_learner_tab():
         <h3>SageMaker Implementation</h3>
         <p>In Amazon SageMaker, the Linear Learner algorithm would be implemented as follows:</p>
         <pre>
-        from sagemaker.amazon.linear_learner import LinearLearner
         
         # Configure the algorithm
+        
+        <code>
+        from sagemaker.amazon.linear_learner import LinearLearner
+
+        
         linear_learner = LinearLearner(
             role='SageMakerRole',
             instance_count=1,
@@ -387,22 +398,28 @@ def display_linear_learner_tab():
             learning_rate=0.1,
             l1=0.01,
             mini_batch_size=100
-        )
+                )
+        </code>
         
         # Train the model
+
+        <code>
         linear_learner.fit({
             'train': train_data,
             'validation': validation_data
-        })
+                })
+        </code>
         
         # Deploy the model
+        <code>
         predictor = linear_learner.deploy(
             initial_instance_count=1,
             instance_type='ml.m4.xlarge'
-        )
+                )
+        </code>
         </pre>
         </div>
-        """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
 def display_xgboost_tab():
     """Display XGBoost algorithm tab content"""
@@ -569,10 +586,13 @@ def display_xgboost_tab():
         <h3>SageMaker Implementation</h3>
         <p>In Amazon SageMaker, XGBoost would be implemented as follows:</p>
         <pre>
+        
+        # Configure the algorithm
+        
+        <code>
         import sagemaker
         from sagemaker.xgboost.estimator import XGBoost
         
-        # Configure the algorithm
         xgboost = XGBoost(
             role='SageMakerRole',
             instance_count=1,
@@ -584,18 +604,25 @@ def display_xgboost_tab():
             num_class=3,
             num_round=100
         )
+        </code>
         
         # Train the model
+        
+        <code>
         xgboost.fit({
             'train': train_data_channel,
             'validation': validation_data_channel
         })
+        </code>
         
         # Deploy the model
+        
+        <code>
         predictor = xgboost.deploy(
             initial_instance_count=1,
             instance_type='ml.m4.xlarge'
         )
+        </code>
         </pre>
         </div>
         """, unsafe_allow_html=True)
@@ -861,9 +888,12 @@ def display_knn_tab():
         <h3>SageMaker Implementation</h3>
         <p>In Amazon SageMaker, the K-Nearest Neighbors algorithm would be implemented as follows:</p>
         <pre>
-        from sagemaker import KNN
         
         # Configure the algorithm
+        
+        <code>
+        from sagemaker import KNN
+        
         knn = KNN(
             role='SageMakerRole',
             instance_count=1,
@@ -874,18 +904,24 @@ def display_knn_tab():
             dimension_reduction_type='sign',
             dimension_reduction_target=50
         )
+        </code>
         
         # Train the model
+        <code>
         knn.fit({
             'train': train_data_channel,
             'test': test_data_channel
         })
+        </code>
         
         # Deploy the model
+        
+        <code>
         predictor = knn.deploy(
             initial_instance_count=1,
             instance_type='ml.m4.xlarge'
         )
+        </code>
         </pre>
         </div>
         """, unsafe_allow_html=True)
@@ -1122,9 +1158,12 @@ def display_fm_tab():
         <h3>SageMaker Implementation</h3>
         <p>In Amazon SageMaker, Factorization Machines would be implemented as follows:</p>
         <pre>
-        from sagemaker.amazon.factorization_machines import FactorizationMachines
         
         # Configure the algorithm
+        
+        <code>
+        from sagemaker.amazon.factorization_machines import FactorizationMachines
+        
         fm = FactorizationMachines(
             role='SageMakerRole',
             instance_count=1,
@@ -1134,18 +1173,25 @@ def display_fm_tab():
             epochs=100,
             mini_batch_size=1000
         )
+        </code>
         
         # Train the model
+        
+        <code>
         fm.fit({
             'train': train_channel,
             'test': test_channel
         })
+        </code>
         
         # Deploy the model
+        
+        <code>
         predictor = fm.deploy(
             initial_instance_count=1,
             instance_type='ml.m4.xlarge'
         )
+        </code>
         </pre>
         </div>
         """, unsafe_allow_html=True)
