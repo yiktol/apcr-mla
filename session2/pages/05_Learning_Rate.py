@@ -165,6 +165,10 @@ def render_hyperparameters_tab():
         - Number of trees in a random forest
         """)
     
+    with col2:
+        st.image("images/hyperparams.png", caption="Hyperparameters vs Parameters")
+    
+    
     st.markdown("---")
     st.markdown("<div class='subtitle'>Interactive Demo: SVM Classifier Hyperparameter Tuning</div>", unsafe_allow_html=True)
     

@@ -304,7 +304,7 @@ def render_overview_tab():
             """, unsafe_allow_html=True)
     
     with col2:
-        st.image("https://miro.medium.com/max/1400/1*mzNlxRJXRs8W2HjU-FSoEA.png", 
+        st.image("https://miro.medium.com/v2/resize:fit:720/format:webp/1*DjLleDNWsOexIdlTwLgbNA.jpeg", 
                  caption="Hyperparameter Tuning Process", 
                  use_container_width=True)
     
@@ -688,7 +688,7 @@ def render_random_search_tab():
         """)
     
     with col2:
-        st.image("https://scikit-learn.org/stable/_images/randomized_search.png",
+        st.image("https://images.contentstack.io/v3/assets/bltb654d1b96a72ddc4/blt500831b25ec72372/660f40c8e838c8586360f703/SPC-Blog-Hyperparameter-optimization-2.jpg",
                  caption="Random Search vs. Grid Search",
                  use_container_width=True)
     
@@ -1039,7 +1039,7 @@ def render_bayesian_tab():
         """)
     
     with col2:
-        st.image("https://miro.medium.com/max/1400/1*qWQ9SRRlSjIgr9bsCI-M5g.png", 
+        st.image("https://miro.medium.com/v2/resize:fit:4800/format:webp/1*2rggEZnIerwTV4i--D4edA.png", 
                  caption="Bayesian Optimization Process",
                  use_container_width=True)
     
@@ -1419,7 +1419,7 @@ def render_hyperband_tab():
         """)
     
     with col2:
-        st.image("https://miro.medium.com/max/1400/0*Z9GuqmrpIvIo-MvY", 
+        st.image("images/hyperband.png", 
                  caption="Hyperband Elimination Process",
                  use_container_width=True)
     

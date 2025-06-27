@@ -228,7 +228,7 @@ def render_overview_tab():
     
     with col2:
         # Show ensemble learning concept image
-        st.image("https://miro.medium.com/max/1200/1*4G__SV580CxFj-xlBw_Zvg.png", caption="Ensemble Learning Concept")
+        st.image("https://viso.ai/wp-content/uploads/2024/02/Common-Ensemble-Methods.jpg", caption="Ensemble Learning Concept")
         
         st.markdown("""
         <div style="text-align: center; font-style: italic; margin-top: 10px;">
@@ -350,7 +350,7 @@ def render_bagging_tab():
     
     with col2:
         # Show bagging process image
-        st.image("https://miro.medium.com/max/1200/1*_NJ9oPKK1BnCYLMxmVgA_w.png", caption="Bagging Process")
+        st.image("images/bagging.png", caption="Bagging Process")
         
         st.markdown("""
         <div class="card">
@@ -673,7 +673,7 @@ def render_boosting_tab():
     
     with col2:
         # Show boosting process image
-        st.image("https://miro.medium.com/max/1200/1*Vc4vmEPwQfPP1qkDzFGnMQ.png", caption="Boosting Process")
+        st.image("images/boosting.png", caption="Boosting Process")
         
         st.markdown("""
         <div class="card">
@@ -1037,7 +1037,7 @@ def render_stacking_tab():
     
     with col2:
         # Show stacking architecture image
-        st.image("https://miro.medium.com/max/1400/1*7WySMBrq9A13Zkq7Q_o3uw.jpeg", caption="Stacking Architecture")
+        st.image("images/stacking.png", caption="Stacking Architecture")
         
         st.markdown("""
         <div class="card">
