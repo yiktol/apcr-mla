@@ -48,7 +48,9 @@ def plot_decision_boundary(model, X, y, title="Decision Boundary"):
     h = 0.01
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
     
-    Z = model(torch.FloatTensor(np.c_[xx.ravel(), yy.ravel()])).detach().numpy()
+    # Make sure the input tensor has the right shape
+    mesh_input = np.c_[xx.ravel(), yy.ravel()]
+    Z = model(torch.FloatTensor(mesh_input)).detach().numpy()
     Z = Z.reshape(xx.shape)
     
     fig, ax = plt.subplots(figsize=(10, 8))
@@ -947,7 +949,7 @@ def render_interactive_playground_tab():
         # Initialize model if needed
         if st.session_state.neural_network is None:
             st.session_state.neural_network = SimpleNN(
-                input_size=2,
+                input_size=2,  # Input size is fixed to 2 for 2D datasets
                 hidden_size=hidden_neurons,
                 output_size=1
             )
