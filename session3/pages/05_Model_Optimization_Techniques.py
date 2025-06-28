@@ -618,17 +618,6 @@ def setup_page_config():
         .st-emotion-cache-16txtl3 a {
             color: #FF9900;
         }
-        # .stTabs [data-baseweb="tab-list"] {
-        #     gap: 2px;
-        # }
-        # .stTabs [data-baseweb="tab"] {
-        #     padding: 10px 20px;
-        #     background-color: #EAEDED;
-        # }
-        # .stTabs [aria-selected="true"] {
-        #     background-color: #FF9900 !important;
-        #     color: white !important;
-        # }
         .stButton>button {
             background-color: #FF9900;
             color: white;
@@ -689,15 +678,7 @@ def render_sidebar():
 
 def render_introduction_tab():
     """Render the Introduction tab content."""
-    st.title("Model Optimization Techniques in Machine Learning")
-    
-    st.markdown("""
-    <div class="concept-box">
-        <h3>Welcome to the Interactive Model Optimization Course!</h3>
-        <p>In this interactive e-learning module, you'll learn about essential techniques 
-        for optimizing machine learning models.</p>
-    </div>
-    """, unsafe_allow_html=True)
+
     
     col1, col2 = st.columns([3,2])
     
@@ -1708,6 +1689,15 @@ def main():
     
     # Render the sidebar
     render_sidebar()
+
+    st.title("Model Optimization Techniques in Machine Learning")
+    
+    st.markdown("""
+    <div class="info-box">
+        <p>In this module, you'll learn about essential techniques 
+        for optimizing machine learning models.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Create tabs for different sections
     tab1, tab2, tab3, tab4, tab5 = st.tabs([

@@ -89,10 +89,11 @@ def apply_styles():
             margin-bottom: 0.3rem;
         }}
         .info-box {{
-            background-color: #F0F2F6;
+            background-color: #E6F2FF;
+            padding: 10px;
             border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            border-left: 5px solid #00A1C9;
         }}
         .success-box {{
             background-color: #D1FAE5;
@@ -252,6 +253,14 @@ def apply_styles():
             margin: 15px 0;
             background-color: #F1F8FF;
         }}
+        .formula-box {{
+            background-color: #EAEDED;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+        }}
+
     </style>
     """, unsafe_allow_html=True)
 

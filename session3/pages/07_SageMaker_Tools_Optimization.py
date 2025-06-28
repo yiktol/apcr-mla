@@ -71,6 +71,9 @@ set_page_config()
 
 def apply_custom_css():
     """Apply custom CSS styling."""
+
+    common.apply_styles()
+    
     st.markdown("""
     <style>
         .main {
@@ -108,13 +111,6 @@ def apply_custom_css():
         }
         .stButton button:hover {
             background-color: #EC7211;
-        }
-        .info-box {
-            background-color: #E6F2FF;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border-left: 5px solid #00A1C9;
         }
         .code-box {
             background-color: #232F3E;
@@ -3033,7 +3029,11 @@ def main():
     
     # Main app header
     st.title("Amazon SageMaker Tools for Optimization")
-    st.markdown("Explore the powerful tools that SageMaker offers for optimizing and accelerating your machine learning workflows.")
+    st.markdown("""
+                <div class="info-box">
+                <p>Explore the powerful tools that SageMaker offers for optimizing and accelerating your machine learning workflows.</p>
+                </div>
+                """, unsafe_allow_html=True)
 
     # Tab-based navigation
     tab1, tab2, tab3, tab4, tab5 = st.tabs([

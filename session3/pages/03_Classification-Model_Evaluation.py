@@ -38,51 +38,51 @@ def set_custom_styles():
 
     common.apply_styles()
 
-    st.markdown("""
-        <style>
-        .main {
-            background-color: #FFFFFF;
-        }
-        .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
-            color: #232F3E;
-        }
-        .st-emotion-cache-16txtl3 a {
-            color: #FF9900;
-        }
-        .stButton>button {
-            background-color: #FF9900;
-            color: white;
-            border: none;
-        }
-        .stButton>button:hover {
-            background-color: #EC7211;
-            color: white;
-        }
-        footer {
-            font-size: 0.8em;
-            color: #232F3E;
-            text-align: center;
-            margin-top: 50px;
-        }
-        .highlight {
-            background-color: #FFECCC;
-            padding: 10px;
-            border-radius: 5px;
-            border-left: 5px solid #FF9900;
-        }
-        .concept-box {
-            background-color: #F2F3F3;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # st.markdown("""
+    #     <style>
+    #     .main {
+    #         background-color: #FFFFFF;
+    #     }
+    #     .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
+    #         color: #232F3E;
+    #     }
+    #     .st-emotion-cache-16txtl3 a {
+    #         color: #FF9900;
+    #     }
+    #     .stButton>button {
+    #         background-color: #FF9900;
+    #         color: white;
+    #         border: none;
+    #     }
+    #     .stButton>button:hover {
+    #         background-color: #EC7211;
+    #         color: white;
+    #     }
+    #     footer {
+    #         font-size: 0.8em;
+    #         color: #232F3E;
+    #         text-align: center;
+    #         margin-top: 50px;
+    #     }
+    #     .highlight {
+    #         background-color: #FFECCC;
+    #         padding: 10px;
+    #         border-radius: 5px;
+    #         border-left: 5px solid #FF9900;
+    #     }
+    #     .concept-box {
+    #         background-color: #F2F3F3;
+    #         padding: 20px;
+    #         border-radius: 10px;
+    #         margin-bottom: 20px;
+    #     }
+    #     .grid-container {
+    #         display: grid;
+    #         grid-template-columns: 1fr 1fr;
+    #         gap: 20px;
+    #     }
+    #     </style>
+    # """, unsafe_allow_html=True)
 
 
 # Initialize session state
@@ -347,15 +347,7 @@ def plot_precision_recall_tradeoff(y_test, y_prob):
 
 # Tab content functions
 def render_intro_tab():
-    st.title("Model Evaluation for Classification Problems")
-    
-    st.markdown("""
-    <div class="concept-box">
-        <h3>Welcome to the Interactive Machine Learning Model Evaluation Course!</h3>
-        <p>In this interactive e-learning module, you'll learn about essential metrics and techniques 
-        for evaluating classification models in machine learning.</p>
-    </div>
-    """, unsafe_allow_html=True)
+
     
     col1, col2 = st.columns([3,2])
     
@@ -1302,7 +1294,16 @@ def main():
     st.session_state.model = model
     st.session_state.feature_names = feature_names
     st.session_state.class_names = class_names
+
+
+    st.title("Model Evaluation for Classification Problems")
     
+    st.markdown("""
+    <div class="info-box">
+        <p>In this module, you'll learn about essential metrics and techniques for evaluating classification models in machine learning.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     # Display tabs
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "🏠 Introduction", 

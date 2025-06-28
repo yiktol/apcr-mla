@@ -80,13 +80,6 @@ def apply_custom_css():
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
-        .formula-box {
-            background-color: #EAEDED;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-            margin: 10px 0;
-        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -419,15 +412,6 @@ def get_model_metrics(_dataset):
 
 def render_introduction_tab(model_metrics):
     """Render content for the Introduction tab"""
-    st.title("Model Evaluation for Regression Problems")
-    
-    st.markdown("""
-    <div class="concept-box">
-        <h3>Welcome to the Interactive Regression Model Evaluation Course!</h3>
-        <p>In this interactive e-learning module, you'll learn about essential metrics 
-        for evaluating regression models in machine learning.</p>
-    </div>
-    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([3,2])
     
@@ -1499,6 +1483,16 @@ def main():
     # Get model metrics
     model_metrics = get_model_metrics(st.session_state.dataset)
     
+    st.title("Model Evaluation for Regression Problems")
+    
+    st.markdown("""
+    <div class="info-box">
+        <p>In this module, you'll learn about essential metrics 
+        for evaluating regression models in machine learning.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
     # Create tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🏠 Introduction", 

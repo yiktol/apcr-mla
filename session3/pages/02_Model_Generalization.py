@@ -91,13 +91,6 @@ def set_custom_css():
             text-align: center;
             margin: 10px 0;
         }
-        .info-box {
-            background-color: #EBF5FB;
-            padding: 10px;
-            border-radius: 5px;
-            border-left: 5px solid #1166BB;
-            margin-bottom: 10px;
-        }
         .warning-box {
             background-color: #FDEDEC;
             padding: 10px;
@@ -192,15 +185,6 @@ def render_sidebar():
 
 
 def render_introduction_tab():
-    st.title("Model Generalization in Machine Learning")
-    
-    st.markdown("""
-    <div class="concept-box">
-        <h3>What is Model Generalization?</h3>
-        <p>Model generalization refers to how well a machine learning model performs on unseen data after being trained on a training dataset.
-        A model that generalizes well can make accurate predictions on new data it hasn't encountered before.</p>
-    </div>
-    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([3,2])
     
@@ -1346,6 +1330,16 @@ def main():
     init_session_state()
     render_sidebar()
     
+    st.title("Model Generalization in Machine Learning")
+    
+    st.markdown("""
+    <div class="info-box">
+        <p>Model generalization refers to how well a machine learning model performs on unseen data after being trained on a training dataset.
+        A model that generalizes well can make accurate predictions on new data it hasn't encountered before.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
     # Main content with tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🏠 Introduction", 
@@ -1355,6 +1349,7 @@ def main():
         "⚖️ L1/L2 Regularization",
         "❓ Knowledge Check"
     ])
+
 
     # Render each tab's content
     with tab1:

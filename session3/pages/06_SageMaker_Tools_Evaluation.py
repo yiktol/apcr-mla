@@ -49,33 +49,13 @@ def set_page_config():
 
 def load_css():
     """Load custom CSS styling."""
+
+    common.apply_styles()
+
     st.markdown("""
     <style>
         .main {
             background-color: #F8F9FA;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: #F8F9FA;
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .stTabs [data-baseweb="tab"] {
-            height: 60px;
-            white-space: pre-wrap;
-            border-radius: 6px;
-            font-weight: 600;
-            background-color: #FFFFFF;
-            color: #232F3E;
-            border: 1px solid #E9ECEF;
-            padding: 5px 15px;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #FF9900 !important;
-            color: #FFFFFF !important;
-            border: 1px solid #FF9900 !important;
         }
         .stButton button {
             background-color: #FF9900;
@@ -86,13 +66,6 @@ def load_css():
         }
         .stButton button:hover {
             background-color: #EC7211;
-        }
-        .info-box {
-            background-color: #E6F2FF;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border-left: 5px solid #00A1C9;
         }
         .code-box {
             background-color: #232F3E;
@@ -152,8 +125,7 @@ def render_sidebar():
 
 def render_header():
     """Render the application header."""
-    st.title("Amazon SageMaker Tools for Evaluation")
-    st.markdown("Explore the powerful tools that SageMaker offers for evaluating, debugging, and improving your machine learning models.")
+
 
 
 @st.cache_data
@@ -2122,7 +2094,15 @@ def main():
     
     # Render the header
     render_header()
-    
+
+    st.title("Amazon SageMaker Tools for Evaluation")
+    st.markdown("""
+    <div class="info-box">
+        <p>Explore the powerful tools that SageMaker offers for evaluating, debugging, and improving your machine learning models.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
     # Create tabs for navigation
     tab1, tab2, tab3, tab4 = st.tabs([
         "🔍 SageMaker Clarify", 
