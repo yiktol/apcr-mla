@@ -57,6 +57,9 @@ def main():
 
 def apply_custom_css():
     """Apply custom CSS styling to the application"""
+
+    common.apply_styles()
+
     st.markdown("""
     <style>
         .main-header {
@@ -134,22 +137,6 @@ def apply_custom_css():
             margin-bottom: 1.5rem;
         }
         /* Make the tab content container take full height */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            height: 50px;
-            white-space: pre-wrap;
-            background-color: #F8F9FA;
-            border-radius: 4px 4px 0px 0px;
-            gap: 1px;
-            padding-left: 16px;
-            padding-right: 16px;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #FF9900 !important;
-            color: white !important;
-        }
         .definition {
             background-color: #EFF6FF;
             border-left: 5px solid #3B82F6;
@@ -2117,10 +2104,13 @@ def render_footer():
         st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
 
 # Main execution flow
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+
+if __name__ == "__main__":
+    main()

@@ -34,6 +34,9 @@ set_page_config()
 
 def apply_custom_css():
     """Apply custom CSS for AWS themed styling"""
+
+    common.apply_styles()
+
     st.markdown("""
         <style>
         .main {
@@ -44,17 +47,6 @@ def apply_custom_css():
         }
         .st-emotion-cache-16txtl3 a {
             color: #FF9900;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 2px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            padding: 10px 20px;
-            background-color: #EAEDED;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #FF9900 !important;
-            color: white !important;
         }
         .stButton>button {
             background-color: #FF9900;

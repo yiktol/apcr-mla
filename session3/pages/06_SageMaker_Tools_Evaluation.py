@@ -11,6 +11,7 @@ from PIL import Image
 import io
 import base64
 from streamlit_lottie import st_lottie
+import streamlit_mermaid as stmd
 import requests
 import utils.common as common
 import utils.authenticate as authenticate
@@ -1497,44 +1498,17 @@ for trial in trials['TrialSummaries']:
     st.markdown("### SageMaker Experiments Workflow")
     
     # Define the workflow stages and connections
-    workflow_stages = [
-        {"id": 1, "name": "Configure\nExperiment", "x": 0.1, "y": 0.5},
-        {"id": 2, "name": "Set\nHyperparameters", "x": 0.25, "y": 0.5},
-        {"id": 3, "name": "Train\nModel", "x": 0.4, "y": 0.5},
-        {"id": 4, "name": "Track\nMetrics", "x": 0.55, "y": 0.5},
-        {"id": 5, "name": "Compare\nResults", "x": 0.7, "y": 0.5},
-        {"id": 6, "name": "Select Best\nModel", "x": 0.85, "y": 0.5}
-    ]
-    
-    # Create workflow visualization
-    fig, ax = plt.subplots(figsize=(12, 4))
-    
-    # Draw connections between stages
-    for i in range(len(workflow_stages)-1):
-        ax.annotate("", 
-                    xy=(workflow_stages[i+1]["x"], workflow_stages[i+1]["y"]), 
-                    xytext=(workflow_stages[i]["x"], workflow_stages[i]["y"]),
-                    arrowprops=dict(arrowstyle="->", color=AWS_COLORS['dark_gray'], lw=2))
-    
-    # Draw nodes
-    for stage in workflow_stages:
-        ax.scatter(stage["x"], stage["y"], s=1500, 
-                  color=AWS_COLORS['teal'] if stage["id"] % 2 == 0 else AWS_COLORS['orange'],
-                  alpha=0.8, edgecolor='white')
-        ax.text(stage["x"], stage["y"], stage["name"], 
-               ha='center', va='center', color='white', fontweight='bold')
-    
-    # Customize appearance
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    
-    st.pyplot(fig)
+    common.mermaid(
+    """
+    graph LR
+        A[Configure Experiment] --> B[Set Hyperparameters]
+        B --> C[Train Model]
+        C --> D[Track Metrics]
+        D --> E[Compare Results]
+        E --> F[Select Best Model]
+    """
+    )
+
 
 
 def generate_model_comparison():
@@ -1655,7 +1629,7 @@ def render_shadow_testing_tab():
     # Interactive Shadow Testing Demo
     st.subheader("Interactive Demo: Shadow Testing a New Model")
     
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown("### Test Configuration")
@@ -1695,81 +1669,33 @@ def render_shadow_testing_tab():
         
     with col2:
         st.markdown("### Shadow Testing Architecture")
-        
-        # Create shadow testing architecture diagram
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.set_xlim(0, 10)
-        ax.set_ylim(0, 6)
-        
-        # Remove axes
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        
-        # Draw clients
-        client_rect = plt.Rectangle((1, 4.5), 2, 1, fc=AWS_COLORS['light_gray'], ec=AWS_COLORS['dark_gray'])
-        ax.add_patch(client_rect)
-        ax.text(2, 5, "Clients", ha='center', va='center')
-        
-        # Draw API Gateway
-        api_rect = plt.Rectangle((3.5, 3), 3, 0.8, fc=AWS_COLORS['teal'], ec='white')
-        ax.add_patch(api_rect)
-        ax.text(5, 3.4, "API Gateway", ha='center', va='center', color='white')
-        
-        # Draw Lambda
-        lambda_rect = plt.Rectangle((4.25, 1.5), 1.5, 0.8, fc=AWS_COLORS['orange'], ec='white')
-        ax.add_patch(lambda_rect)
-        ax.text(5, 1.9, "Lambda", ha='center', va='center', color='white')
-        
-        # Draw Production Model
-        prod_rect = plt.Rectangle((1.5, 0.2), 2, 0.8, fc=AWS_COLORS['blue'], ec='white')
-        ax.add_patch(prod_rect)
-        ax.text(2.5, 0.6, "Model A\n(Production)", ha='center', va='center', color='white')
-        
-        # Draw Shadow Model
-        shadow_rect = plt.Rectangle((6.5, 0.2), 2, 0.8, fc=AWS_COLORS['green'], ec='white')
-        ax.add_patch(shadow_rect)
-        ax.text(7.5, 0.6, "Model B\n(Shadow)", ha='center', va='center', color='white')
-        
-        # Draw connections
-        ax.arrow(2, 4.5, 0, -1, head_width=0.2, head_length=0.2, fc=AWS_COLORS['dark_gray'], ec=AWS_COLORS['dark_gray'])
-        ax.arrow(5, 3, 0, -0.7, head_width=0.2, head_length=0.2, fc=AWS_COLORS['dark_gray'], ec=AWS_COLORS['dark_gray'])
-        
-        # Connections to models
-        ax.arrow(4.5, 1.5, -1.5, -0.5, head_width=0.2, head_length=0.2, fc=AWS_COLORS['dark_gray'], ec=AWS_COLORS['dark_gray'])
-        
-        # Shadow connection - dashed line based on traffic allocation
-        if traffic_allocation < 100:
-            arrow_style = '--'
-            alpha = 0.7
-        else:
-            arrow_style = '-'
-            alpha = 1.0
+
+        code = """
+        flowchart TD
+            Clients --> APIGateway[API Gateway]
+            APIGateway --> Lambda
+            Lambda --> ModelA[Model A Production]
+            Lambda --> |50% Traffic| ModelB[Model B Shadow]
+            ModelA <-->|Performance Comparison| ModelB
             
-        ax.arrow(5.5, 1.5, 1.5, -0.5, head_width=0.2, head_length=0.2, 
-                fc=AWS_COLORS['dark_gray'], ec=AWS_COLORS['dark_gray'], 
-                linestyle=arrow_style, alpha=alpha)
-        
-        # Traffic allocation label
-        ax.text(6.2, 1.2, f"{traffic_allocation}% Traffic", ha='center', fontsize=9)
-        
-        # Data comparison arrow
-        ax.arrow(2.5, 0.1, 5, 0, head_width=0.15, head_length=0.2, 
-                fc=AWS_COLORS['orange'], ec=AWS_COLORS['orange'], linestyle='--')
-        ax.text(5, 0, "Performance Comparison", ha='center', fontsize=9, color=AWS_COLORS['orange'])
-        
-        # Highlight selected model
-        if st.session_state.shadow_test_model == "Model A":
-            highlight = plt.Rectangle((1.3, 0), 2.4, 1.2, fill=False, ec='red', lw=2, linestyle='-')
-            ax.add_patch(highlight)
-        else:
-            highlight = plt.Rectangle((6.3, 0), 2.4, 1.2, fill=False, ec='red', lw=2, linestyle='-')
-            ax.add_patch(highlight)
-        
-        st.pyplot(fig)
+            %% Adding the traffic percentage label
+            linkStyle 3 stroke:#888,stroke-width:2,stroke-dasharray: 5 5
+            
+            %% Style for the boxes
+            classDef clients fill:#f5f5f5,stroke:#333,stroke-width:1px;
+            classDef gateway fill:#00a0c6,color:white;
+            classDef lambda fill:#ff9900,color:white;
+            classDef modelA fill:#2d3e50,color:white;
+            classDef modelB fill:#4caf50,color:white;
+            
+            class Clients clients;
+            class APIGateway gateway;
+            class Lambda lambda;
+            class ModelA modelA;
+            class ModelB modelB;
+            """
+
+        stmd.st_mermaid(code, height=450)
     
     # Shadow test comparison results
     st.markdown("### Performance Comparison Results")
@@ -2223,12 +2149,13 @@ def main():
 
 
 # Main execution flow
-if __name__ == "__main__":
-    # Configure the page
-    set_page_config()
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+
+if __name__ == "__main__":
+    main()

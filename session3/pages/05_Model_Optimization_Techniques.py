@@ -1,6 +1,6 @@
 import streamlit as st
 from streamlit_markdown import st_markdown
-import streamlit.components.v1 as components
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -93,20 +93,6 @@ def logistic_regression_predict(X, coef, intercept):
     z = X @ coef + intercept
     return 1 / (1 + np.exp(-z))
 
-
-def mermaid(code: str) -> None:
-    components.html(
-        f"""
-        <pre class="mermaid">
-            {code}
-        </pre>
-
-        <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({{ startOnLoad: true }});
-        </script>
-        """
-    )
 
 def gradient_descent_linear(X, y, learning_rate=0.01, n_iterations=100, tolerance=1e-6):
     """Implement gradient descent for linear regression."""
@@ -617,6 +603,9 @@ def setup_page_config():
         initial_sidebar_state="expanded",
     )
     
+
+    common.apply_styles()
+
     # Custom CSS for AWS themed styling
     st.markdown("""
         <style>
@@ -629,17 +618,17 @@ def setup_page_config():
         .st-emotion-cache-16txtl3 a {
             color: #FF9900;
         }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 2px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            padding: 10px 20px;
-            background-color: #EAEDED;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #FF9900 !important;
-            color: white !important;
-        }
+        # .stTabs [data-baseweb="tab-list"] {
+        #     gap: 2px;
+        # }
+        # .stTabs [data-baseweb="tab"] {
+        #     padding: 10px 20px;
+        #     background-color: #EAEDED;
+        # }
+        # .stTabs [aria-selected="true"] {
+        #     background-color: #FF9900 !important;
+        #     color: white !important;
+        # }
         .stButton>button {
             background-color: #FF9900;
             color: white;
@@ -764,7 +753,7 @@ def render_introduction_tab():
     Model optimization is a crucial step in the machine learning development process:
     """, unsafe_allow_html=True)
     
-    mermaid(
+    common.mermaid(
     f"""
     {mermaid_code}
     """

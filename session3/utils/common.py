@@ -2,7 +2,7 @@ import streamlit as st
 import uuid
 from datetime import datetime
 import utils.authenticate as authenticate
-
+import streamlit.components.v1 as components
 
 
 def reset_session():
@@ -145,19 +145,26 @@ def apply_styles():
         /* Make the tab content container take full height */
         .stTabs [data-baseweb="tab-list"] {{
             gap: 8px;
+            background-color: #F8F9FA;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }}
         .stTabs [data-baseweb="tab"] {{
-            height: 50px;
+            height: 60px;
             white-space: pre-wrap;
-            background-color: #F8F9FA;
-            border-radius: 4px 4px 0px 0px;
-            gap: 1px;
-            padding-left: 16px;
-            padding-right: 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            background-color: #FFFFFF;
+            color: #232F3E;
+            border: 1px solid #E9ECEF;
+            padding: 5px 15px;
         }}
         .stTabs [aria-selected="true"] {{
             background-color: #FF9900 !important;
-            color: white !important;
+            color: #FFFFFF !important;
+            border: 1px solid #FF9900 !important;
         }}
         .definition {{
             background-color: #EFF6FF;
@@ -247,3 +254,17 @@ def apply_styles():
         }}
     </style>
     """, unsafe_allow_html=True)
+
+def mermaid(code: str) -> None:
+    components.html(
+        f"""
+        <pre class="mermaid">
+            {code}
+        </pre>
+
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({{ startOnLoad: true }});
+        </script>
+        """
+    )
