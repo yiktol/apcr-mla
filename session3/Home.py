@@ -2104,13 +2104,13 @@ def render_footer():
         st.markdown("© 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.")
 
 # Main execution flow
-# if __name__ == "__main__":
-#     # First check authentication
-#     is_authenticated = authenticate.login()
-    
-#     # If authenticated, show the main app content
-#     if is_authenticated:
-#         main()
-
 if __name__ == "__main__":
-    main()
+    if 'localhost' in st.context.headers["host"]:
+        main()
+    else:
+        # First check authentication
+        is_authenticated = authenticate.login()
+        
+        # If authenticated, show the main app content
+        if is_authenticated:
+            main()

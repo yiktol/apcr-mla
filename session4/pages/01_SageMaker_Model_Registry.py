@@ -1,5 +1,6 @@
 
 import streamlit as st
+import streamlit_mermaid as stmd
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -494,69 +495,23 @@ def main():
         
         st.subheader("Model Registry Workflow")
         
-        # Create a workflow diagram using Plotly
-        fig = go.Figure()
-        
-        # Define stages
-        stages = ["Register Model", "Version Model", "Approve/Reject", "Deploy to Production", "Monitor Performance"]
-        stage_descriptions = [
-            "Register a model and create a model package group",
-            "Create versions for each model iteration",
-            "Review and approve models for production use",
-            "Deploy approved model versions to endpoints",
-            "Track and monitor model performance in production"
-        ]
-        
-        # Add nodes
-        x_positions = [0, 1, 2, 3, 4]
-        y_positions = [0, 0, 0, 0, 0]
-        
-        colors = [AWS_COLORS["orange"], AWS_COLORS["orange"], AWS_COLORS["teal"], 
-                 AWS_COLORS["green"], AWS_COLORS["blue"]]
-        
-        # Draw nodes
-        for i, stage in enumerate(stages):
-            fig.add_trace(go.Scatter(
-                x=[x_positions[i]],
-                y=[y_positions[i]],
-                mode="markers+text",
-                marker=dict(size=40, color=colors[i]),
-                text=[stage],
-                textposition="bottom center",
-                hoverinfo="text",
-                hovertext=[stage_descriptions[i]],
-                name=stage
-            ))
-        
-        # Draw arrows between nodes
-        for i in range(len(stages) - 1):
-            fig.add_annotation(
-                x=x_positions[i] + 0.5,
-                y=y_positions[i],
-                ax=x_positions[i] + 0.1,
-                ay=y_positions[i],
-                xref="x",
-                yref="y",
-                axref="x",
-                ayref="y",
-                showarrow=True,
-                arrowhead=2,
-                arrowsize=1.5,
-                arrowwidth=2,
-                arrowcolor="#545B64"
-            )
-        
-        # Configure layout
-        fig.update_layout(
-            showlegend=False,
-            height=250,
-            margin=dict(l=20, r=20, t=20, b=100),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            plot_bgcolor="rgba(0,0,0,0)"
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+        common.mermaid("""
+        graph LR
+            A["Register Model"] -->|"Register a model and create a model package group"| B["Version Model"]
+            B -->|"Create versions for each model iteration"| C["Approve/Reject"]
+            C -->|"Review and approve models for production use"| D["Deploy to Production"]
+            D -->|"Deploy approved model versions to endpoints"| E["Monitor Performance"]
+            
+            classDef orange fill:#FF9900,color:black,stroke:black;
+            classDef teal fill:#00A1B9,color:white,stroke:black;
+            classDef green fill:#1E8900,color:white,stroke:black;
+            classDef blue fill:#0073BB,color:white,stroke:black;
+            
+            class A,B orange;
+            class C teal;
+            class D green;
+            class E blue;                       
+        """, height=120)
         
         st.markdown("""
         <div class="info-box">
@@ -899,111 +854,137 @@ print(f"Deployed model to endpoint: {predictor.endpoint_name}")
         # Interactive diagram
         st.subheader("Registry Component Hierarchy")
         
-        # Create interactive diagram with Plotly
-        fig = go.Figure()
-        
-        # Add nodes
-        nodes = [
-            {"name": "Model Registry", "x": 0, "y": 0, "size": 30, "color": AWS_COLORS["blue"]},
-            {"name": "Model Package Group 1", "x": -2, "y": -2, "size": 25, "color": AWS_COLORS["teal"]},
-            {"name": "Model Package Group 2", "x": 2, "y": -2, "size": 25, "color": AWS_COLORS["teal"]},
-            {"name": "Model v1", "x": -3, "y": -4, "size": 20, "color": AWS_COLORS["orange"]},
-            {"name": "Model v2", "x": -1, "y": -4, "size": 20, "color": AWS_COLORS["orange"]},
-            {"name": "Model v1", "x": 1, "y": -4, "size": 20, "color": AWS_COLORS["orange"]},
-            {"name": "Model v2", "x": 3, "y": -4, "size": 20, "color": AWS_COLORS["orange"]}
-        ]
-        
-        # Add nodes to figure
-        for node in nodes:
-            fig.add_trace(go.Scatter(
-                x=[node["x"]],
-                y=[node["y"]],
-                mode="markers+text",
-                marker=dict(size=node["size"], color=node["color"]),
-                text=[node["name"]],
-                textposition="bottom center",
-                name=node["name"]
-            ))
-        
-        # Add connecting lines
-        # Registry to package groups
-        fig.add_shape(
-            type="line", x0=0, y0=0, x1=-2, y1=-2,
-            line=dict(color="gray", width=2)
-        )
-        
-        fig.add_shape(
-            type="line", x0=0, y0=0, x1=2, y1=-2,
-            line=dict(color="gray", width=2)
-        )
-        
-        # Package groups to models
-        fig.add_shape(
-            type="line", x0=-2, y0=-2, x1=-3, y1=-4,
-            line=dict(color="gray", width=2)
-        )
-        
-        fig.add_shape(
-            type="line", x0=-2, y0=-2, x1=-1, y1=-4,
-            line=dict(color="gray", width=2)
-        )
-        
-        fig.add_shape(
-            type="line", x0=2, y0=-2, x1=1, y1=-4,
-            line=dict(color="gray", width=2)
-        )
-        
-        fig.add_shape(
-            type="line", x0=2, y0=-2, x1=3, y1=-4,
-            line=dict(color="gray", width=2)
-        )
-        
-        # Configure layout
-        fig.update_layout(
-            height=500,
-            showlegend=False,
-            margin=dict(l=20, r=20, t=20, b=20),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-4, 4]),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-5, 1]),
-            plot_bgcolor="rgba(0,0,0,0)"
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+        common.mermaid("""
+        graph TD
+            A["Model Registry"] --> B["Model Package Group 1"]
+            A --> C["Model Package Group 2"]
+            B --> D["Model v1"]
+            B --> E["Model v2"]
+            C --> F["Model v1"]
+            C --> G["Model v2"]
+            
+            classDef registry fill:#0073BB,color:white,stroke:black;
+            classDef packageGroup fill:#00A1B9,color:white,stroke:black;
+            classDef model fill:#FF9900,color:black,stroke:black;
+            
+            class A registry;
+            class B,C packageGroup;
+            class D,E,F,G model;                       
+            """,height=350)
         
         # Model Lineage section
         st.subheader("Model Lineage Tracking")
-        
+
         st.markdown("""
         Model lineage tracking helps you understand the complete lifecycle of a model,
         from the datasets used for training to the deployed endpoints. This is crucial for
         reproducibility, auditing, and compliance.
         """)
-        
-        # Interactive lineage visualization
-        lineage_graph = st.session_state.lineage_graph
-        
+
         # Path highlighting options
         st.markdown("#### Explore Model Lineage Paths")
-        
+
         path_options = {
             "None": None,
             "Data Processing Path": ["Raw Data", "Data Processing", "Processed Data"],
             "Model Training Path": ["Training Dataset", "Training Job", "Model v2"],
             "Model Evaluation Path": ["Validation Dataset", "Model Evaluation", "Approved Model"],
             "Complete Deployment Path": ["Raw Data", "Data Processing", "Processed Data", 
-                                       "Feature Engineering", "Training Dataset", "Training Job", 
-                                       "Model v2", "Model Evaluation", "Approved Model", "Production Endpoint"]
+                                    "Feature Engineering", "Training Dataset", "Training Job", 
+                                    "Model v2", "Model Evaluation", "Approved Model", "Production Endpoint"]
         }
-        
+
         selected_path = st.selectbox("Highlight a lineage path:", list(path_options.keys()))
-        
+
         # Update highlighted path in session state
         st.session_state.highlight_path = path_options[selected_path]
+
+        # Generate Mermaid diagram with highlighted path
+        mermaid_code = """
+        graph TD
+            RD[Raw Data] --> DP[Data Processing]
+            DP --> PD[Processed Data]
+            PD --> FE[Feature Engineering]
+            FE --> TD[Training Dataset]
+            FE --> VD[Validation Dataset]
+            TD --> TJ[Training Job]
+            TJ --> M1[Model v1]
+            TJ --> M2[Model v2]
+            M1 --> ME[Model Evaluation]
+            M2 --> ME
+            VD --> ME
+            M2 --> AM[Approved Model]
+            AM --> PE[Production Endpoint]
+            
+            classDef default fill:#f9f9f9,stroke:#999,stroke-width:1px;
+            classDef dataProcessing fill:#3F88C5,stroke:#3F88C5,stroke-width:2px;
+            classDef process fill:#FF9900,stroke:#FF9900,stroke-width:2px;
+            classDef model fill:#16DB93,stroke:#16DB93,stroke-width:2px;
+            classDef endpoint fill:#FFC914,stroke:#FFC914,stroke-width:2px;
+            classDef highlight fill:#ffcccc,stroke:#ff0000,stroke-width:3px;
+        """
+
+        # Add class styling based on selected path
+        if st.session_state.highlight_path:
+            highlight_nodes = st.session_state.highlight_path
+            
+            # Add class applications for highlighted nodes
+            for node in highlight_nodes:
+                node_id = ''.join([c[0] for c in node.split()])  # Get node ID (e.g., "Raw Data" -> "RD")
+                if node_id == "M1":  # Handle special case for Model v1
+                    mermaid_code += f"    class M1 highlight;\n"
+                elif node_id == "M2":  # Handle special case for Model v2
+                    mermaid_code += f"    class M2 highlight;\n"
+                elif node_id == "PD":  # Handle special case for Processed Data
+                    mermaid_code += f"    class PD highlight;\n"
+                elif node_id == "TD":  # Handle special case for Training Dataset
+                    mermaid_code += f"    class TD highlight;\n"
+                elif node_id == "VD":  # Handle special case for Validation Dataset
+                    mermaid_code += f"    class VD highlight;\n"
+                elif node_id == "TJ":  # Handle special case for Training Job
+                    mermaid_code += f"    class TJ highlight;\n"
+                elif node_id == "ME":  # Handle special case for Model Evaluation
+                    mermaid_code += f"    class ME highlight;\n"
+                elif node_id == "AM":  # Handle special case for Approved Model
+                    mermaid_code += f"    class AM highlight;\n"
+                elif node_id == "PE":  # Handle special case for Production Endpoint
+                    mermaid_code += f"    class PE highlight;\n"
+                elif node_id == "RD":  # Handle special case for Raw Data
+                    mermaid_code += f"    class RD highlight;\n"
+                elif node_id == "DP":  # Handle special case for Data Processing
+                    mermaid_code += f"    class DP highlight;\n"
+                elif node_id == "FE":  # Handle special case for Feature Engineering
+                    mermaid_code += f"    class FE highlight;\n"
+
+        # Apply default type-based styling
+        mermaid_code += """
+            class RD,PD,TD,VD dataProcessing;
+            class DP,FE,TJ,ME process;
+            class M1,M2,AM model;
+            class PE endpoint;
+            """
         
-        # Draw the lineage graph
-        lineage_fig = draw_model_lineage(lineage_graph, st.session_state.highlight_path)
-        st.pyplot(lineage_fig)
-        
+
+
+        # Add a legend for the diagram
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            # Render the Mermaid diagram
+            common.mermaid(mermaid_code, height=1000)
+
+        with col2:
+            st.markdown("""
+            **Node Types:**
+            - 🔵 Data (blue)
+            - 🟠 Process (orange)
+            - 🟢 Model (green)
+            - 🟡 Endpoint (yellow)
+            """)
+            st.markdown("""
+            **Highlighted Path:**
+            - 🔴 Selected path nodes (red border)
+            """) 
+
         # Model metadata components
         st.subheader("Model Package Metadata")
         
@@ -1324,67 +1305,36 @@ response = sagemaker_client.delete_model_package(
         
         # Governance workflow
         st.subheader("Model Governance Workflow Example")
+
+        common.mermaid("""
+        flowchart LR
+            classDef pending fill:#FF9900,color:white
+            classDef approved fill:#1D8102,color:white
+            classDef rejected fill:#D13212,color:white
+
+            Development["Development"]
+            Testing["Testing"]
+            Review["Review"]
+            Approval["Approval"]
+            Deployment["Deployment"]
+            Monitoring["Monitoring"]
+            
+            Development -->|"Model is built and undergoes initial testing"| Testing
+            Testing -->|"Model undergoes validation with test datasets"| Review
+            Review -->|"ML team reviews model metrics and documentation"| Approval
+            Approval -->|"Business stakeholders approve model for production"| Deployment
+            Deployment -->|"Model is deployed to production environment"| Monitoring
+            
+            class Development pending
+            class Testing pending
+            class Review pending
+            class Approval approved
+            class Deployment approved
+            class Monitoring approved                       
+
+            """, height=150)
         
-        # Create a timeline visualization
-        timeline_data = [
-            {"stage": "Development", "description": "Model is built and undergoes initial testing", "status": "PendingManualApproval"},
-            {"stage": "Testing", "description": "Model undergoes validation with test datasets", "status": "PendingManualApproval"},
-            {"stage": "Review", "description": "ML team reviews model metrics and documentation", "status": "PendingManualApproval"},
-            {"stage": "Approval", "description": "Business stakeholders approve model for production", "status": "Approved"},
-            {"stage": "Deployment", "description": "Model is deployed to production environment", "status": "Approved"},
-            {"stage": "Monitoring", "description": "Model performance is continuously monitored", "status": "Approved"}
-        ]
-        
-        # Create timeline visualization with Plotly
-        fig = go.Figure()
-        
-        # Add timeline nodes
-        y_pos = 0
-        status_colors = {
-            "PendingManualApproval": AWS_COLORS["orange"],
-            "Approved": AWS_COLORS["green"],
-            "Rejected": AWS_COLORS["red"]
-        }
-        
-        for i, stage in enumerate(timeline_data):
-            fig.add_trace(go.Scatter(
-                x=[i],
-                y=[y_pos],
-                mode="markers+text",
-                marker=dict(size=30, color=status_colors[stage["status"]]),
-                text=[stage["stage"]],
-                textposition="bottom center",
-                hoverinfo="text",
-                hovertext=[stage["description"]],
-                name=stage["stage"]
-            ))
-        
-        # Add connecting lines
-        for i in range(len(timeline_data) - 1):
-            fig.add_shape(
-                type="line",
-                x0=i,
-                y0=y_pos,
-                x1=i + 1,
-                y1=y_pos,
-                line=dict(color="gray", width=2, dash="dot")
-            )
-        
-        # Configure layout
-        fig.update_layout(
-            height=200,
-            margin=dict(l=20, r=20, t=20, b=100),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            showlegend=False,
-            plot_bgcolor="rgba(0,0,0,0)"
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Add descriptions below timeline
-        for i, stage in enumerate(timeline_data):
-            st.markdown(f"**{stage['stage']}:** {stage['description']}")
+
             
         # Integration with other SageMaker services
         st.subheader("Integration with SageMaker MLOps")
@@ -1413,9 +1363,12 @@ response = sagemaker_client.delete_model_package(
 
 # Main execution flow
 if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
-    
-    # If authenticated, show the main app content
-    if is_authenticated:
+    if 'localhost' in st.context.headers["host"]:
         main()
+    else:
+        # First check authentication
+        is_authenticated = authenticate.login()
+        
+        # If authenticated, show the main app content
+        if is_authenticated:
+            main()

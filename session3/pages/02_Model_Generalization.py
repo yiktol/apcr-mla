@@ -41,66 +41,6 @@ def set_custom_css():
 
     common.apply_styles()
 
-    st.markdown("""
-        <style>
-        .main {
-            background-color: #FFFFFF;
-        }
-        .st-emotion-cache-16txtl3 h1, .st-emotion-cache-16txtl3 h2, .st-emotion-cache-16txtl3 h3 {
-            color: #232F3E;
-        }
-        .st-emotion-cache-16txtl3 a {
-            color: #FF9900;
-        }
-        .stButton>button {
-            background-color: #FF9900;
-            color: white;
-            border: none;
-        }
-        .stButton>button:hover {
-            background-color: #EC7211;
-            color: white;
-        }
-        footer {
-            font-size: 0.8em;
-            color: #232F3E;
-            text-align: center;
-            margin-top: 50px;
-        }
-        .highlight {
-            background-color: #FFECCC;
-            padding: 10px;
-            border-radius: 5px;
-            border-left: 5px solid #FF9900;
-        }
-        .concept-box {
-            background-color: #F2F3F3;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .formula-box {
-            background-color: #EAEDED;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-            margin: 10px 0;
-        }
-        .warning-box {
-            background-color: #FDEDEC;
-            padding: 10px;
-            border-radius: 5px;
-            border-left: 5px solid #D13212;
-            margin-bottom: 10px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
 
 # Initialize session state
 def init_session_state():
@@ -1378,13 +1318,13 @@ def main():
 
 
 # Main execution flow
-# if __name__ == "__main__":
-#     # First check authentication
-#     is_authenticated = authenticate.login()
-    
-#     # If authenticated, show the main app content
-#     if is_authenticated:
-#         main()
-
 if __name__ == "__main__":
-    main()
+    if 'localhost' in st.context.headers["host"]:
+        main()
+    else:
+        # First check authentication
+        is_authenticated = authenticate.login()
+        
+        # If authenticated, show the main app content
+        if is_authenticated:
+            main()

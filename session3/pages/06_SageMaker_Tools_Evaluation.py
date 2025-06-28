@@ -666,7 +666,7 @@ def render_debugger_tab():
         """)
     
     with col2:
-        st.image("https://d1.awsstatic.com/re19/Diagrams/product-page-diagram_Amazon-SageMaker-Debugger_How-it-Works.2dc4323179c41a34b6cc41a1bcc43a031ecfcafd.png", 
+        st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/debugger/debugger_new_diagram.png", 
                  caption="SageMaker Debugger Workflow")
     
     # Interactive debugger demo
@@ -2129,13 +2129,13 @@ def main():
 
 
 # Main execution flow
-# if __name__ == "__main__":
-#     # First check authentication
-#     is_authenticated = authenticate.login()
-    
-#     # If authenticated, show the main app content
-#     if is_authenticated:
-#         main()
-
 if __name__ == "__main__":
-    main()
+    if 'localhost' in st.context.headers["host"]:
+        main()
+    else:
+        # First check authentication
+        is_authenticated = authenticate.login()
+        
+        # If authenticated, show the main app content
+        if is_authenticated:
+            main()
