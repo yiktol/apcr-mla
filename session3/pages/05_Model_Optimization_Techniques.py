@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_markdown import st_markdown
+import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -91,6 +93,20 @@ def logistic_regression_predict(X, coef, intercept):
     z = X @ coef + intercept
     return 1 / (1 + np.exp(-z))
 
+
+def mermaid(code: str) -> None:
+    components.html(
+        f"""
+        <pre class="mermaid">
+            {code}
+        </pre>
+
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({{ startOnLoad: true }});
+        </script>
+        """
+    )
 
 def gradient_descent_linear(X, y, learning_rate=0.01, n_iterations=100, tolerance=1e-6):
     """Implement gradient descent for linear regression."""
@@ -733,12 +749,7 @@ def render_introduction_tab():
         <p class="highlight">Tip: Try adjusting parameters in the interactive visualizations to see how optimization behaves in different scenarios!</p>
         """, unsafe_allow_html=True)
     
-    st.markdown("""
-    ### Optimization in the Machine Learning Workflow
-    
-    Model optimization is a crucial step in the machine learning development process:
-    
-    ```mermaid
+    mermaid_code = '''
     graph LR
         A[Data Collection] --> B[Data Preprocessing]
         B --> C[Model Selection]
@@ -746,8 +757,20 @@ def render_introduction_tab():
         D --> E[Model Evaluation]
         E --> F[Deployment]
         E --> D
-    ```
+    '''
+    st.markdown(f"""
+    ### Optimization in the Machine Learning Workflow
     
+    Model optimization is a crucial step in the machine learning development process:
+    """, unsafe_allow_html=True)
+    
+    mermaid(
+    f"""
+    {mermaid_code}
+    """
+    )
+
+    st.markdown(f"""
     In this module, we'll focus on the **Model Training & Optimization** phase, which includes:
     
     1. Selecting appropriate loss functions
@@ -755,7 +778,7 @@ def render_introduction_tab():
     3. Implementing gradient descent algorithms
     
     Let's get started!
-    """)
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -865,9 +888,9 @@ def render_loss_functions_tab():
         'Loss Function': ['Mean Squared Error (MSE)', 'Mean Absolute Error (MAE)', 'Log Loss (Binary Cross-Entropy)', 'Huber Loss'],
         'Formula': [
             '$$\\frac{1}{n}\\sum_{i=1}^{n}(y_i - \\hat{y}_i)^2$$',
-            '$$\\frac{1}{n}\\sum_{i=1}^{n}|y_i - \\hat{y}_i|$$',
+            '$$\\frac{1}{n} \\sum_{i=1}^{n} \\operatorname{abs}(y_i - \\hat{y}_i)$$',
             '$$-\\frac{1}{n}\\sum_{i=1}^{n}[y_i\\log(\\hat{y}_i) + (1-y_i)\\log(1-\\hat{y}_i)]$$',
-            '$$\\begin{cases} \\frac{1}{2}(y_i - \\hat{y}_i)^2 & \\text{for } |y_i - \\hat{y}_i| \\leq \\delta \\\\ \\delta(|y_i - \\hat{y}_i| - \\frac{1}{2}\\delta) & \\text{otherwise} \\end{cases}$$'
+            '$$\\begin{cases} \\frac{1}{2}(y_i - \\hat{y}_i)^2 & \\text{for } \\operatorname{abs}(y_i - \\hat{y}_i) \\leq \\delta \\\\ \\delta(\operatorname{abs}(y_i - \\hat{y}_i) - \\frac{1}{2}\delta) & \\text{otherwise} \\end{cases}$$'
         ],
         'Use Case': [
             'Regression when outliers are rare',
@@ -1299,7 +1322,7 @@ def render_gradient_descent_tab():
         The update rule is:
         
         <div class="formula-box">
-        $$ \\theta_{new} = \\theta_{old} - \\alpha \\nabla J(\\theta) $$
+        <img src="https://latex.codecogs.com/png.latex?\dpi{300}%5Ctheta_%7Bnew%7D%20%3D%20%5Ctheta_%7Bold%7D%20-%20%5Calpha%20%5Cnabla%20J%28%5Ctheta%29" alt="formula" width="250">
         </div>
         
         Where:
@@ -1319,7 +1342,7 @@ def render_gradient_descent_tab():
         - **Momentum**: Adds "inertia" to updates
         - **AdaGrad/RMSProp**: Adaptive learning rates per parameter
         - **Adam**: Combines momentum and adaptive learning rates
-        """)
+        """, unsafe_allow_html=True)
     
     with col2:
         st.image("https://miro.medium.com/v2/resize:fit:1400/1*f9a162GhpMbiTVTAua_lLQ.png", caption="Gradient Descent Visualization")
@@ -1726,10 +1749,15 @@ def main():
     render_summary_and_footer()
 
 
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# Main execution flow
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+
+if __name__ == "__main__":
+    main()
+

@@ -1349,10 +1349,14 @@ def main():
 
 
 # Main execution flow
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+
+if __name__ == "__main__":
+    main()
+

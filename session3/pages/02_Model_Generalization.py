@@ -647,7 +647,7 @@ def render_regularization_tab():
         **L1 Regularization (Lasso)** adds a penalty term to the loss function proportional to the absolute sum of coefficient values:
         
         <div class='formula-box'>
-        $$Loss = MSE + \\alpha \\sum_{i=1}^{n} |w_i|$$
+        <img src="https://latex.codecogs.com/png.latex?Loss%20%3D%20MSE%20%2B%20%5Calpha%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20%7Cw_i%7C" alt="Loss = MSE + \alpha \sum_{i=1}^{n} |w_i|">
         </div>
         
         This encourages sparse models by pushing some coefficients exactly to zero, effectively performing feature selection.
@@ -660,7 +660,7 @@ def render_regularization_tab():
         **L2 Regularization (Ridge)** adds a penalty term proportional to the squared sum of coefficient values:
         
         <div class="formula-box">
-        $$Loss = MSE + \\alpha \\sum_{i=1}^{n} w_i^2$$
+        <img src="https://latex.codecogs.com/png.latex?Loss%20%3D%20MSE%20%2B%20%5Calpha%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20w_i%5E2" alt="Loss = MSE + \alpha \sum_{i=1}^{n} w_i^2">
         </div>
         
         This shrinks all coefficients toward zero but rarely makes them exactly zero. It works well when all features contribute to the prediction.
@@ -946,7 +946,7 @@ def render_l1l2_regularization_tab():
         Adds a penalty equal to the absolute value of coefficients:
         
         <div class="formula-box">
-        $$Loss = MSE + \\alpha \\sum_{i=1}^{n} |w_i|$$
+        <img src="https://latex.codecogs.com/png.latex?\dpi{300}Loss%20%3D%20MSE%20%2B%20%5Calpha%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20%7Cw_i%7C" alt="Loss = MSE + \alpha \sum_{i=1}^{n} |w_i|" width="250">
         </div>
         
         **Key characteristics:**
@@ -963,7 +963,7 @@ def render_l1l2_regularization_tab():
         Adds a penalty equal to the square of coefficients:
         
         <div class="formula-box">
-        $$Loss = MSE + \\alpha \\sum_{i=1}^{n} w_i^2$$
+        <img src="https://latex.codecogs.com/png.latex?\dpi{300}Loss%20%3D%20MSE%20%2B%20%5Calpha%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20w_i%5E2" alt="Loss = MSE + \alpha \sum_{i=1}^{n} w_i^2" width="250">
         </div>
         
         **Key characteristics:**
@@ -1131,7 +1131,7 @@ def render_l1l2_regularization_tab():
     Elastic Net combines L1 and L2 regularization, offering the best of both worlds:
     
     <div class="formula-box">
-    $$Loss = MSE + \\alpha_1 \\sum_{i=1}^{n} |w_i| + \\alpha_2 \\sum_{i=1}^{n} w_i^2$$
+    <img src="https://latex.codecogs.com/png.latex?\dpi{300}Loss%20%3D%20MSE%20%2B%20%5Calpha_1%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20%7Cw_i%7C%20%2B%20%5Calpha_2%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20w_i%5E2" alt="Loss = MSE + \alpha_1 \sum_{i=1}^{n} |w_i| + \alpha_2 \sum_{i=1}^{n} w_i^2" width="400">
     </div>
     
     This approach:
@@ -1391,10 +1391,13 @@ def main():
 
 
 # Main execution flow
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+
+if __name__ == "__main__":
+    main()

@@ -409,7 +409,7 @@ def get_model_metrics(_dataset):
     """Calculate metrics for different models"""
     metrics = {}
     for model_name in ["Linear Regression", "Ridge Regression", "Random Forest", "Gradient Boosting"]:
-        _, _, _, y_test, y_pred, _, _, _ = prepare_dataset(_dataset, model_name)
+        X_train, X_test, y_train, y_test, y_pred, _, feature_names, _ = prepare_dataset(_dataset, model_name)
         
         mse = calculate_mse(y_test, y_pred)
         rmse = calculate_rmse(y_test, y_pred)
@@ -529,7 +529,7 @@ def render_mse_tab():
         **Definition:** The average of the squared differences between predicted and actual values.
         
         <div class="formula-box">
-        $$ MSE = \\frac{1}{n} \\sum_{i=1}^{n} (y_i - \\hat{y}_i)^2 $$
+        <img src="https://latex.codecogs.com/png.latex?\dpi{300}MSE%20%3D%20%5Cfrac%7B1%7D%7Bn%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20%28y_i%20-%20%5Chat%7By%7D_i%29%5E2" alt="MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2" width="250">
         </div>
         
         Where:
@@ -549,7 +549,7 @@ def render_mse_tab():
         - When large errors are particularly undesirable
         - When working with optimization algorithms (differentiable)
         - When the target variable's scale is meaningful
-        """)
+        """, unsafe_allow_html=True)
         
         st.markdown('<p class="highlight">MSE is particularly useful as a loss function for optimization algorithms because its derivative is continuous.</p>', unsafe_allow_html=True)
     
@@ -719,7 +719,7 @@ def render_rmse_tab():
         **Definition:** The square root of the mean squared error.
         
         <div class="formula-box">
-        $$ RMSE = \\sqrt{\\frac{1}{n} \\sum_{i=1}^{n} (y_i - \\hat{y}_i)^2} = \\sqrt{MSE} $$
+        <img src="https://latex.codecogs.com/png.latex?\dpi{300}RMSE%20%3D%20%5Csqrt%7B%5Cfrac%7B1%7D%7Bn%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn%7D%20%28y_i%20-%20%5Chat%7By%7D_i%29%5E2%7D%20%3D%20%5Csqrt%7BMSE%7D" alt="RMSE = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2} = \sqrt{MSE}" width="300">
         </div>
         
         Where:
@@ -739,7 +739,7 @@ def render_rmse_tab():
         - When you want an error metric in the same units as your target
         - When communicating results to non-technical stakeholders
         - When comparing models predicting the same target variable
-        """)
+        """, unsafe_allow_html=True)
         
         st.markdown('<p class="highlight">RMSE is often preferred over MSE in reporting because it\'s more interpretable - an RMSE of 5 means predictions are, on average, about 5 units away from actual values.</p>', unsafe_allow_html=True)
     
@@ -857,7 +857,7 @@ def render_r2_tab():
         **Definition:** The proportion of the variance in the dependent variable that is predictable from the independent variables.
         
         <div class="formula-box">
-        $$ R^2 = 1 - \\frac{SS_{res}}{SS_{tot}} = 1 - \\frac{\\sum_{i} (y_i - \\hat{y}_i)^2}{\\sum_{i} (y_i - \\bar{y})^2} $$
+        <img src="https://latex.codecogs.com/png.latex?\dpi{300}R%5E2%20%3D%201%20-%20%5Cfrac%7BSS_%7Bres%7D%7D%7BSS_%7Btot%7D%7D%20%3D%201%20-%20%5Cfrac%7B%5Csum_%7Bi%7D%20%28y_i%20-%20%5Chat%7By%7D_i%29%5E2%7D%7B%5Csum_%7Bi%7D%20%28y_i%20-%20%5Cbar%7By%7D%29%5E2%7D" alt="R^2 = 1 - \frac{SS_{res}}{SS_{tot}} = 1 - \frac{\sum_{i} (y_i - \hat{y}_i)^2}{\sum_{i} (y_i - \bar{y})^2}" width="350">
         </div>
         
         Where:
@@ -879,7 +879,7 @@ def render_r2_tab():
         - When comparing models across different datasets
         - When you need a scale-independent measure of fit
         - When communicating model quality to stakeholders
-        """)
+        """, unsafe_allow_html=True)
         
         st.markdown('<p class="highlight">R² is particularly useful because it has a clear interpretation: "Our model explains X% of the variance in the target variable."</p>', unsafe_allow_html=True)
     
@@ -1095,7 +1095,7 @@ def render_adjusted_r2_tab():
         **Definition:** A modified version of R² that adjusts for the number of predictors in a regression model.
         
         <div class="formula-box">
-        $$ \\text{Adjusted } R^2 = 1 - \\frac{(1 - R^2)(n - 1)}{n - p - 1} $$
+        <img src="https://latex.codecogs.com/png.latex?\dpi{300}%5Ctext%7BAdjusted%20%7D%20R%5E2%20%3D%201%20-%20%5Cfrac%7B%281%20-%20R%5E2%29%28n%20-%201%29%7D%7Bn%20-%20p%20-%201%7D" alt="\text{Adjusted } R^2 = 1 - \frac{(1 - R^2)(n - 1)}{n - p - 1}" width="300">
         </div>
         
         Where:
@@ -1115,7 +1115,7 @@ def render_adjusted_r2_tab():
         - When comparing models with different numbers of predictors
         - When performing feature selection
         - When you want to avoid overfitting by adding too many features
-        """)
+        """, unsafe_allow_html=True)
         
         st.markdown('<p class="highlight">Adjusted R² helps protect against overfitting by penalizing models that add predictors without substantially improving explanatory power.</p>', unsafe_allow_html=True)
     
@@ -1541,10 +1541,14 @@ def main():
 
 
 # Main execution flow
-if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
+# if __name__ == "__main__":
+#     # First check authentication
+#     is_authenticated = authenticate.login()
     
-    # If authenticated, show the main app content
-    if is_authenticated:
-        main()
+#     # If authenticated, show the main app content
+#     if is_authenticated:
+#         main()
+
+if __name__ == "__main__":
+    main()
+
