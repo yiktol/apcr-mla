@@ -7,17 +7,9 @@ import seaborn as sns
 import altair as alt
 import plotly.graph_objects as go
 import plotly.express as px
-import json
-import time
 import uuid
-import random
 from datetime import datetime, timedelta
-from PIL import Image
-import io
-import base64
-from streamlit_lottie import st_lottie
 import requests
-import networkx as nx
 from typing import Dict, List, Any, Optional, Tuple, Union
 import utils.common as common
 import utils.authenticate as authenticate
@@ -254,237 +246,6 @@ def create_comparison_chart(
     return chart
 
 
-def create_inference_flow_diagram(
-    inference_type: str, 
-    fig_width: int = 800, 
-    fig_height: int = 400
-) -> plt.Figure:
-    """
-    Create a flow diagram showing the inference process for a given inference type
-    
-    Args:
-        inference_type: Type of inference (realtime, async, batch, serverless)
-        fig_width: Figure width in pixels
-        fig_height: Figure height in pixels
-        
-    Returns:
-        Matplotlib Figure object
-    """
-    # Set up figure
-    fig, ax = plt.subplots(figsize=(fig_width/100, fig_height/100), dpi=100)
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 5)
-    ax.axis('off')
-    
-    # AWS Colors
-    AWS_COLORS = {
-        "orange": "#FF9900",
-        "teal": "#00A1C9", 
-        "blue": "#232F3E",
-        "gray": "#E9ECEF",
-        "light_gray": "#F8F9FA",
-        "white": "#FFFFFF",
-        "dark_gray": "#545B64",
-        "green": "#59BA47",
-        "red": "#D13212"
-    }
-    
-    # Common elements
-    # Client
-    client = plt.Rectangle((0.5, 3.5), 1.5, 1, fc=AWS_COLORS["blue"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-    ax.add_patch(client)
-    ax.text(1.25, 4, "Client", ha='center', va='center', color='white', fontweight='bold')
-    
-    if inference_type == "realtime":
-        # Real-time components
-        endpoint = plt.Rectangle((5, 3.5), 2, 1, fc=AWS_COLORS["orange"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(endpoint)
-        ax.text(6, 4, "Real-time Endpoint", ha='center', va='center', color='white', fontweight='bold')
-        
-        # Arrows
-        ax.arrow(2.2, 4, 2.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        ax.text(3.5, 4.2, "Request", ha='center', va='bottom')
-        
-        ax.arrow(5, 3.75, -2.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["green"], ec=AWS_COLORS["green"])
-        ax.text(3.5, 3.6, "Response (Synchronous)", ha='center', va='top', color=AWS_COLORS["green"])
-        
-        # Container(s)
-        container = plt.Rectangle((8, 3.5), 1.5, 1, fc=AWS_COLORS["teal"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(container)
-        ax.text(8.75, 4, "Model\nContainer", ha='center', va='center', color='white', fontweight='bold')
-        
-        # Connection between endpoint and container
-        ax.arrow(7.1, 4, 0.7, 0, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        ax.arrow(8, 3.75, -0.7, 0, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Add text highlighting key characteristics
-        ax.text(5, 2.5, "• Low latency, synchronous responses\n• Always running\n• Pay for provisioned capacity\n• Ideal for interactive applications", 
-               fontsize=10, ha='center', va='center', bbox=dict(facecolor=AWS_COLORS["light_gray"], alpha=0.5))
-        
-    elif inference_type == "async":
-        # Async components
-        endpoint = plt.Rectangle((4, 3.5), 2, 1, fc=AWS_COLORS["orange"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(endpoint)
-        ax.text(5, 4, "Async Endpoint", ha='center', va='center', color='white', fontweight='bold')
-        
-        # S3 bucket
-        s3_in = plt.Rectangle((4, 1.5), 1, 1, fc=AWS_COLORS["teal"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(s3_in)
-        ax.text(4.5, 2, "S3 Input", ha='center', va='center', color='white', fontweight='bold')
-        
-        s3_out = plt.Rectangle((7, 1.5), 1, 1, fc=AWS_COLORS["teal"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(s3_out)
-        ax.text(7.5, 2, "S3 Output", ha='center', va='center', color='white', fontweight='bold')
-        
-        # SQS
-        sqs = plt.Rectangle((5.5, 1.5), 1, 1, fc=AWS_COLORS["green"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(sqs)
-        ax.text(6, 2, "Queue", ha='center', va='center', color='white', fontweight='bold')
-        
-        # Container
-        container = plt.Rectangle((8, 3.5), 1.5, 1, fc=AWS_COLORS["teal"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(container)
-        ax.text(8.75, 4, "Model\nContainer", ha='center', va='center', color='white', fontweight='bold')
-        
-        # Arrows
-        # Client to endpoint
-        ax.arrow(2.2, 4, 1.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        ax.text(3, 4.2, "Submit Job", ha='center', va='bottom')
-        
-        # Endpoint to client
-        ax.arrow(4, 3.75, -1.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["green"], ec=AWS_COLORS["green"])
-        ax.text(3, 3.6, "Job ID", ha='center', va='top', color=AWS_COLORS["green"])
-        
-        # Endpoint to S3
-        ax.arrow(4.5, 3.5, 0, -0.8, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # S3 to Queue
-        ax.arrow(5.1, 2, 0.3, 0, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Queue to endpoint
-        ax.arrow(6, 2.5, 0, 0.8, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Endpoint to container
-        ax.arrow(6.1, 4, 1.7, 0, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Container to S3 output
-        ax.arrow(8.5, 3.5, -0.5, -0.8, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Client checking S3
-        ax.arrow(1.25, 3.5, 5.5, -1.5, head_width=0.1, head_length=0.1, fc=AWS_COLORS["green"], ec=AWS_COLORS["green"], 
-                linestyle='dashed')
-        ax.text(4, 2.7, "Check Result", ha='center', va='center', color=AWS_COLORS["green"], fontsize=9)
-        
-        # Add text highlighting key characteristics
-        ax.text(2, 0.7, "• Asynchronous processing\n• Queued requests\n• Results available in S3\n• Ideal for large payloads or long processing times", 
-               fontsize=10, ha='left', va='center', bbox=dict(facecolor=AWS_COLORS["light_gray"], alpha=0.5))
-        
-    elif inference_type == "batch":
-        # Batch components
-        batch_job = plt.Rectangle((5, 3.5), 2, 1, fc=AWS_COLORS["orange"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(batch_job)
-        ax.text(6, 4, "Batch Transform Job", ha='center', va='center', color='white', fontweight='bold')
-        
-        # S3 bucket
-        s3_in = plt.Rectangle((3, 1.5), 1, 1, fc=AWS_COLORS["teal"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(s3_in)
-        ax.text(3.5, 2, "S3 Input", ha='center', va='center', color='white', fontweight='bold')
-        
-        s3_out = plt.Rectangle((9, 1.5), 1, 1, fc=AWS_COLORS["teal"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(s3_out)
-        ax.text(9.5, 2, "S3 Output", ha='center', va='center', color='white', fontweight='bold')
-        
-        # Worker nodes
-        for i in range(3):
-            worker = plt.Rectangle((5.5 + i*1.5, 2), 1, 0.8, fc=AWS_COLORS["green"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-            ax.add_patch(worker)
-            ax.text(6 + i*1.5, 2.4, f"Worker {i+1}", ha='center', va='center', color='white', fontweight='bold')
-        
-        # Arrows
-        # Client to batch job
-        ax.arrow(2.2, 4, 2.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        ax.text(3.5, 4.2, "Configure & Start", ha='center', va='bottom')
-        
-        # Batch job to client
-        ax.arrow(5, 3.75, -2.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["green"], ec=AWS_COLORS["green"])
-        ax.text(3.5, 3.6, "Job Status", ha='center', va='top', color=AWS_COLORS["green"])
-        
-        # Batch job to input
-        ax.arrow(5.5, 3.5, -1.5, -1, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        ax.text(4.7, 3, "Read Data", ha='center', va='center', fontsize=9)
-        
-        # Batch job to workers
-        for i in range(3):
-            ax.arrow(6, 3.5, 0.2 + i*1.5, -0.5, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Workers to output
-        for i in range(3):
-            ax.arrow(6.5 + i*1.5, 2, 2 - i*1.5, 0, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Client checking S3 output
-        ax.arrow(1.25, 3.5, 7.5, -1.5, head_width=0.1, head_length=0.1, fc=AWS_COLORS["green"], ec=AWS_COLORS["green"], 
-                linestyle='dashed')
-        ax.text(5, 2.5, "Check Results", ha='center', va='center', color=AWS_COLORS["green"], fontsize=9)
-        
-        # Add text highlighting key characteristics
-        ax.text(2, 0.7, "• Process entire datasets at once\n• Highly scalable with multiple workers\n• Cost-effective for large datasets\n• Ideal for offline processing", 
-               fontsize=10, ha='left', va='center', bbox=dict(facecolor=AWS_COLORS["light_gray"], alpha=0.5))
-        
-    else:  # serverless
-        # Serverless components
-        endpoint = plt.Rectangle((5, 3.5), 2, 1, fc=AWS_COLORS["orange"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-        ax.add_patch(endpoint)
-        ax.text(6, 4, "Serverless Endpoint", ha='center', va='center', color='white', fontweight='bold')
-        
-        # Auto-scaling container fleet
-        container_group = plt.Rectangle((7.5, 1.5), 2, 1.5, fc=AWS_COLORS["light_gray"], ec=AWS_COLORS["dark_gray"], alpha=0.4)
-        ax.add_patch(container_group)
-        ax.text(8.5, 2.5, "Auto-scaling\nContainer Fleet", ha='center', va='center', fontsize=9)
-        
-        for i in range(3):
-            container = plt.Rectangle((7.7 + i*0.6, 1.7), 0.5, 0.5, fc=AWS_COLORS["teal"], ec=AWS_COLORS["dark_gray"], alpha=0.8)
-            ax.add_patch(container)
-            
-        # Arrows
-        # Client to endpoint
-        ax.arrow(2.2, 4, 2.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        ax.text(3.5, 4.2, "Request", ha='center', va='bottom')
-        
-        # Endpoint to client
-        ax.arrow(5, 3.75, -2.5, 0, head_width=0.2, head_length=0.2, fc=AWS_COLORS["green"], ec=AWS_COLORS["green"])
-        ax.text(3.5, 3.6, "Response", ha='center', va='top', color=AWS_COLORS["green"])
-        
-        # Endpoint to container fleet
-        ax.arrow(6, 3.5, 1.5, -1, head_width=0.1, head_length=0.1, fc=AWS_COLORS["dark_gray"], ec=AWS_COLORS["dark_gray"])
-        
-        # Elastic scaling visualization
-        elastic_arrow1 = plt.Arrow(8, 1.2, 0, -0.5, width=0.1, fc=AWS_COLORS["green"])
-        elastic_arrow2 = plt.Arrow(8.5, 1.2, 0, -0.5, width=0.1, fc=AWS_COLORS["green"])
-        elastic_arrow3 = plt.Arrow(9, 1.2, 0, -0.5, width=0.1, fc=AWS_COLORS["green"])
-        ax.add_patch(elastic_arrow1)
-        ax.add_patch(elastic_arrow2)
-        ax.add_patch(elastic_arrow3)
-        
-        # Add text highlighting key characteristics
-        ax.text(3, 2, "• Auto-scaling to zero when idle\n• Pay only for inference time used\n• No infrastructure management\n• Ideal for variable or unpredictable workloads", 
-               fontsize=10, ha='left', va='center', bbox=dict(facecolor=AWS_COLORS["light_gray"], alpha=0.5))
-        
-        # Add cost efficiency indicator
-        cost_scale = plt.Rectangle((5, 0.7), 4, 0.3, fc=AWS_COLORS["light_gray"], ec=AWS_COLORS["dark_gray"], alpha=0.4)
-        ax.add_patch(cost_scale)
-        
-        # Gradient from low to high usage
-        for i in range(40):
-            cost_bar = plt.Rectangle((5 + i*0.1, 0.7), 0.1, 0.3, fc=plt.cm.RdYlGn_r(i/40), alpha=0.7)
-            ax.add_patch(cost_bar)
-        
-        ax.text(5, 0.5, "Low Usage", ha='left', va='top', fontsize=8)
-        ax.text(9, 0.5, "High Usage", ha='right', va='top', fontsize=8)
-        ax.text(7, 0.5, "Cost Efficiency", ha='center', va='top', fontsize=9, fontweight='bold')
-    
-    return fig
-
-
 def create_case_study_data(
     case_study_type: str
 ) -> Dict[str, Any]:
@@ -588,7 +349,7 @@ def create_case_study_data(
             "model_type": "Gradient Boosting Fraud Detector",
             "metrics": {
                 "latency": "210ms (p95)",
-                "cold start": "890ms first request",
+                "cold_start": "890ms first request",
                 "cost_savings": "76% compared to always-on endpoints"
             },
             "traffic_pattern": "Highly variable with 20x difference between peak and quiet periods",
@@ -970,7 +731,6 @@ def reset_session():
 
 # Main application
 def main():
-
     
     # Initialize session state
     initialize_session_state()
@@ -1141,12 +901,6 @@ def main():
     for serving machine learning models in production.
     """)
     
-    # # Animation for the header
-    # lottie_url = "https://assets1.lottiefiles.com/packages/lf20_kuhijlvx.json"
-    # lottie_json = load_lottieurl(lottie_url)
-    # if lottie_json:
-    #     st_lottie(lottie_json, height=200, key="header_animation")
-    
     # Tab-based navigation with emoji
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🔍 Overview", 
@@ -1183,102 +937,33 @@ def main():
         # Decision tree visualization
         st.subheader("Choosing the Right Inference Option")
         
-        decision_tree_fig = go.Figure()
-        
-        # Create nodes for the decision tree
-        decision_tree_fig.add_trace(go.Scatter(
-            x=[5], y=[5],
-            mode="markers+text",
-            marker=dict(size=30, color=AWS_COLORS["blue"]),
-            text=["Start"],
-            textposition="middle center",
-            textfont=dict(color="white", size=12),
-            hoverinfo="skip"
-        ))
-        
-        # Add decision points
-        decision_tree_fig.add_trace(go.Scatter(
-            x=[5, 2, 8, 2, 8],
-            y=[4, 3, 3, 2, 2],
-            mode="markers+text",
-            marker=dict(size=[25, 25, 25, 25, 25], 
-                       color=[AWS_COLORS["teal"], AWS_COLORS["teal"], 
-                             AWS_COLORS["teal"], AWS_COLORS["teal"], 
-                             AWS_COLORS["teal"]]),
-            text=["Need immediate<br>response?", 
-                 "Low latency<br>requirement?", 
-                 "Processing<br>entire dataset?",
-                 "Consistent<br>workload?",
-                 "Large payload or<br>long processing?"],
-            textposition="middle center",
-            textfont=dict(color="white", size=10),
-            hoverinfo="skip"
-        ))
-        
-        # Add endpoints/solutions
-        decision_tree_fig.add_trace(go.Scatter(
-            x=[1, 3, 7, 9],
-            y=[1, 1, 1, 1],
-            mode="markers+text",
-            marker=dict(size=[30, 30, 30, 30], 
-                       color=[AWS_COLORS["orange"], AWS_COLORS["green"], 
-                             AWS_COLORS["orange"], AWS_COLORS["green"]]),
-            text=["Real-Time<br>Inference", 
-                 "Serverless<br>Inference", 
-                 "Batch<br>Transform",
-                 "Asynchronous<br>Inference"],
-            textposition="middle center",
-            textfont=dict(color="white", size=11),
-            hoverinfo="skip"
-        ))
-        
-        # Draw connecting lines
-        decision_tree_fig.add_shape(type="line", x0=5, y0=5, x1=5, y1=4, line=dict(color="gray", width=2))
-        
-        # From "Need immediate response?" node
-        decision_tree_fig.add_shape(type="line", x0=5, y0=4, x1=2, y1=3, line=dict(color="gray", width=2))
-        decision_tree_fig.add_shape(type="line", x0=5, y0=4, x1=8, y1=3, line=dict(color="gray", width=2))
-        
-        # From "Low latency requirement?" node
-        decision_tree_fig.add_shape(type="line", x0=2, y0=3, x1=2, y1=2, line=dict(color="gray", width=2))
-        
-        # From "Processing entire dataset?" node
-        decision_tree_fig.add_shape(type="line", x0=8, y0=3, x1=8, y1=2, line=dict(color="gray", width=2))
-        
-        # From "Consistent workload?" node
-        decision_tree_fig.add_shape(type="line", x0=2, y0=2, x1=1, y1=1, line=dict(color="gray", width=2))
-        decision_tree_fig.add_shape(type="line", x0=2, y0=2, x1=3, y1=1, line=dict(color="gray", width=2))
-        
-        # From "Large payload or long processing?" node
-        decision_tree_fig.add_shape(type="line", x0=8, y0=2, x1=7, y1=1, line=dict(color="gray", width=2))
-        decision_tree_fig.add_shape(type="line", x0=8, y0=2, x1=9, y1=1, line=dict(color="gray", width=2))
-        
-        # Add Yes/No labels
-        text_annotations = [
-            dict(x=3.2, y=3.7, text="Yes", showarrow=False, font=dict(color=AWS_COLORS["green"])),
-            dict(x=6.8, y=3.7, text="No", showarrow=False, font=dict(color=AWS_COLORS["red"])),
-            dict(x=1.3, y=2.5, text="Yes", showarrow=False, font=dict(color=AWS_COLORS["green"])),
-            dict(x=7.3, y=2.5, text="Yes", showarrow=False, font=dict(color=AWS_COLORS["green"])),
-            dict(x=1.3, y=1.5, text="Yes", showarrow=False, font=dict(color=AWS_COLORS["green"])),
-            dict(x=2.7, y=1.5, text="No", showarrow=False, font=dict(color=AWS_COLORS["red"])),
-            dict(x=7.3, y=1.5, text="No", showarrow=False, font=dict(color=AWS_COLORS["red"])),
-            dict(x=8.7, y=1.5, text="Yes", showarrow=False, font=dict(color=AWS_COLORS["green"])),
-        ]
-        for annotation in text_annotations:
-            decision_tree_fig.add_annotation(**annotation)
-        
-        # Set up layout
-        decision_tree_fig.update_layout(
-            showlegend=False,
-            plot_bgcolor='white',
-            width=800,
-            height=500,
-            margin=dict(l=20, r=20, t=30, b=30),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-        )
-        
-        st.plotly_chart(decision_tree_fig, use_container_width=True)
+        common.mermaid("""
+        flowchart TD
+            Start([Start]) --> A{Need immediate<br/>response?}
+            
+            A -->|Yes| B{Low latency<br/>requirement?}
+            A -->|No| C{Processing<br/>entire dataset?}
+            
+            B -->|Yes| D{Consistent<br/>workload?}
+            C -->|Yes| E{Large payload or<br/>long processing?}
+            
+            D -->|Yes| F[Real-Time<br/>Inference]
+            D -->|No| G[Serverless<br/>Inference]
+            
+            E -->|No| H[Batch<br/>Transform]
+            E -->|Yes| I[Asynchronous<br/>Inference]
+            
+            %% Styling
+            classDef startNode fill:#232f3e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef decisionNode fill:#16191f,stroke:#fff,stroke-width:2px,color:#fff
+            classDef endNodeOrange fill:#ff9900,stroke:#fff,stroke-width:2px,color:#fff
+            classDef endNodeGreen fill:#7aa116,stroke:#fff,stroke-width:2px,color:#fff
+            
+            class Start startNode
+            class A,B,C,D,E decisionNode
+            class F,H endNodeOrange
+            class G,I endNodeGreen           
+                       """, height=450)
         
         # Key metrics comparison
         st.subheader("Performance Comparison")
@@ -1399,11 +1084,37 @@ def main():
             st.image("images/realtime_inference.png", 
                      caption="SageMaker Real-Time Inference", use_container_width=True)
         
-        # Real-time inference diagram
+        # Real-time inference diagram - NOW USING MERMAID
         st.subheader("How Real-Time Inference Works")
         
-        realtime_fig = create_inference_flow_diagram("realtime")
-        st.pyplot(realtime_fig)
+        common.mermaid("""
+        flowchart LR
+            Client([Client Application]) 
+            Endpoint[Real-time Endpoint]
+            Container[Model Container]
+            
+            Client -->|1 Send Request<br/>Synchronous| Endpoint
+            Endpoint -->|2 Forward Request| Container
+            Container -->|3 Process & Return| Endpoint
+            Endpoint -->|4 Return Response<br/>Low Latency| Client
+            
+            %% Styling
+            classDef clientNode fill:#232f3e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef endpointNode fill:#ff9900,stroke:#fff,stroke-width:2px,color:#fff
+            classDef containerNode fill:#16537e,stroke:#fff,stroke-width:2px,color:#fff
+            
+            class Client clientNode
+            class Endpoint endpointNode
+            class Container containerNode
+        """, height=300)
+        
+        st.markdown("""
+        **Key Characteristics:**
+        - Low latency, synchronous responses
+        - Always running (pay for provisioned capacity)
+        - Auto-scaling based on traffic
+        - Ideal for interactive applications
+        """)
         
         # Latency distribution
         st.subheader("Latency Distribution")
@@ -1469,12 +1180,10 @@ def main():
             xaxis_title="Hour of Day",
             yaxis=dict(
                 title="Traffic (requests/sec)",
-                # titlefont=dict(color=AWS_COLORS["blue"]),
                 tickfont=dict(color=AWS_COLORS["blue"])
             ),
             yaxis2=dict(
                 title="Instance Count",
-                # titlefont=dict(color=AWS_COLORS["orange"]),
                 tickfont=dict(color=AWS_COLORS["orange"]),
                 anchor="x",
                 overlaying="y",
@@ -1571,11 +1280,54 @@ def main():
             st.image("images/async_inference.png", 
                      caption="SageMaker Asynchronous Inference", use_container_width=True)
         
-        # Async inference diagram
+        # Async inference diagram - NOW USING MERMAID
         st.subheader("How Asynchronous Inference Works")
         
-        async_fig = create_inference_flow_diagram("async")
-        st.pyplot(async_fig)
+        common.mermaid("""
+        flowchart TD
+            Client([Client Application])
+            Endpoint[Async Endpoint]
+            S3Input[(S3 Input Bucket)]
+            Queue[SQS Queue]
+            Container[Model Container]
+            S3Output[(S3 Output Bucket)]
+            SNS[SNS Notification]
+            
+            Client -->|1\. Submit Job<br/>Large Payload| Endpoint
+            Endpoint -->|2\. Return Job ID| Client
+            Client -->|3\. Upload Data| S3Input
+            S3Input -->|4\. Queue Request| Queue
+            Queue -->|5\. Process When Available| Container
+            Container -->|6\. Store Results| S3Output
+            S3Output -->|7\. Trigger Notification| SNS
+            SNS -->|8\. Notify Completion| Client
+            Client -.->|9\. Retrieve Results| S3Output
+            
+            %% Styling
+            classDef clientNode fill:#232f3e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef endpointNode fill:#ff9900,stroke:#fff,stroke-width:2px,color:#fff
+            classDef storageNode fill:#16537e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef queueNode fill:#7aa116,stroke:#fff,stroke-width:2px,color:#fff
+            classDef containerNode fill:#16537e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef notificationNode fill:#d13212,stroke:#fff,stroke-width:2px,color:#fff
+            
+            class Client clientNode
+            class Endpoint endpointNode
+            class S3Input,S3Output storageNode
+            class Queue queueNode
+            class Container containerNode
+            class SNS notificationNode
+        """, height=500)
+        
+        st.markdown("""
+        **Key Characteristics:**
+        - Asynchronous processing with job IDs
+        - Supports large payloads (up to 1GB)
+        - No timeout constraints
+        - Results stored in S3
+        - Optional SNS notifications
+        - Ideal for long-running processes
+        """)
         
         # Async inference flow animation
         st.subheader("Asynchronous Inference Process")
@@ -1801,105 +1553,88 @@ def main():
             st.image("images/batch_transform.png", 
                      caption="SageMaker Batch Transform", use_container_width=True)
         
-        # Batch transform diagram
+        # Batch transform diagram - NOW USING MERMAID
         st.subheader("How Batch Transform Works")
         
-        batch_fig = create_inference_flow_diagram("batch")
-        st.pyplot(batch_fig)
+        common.mermaid("""
+        flowchart TD
+            Client([Client Application])
+            Job[Batch Transform Job]
+            S3Input[(S3 Input Dataset)]
+            Worker1[Worker Instance 1]
+            Worker2[Worker Instance 2]
+            Worker3[Worker Instance 3]
+            S3Output[(S3 Output Results)]
+            
+            Client -->|1\. Configure & Start Job| Job
+            Job -->|2\. Read Dataset| S3Input
+            Job -->|3\. Distribute Work| Worker1
+            Job -->|3\. Distribute Work| Worker2
+            Job -->|3\. Distribute Work| Worker3
+            
+            Worker1 -->|4\. Process Batch| S3Output
+            Worker2 -->|4\. Process Batch| S3Output
+            Worker3 -->|4\. Process Batch| S3Output
+            
+            S3Output -.->|5\. Job Complete<br/>Notification| Client
+            
+            %% Styling
+            classDef clientNode fill:#232f3e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef jobNode fill:#ff9900,stroke:#fff,stroke-width:2px,color:#fff
+            classDef storageNode fill:#16537e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef workerNode fill:#7aa116,stroke:#fff,stroke-width:2px,color:#fff
+            
+            class Client clientNode
+            class Job jobNode
+            class S3Input,S3Output storageNode
+            class Worker1,Worker2,Worker3 workerNode
+        """, height=400)
         
-        # Batch transform process animation
+        st.markdown("""
+        **Key Characteristics:**
+        - Processes entire datasets at once
+        - Highly scalable with multiple workers
+        - Cost-effective for large datasets
+        - No provisioned infrastructure
+        - Pay only for job duration
+        - Ideal for offline processing
+        """)
+        
+        # Batch transform process - NOW USING MERMAID
         st.subheader("Batch Transform Process")
         
-        # Create batch processing visualization
-        batch_process_fig = go.Figure()
-        
-        # Add S3 input bucket
-        batch_process_fig.add_trace(go.Scatter(
-            x=[1],
-            y=[3],
-            mode="markers+text",
-            marker=dict(size=40, color=AWS_COLORS["teal"]),
-            text=["S3 Input"],
-            textposition="bottom center"
-        ))
-        
-        # Add batch transform job
-        batch_process_fig.add_trace(go.Scatter(
-            x=[3],
-            y=[3],
-            mode="markers+text",
-            marker=dict(size=50, color=AWS_COLORS["orange"]),
-            text=["Batch Transform Job"],
-            textposition="bottom center"
-        ))
-        
-        # Add worker nodes
-        for i in range(3):
-            batch_process_fig.add_trace(go.Scatter(
-                x=[5],
-                y=[4 - i],
-                mode="markers+text",
-                marker=dict(size=30, color=AWS_COLORS["green"]),
-                text=[f"Worker {i+1}"],
-                textposition="bottom right"
-            ))
-        
-        # Add S3 output bucket
-        batch_process_fig.add_trace(go.Scatter(
-            x=[7],
-            y=[3],
-            mode="markers+text",
-            marker=dict(size=40, color=AWS_COLORS["teal"]),
-            text=["S3 Output"],
-            textposition="bottom center"
-        ))
-        
-        # Add connecting arrows
-        batch_process_fig.add_shape(
-            type="line", x0=1.5, y0=3, x1=2.5, y1=3,
-            line=dict(color="gray", width=2),
-            xref="x", yref="y"
-        )
-        batch_process_fig.add_annotation(
-            x=2, y=3.1, text="1. Read Data",
-            showarrow=False, xref="x", yref="y"
-        )
-        
-        # Add arrows from transform job to workers
-        for i in range(3):
-            batch_process_fig.add_shape(
-                type="line", x0=3.5, y0=3, x1=4.5, y1=4-i,
-                line=dict(color="gray", width=2),
-                xref="x", yref="y"
-            )
-        batch_process_fig.add_annotation(
-            x=4, y=3.8, text="2. Distribute Work",
-            showarrow=False, xref="x", yref="y"
-        )
-        
-        # Add arrows from workers to output
-        for i in range(3):
-            batch_process_fig.add_shape(
-                type="line", x0=5.5, y0=4-i, x1=6.5, y1=3,
-                line=dict(color="gray", width=2),
-                xref="x", yref="y"
-            )
-        batch_process_fig.add_annotation(
-            x=6, y=3.8, text="3. Write Results",
-            showarrow=False, xref="x", yref="y"
-        )
-        
-        # Set layout
-        batch_process_fig.update_layout(
-            showlegend=False,
-            plot_bgcolor="white",
-            height=300,
-            margin=dict(l=20, r=20, t=20, b=20),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 8]),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[1, 5])
-        )
-        
-        st.plotly_chart(batch_process_fig, use_container_width=True)
+        common.mermaid("""
+        flowchart LR
+            subgraph Input["📥 Input Phase"]
+                Upload[Upload Dataset to S3]
+                Configure[Configure Transform Job]
+            end
+            
+            subgraph Processing["⚙️ Processing Phase"]
+                Split[Split Data into Batches]
+                Parallel[Parallel Processing<br/>Multiple Instances]
+            end
+            
+            subgraph Output["📤 Output Phase"]
+                Combine[Combine Results]
+                Store[Store in S3 Output]
+            end
+            
+            Upload --> Configure
+            Configure --> Split
+            Split --> Parallel
+            Parallel --> Combine
+            Combine --> Store
+            
+            %% Styling
+            classDef inputNode fill:#16537e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef processNode fill:#ff9900,stroke:#fff,stroke-width:2px,color:#fff
+            classDef outputNode fill:#7aa116,stroke:#fff,stroke-width:2px,color:#fff
+            
+            class Upload,Configure inputNode
+            class Split,Parallel processNode
+            class Combine,Store outputNode
+        """, height=250)
         
         # Batch transform strategies
         st.subheader("Data Splitting Strategies")
@@ -1983,12 +1718,10 @@ def main():
             xaxis_title="Number of Instances",
             yaxis=dict(
                 title="Processing Time (min)",
-                # titlefont=dict(color=AWS_COLORS["orange"]),
                 tickfont=dict(color=AWS_COLORS["orange"])
             ),
             yaxis2=dict(
                 title="Throughput (records/min)",
-                # titlefont=dict(color=AWS_COLORS["teal"]),
                 tickfont=dict(color=AWS_COLORS["teal"]),
                 overlaying="y",
                 side="right"
@@ -2089,11 +1822,55 @@ def main():
             st.image("images/serverless_inference.png", 
                      caption="Serverless Architecture Pattern", use_container_width=True)
         
-        # Serverless inference diagram
+        # Serverless inference diagram - NOW USING MERMAID
         st.subheader("How Serverless Inference Works")
         
-        serverless_fig = create_inference_flow_diagram("serverless")
-        st.pyplot(serverless_fig)
+        common.mermaid("""
+        flowchart TD
+            Client([Client Application])
+            Endpoint[Serverless Endpoint]
+            
+            subgraph AutoScale["🔄 Auto-scaling Container Fleet"]
+                Container1[Container 1]
+                Container2[Container 2]
+                Container3[Container 3]
+                Scaling["Scale 0 → N<br/>Based on Demand"]
+            end
+            
+            CostMeter["💰 Pay per Inference"]
+            
+            Client -->|1\. Send Request| Endpoint
+            Endpoint -->|2\. Auto-scale & Route| AutoScale
+            Container1 -->|3\. Process Request| Endpoint
+            Container2 -.->|Available if needed| Endpoint
+            Container3 -.->|Available if needed| Endpoint
+            Endpoint -->|4\. Return Response| Client
+            
+            AutoScale -->|Usage-based billing| CostMeter
+            
+            %% Styling
+            classDef clientNode fill:#232f3e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef endpointNode fill:#ff9900,stroke:#fff,stroke-width:2px,color:#fff
+            classDef containerNode fill:#16537e,stroke:#fff,stroke-width:2px,color:#fff
+            classDef scalingNode fill:#7aa116,stroke:#fff,stroke-width:2px,color:#fff
+            classDef costNode fill:#d13212,stroke:#fff,stroke-width:2px,color:#fff
+            
+            class Client clientNode
+            class Endpoint endpointNode
+            class Container1,Container2,Container3 containerNode
+            class Scaling scalingNode
+            class CostMeter costNode
+        """, height=400)
+        
+        st.markdown("""
+        **Key Characteristics:**
+        - Auto-scaling to zero when idle
+        - Pay only for inference time used
+        - No infrastructure management
+        - Built-in high availability
+        - Ideal for variable workloads
+        - Memory-based configuration (1-6GB)
+        """)
         
         # Serverless auto-scaling visualization
         st.subheader("Serverless Scaling Behavior")
@@ -2393,4 +2170,3 @@ if __name__ == "__main__":
         # If authenticated, show the main app content
         if is_authenticated:
             main()
-

@@ -511,7 +511,7 @@ def main():
             class C teal;
             class D green;
             class E blue;                       
-        """, height=120)
+        """, height=100)
         
         st.markdown("""
         <div class="info-box">
@@ -870,7 +870,7 @@ print(f"Deployed model to endpoint: {predictor.endpoint_name}")
             class A registry;
             class B,C packageGroup;
             class D,E,F,G model;                       
-            """,height=350)
+            """)
         
         # Model Lineage section
         st.subheader("Model Lineage Tracking")
@@ -964,13 +964,11 @@ print(f"Deployed model to endpoint: {predictor.endpoint_name}")
             class PE endpoint;
             """
         
-
-
         # Add a legend for the diagram
         col1, col2 = st.columns([1, 1])
         with col1:
             # Render the Mermaid diagram
-            common.mermaid(mermaid_code, height=1000)
+            common.mermaid(mermaid_code)
 
         with col2:
             st.markdown("""
