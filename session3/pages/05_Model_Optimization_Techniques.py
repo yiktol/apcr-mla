@@ -1,6 +1,4 @@
 import streamlit as st
-from streamlit_markdown import st_markdown
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

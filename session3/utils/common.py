@@ -264,16 +264,30 @@ def apply_styles():
     </style>
     """, unsafe_allow_html=True)
 
-def mermaid(code: str) -> None:
+def mermaid(code: str, height: int = 500) -> None:
+    """Render Mermaid diagrams in Streamlit.
+    
+    Args:
+        code: The Mermaid diagram code to render
+        height: Height of the diagram container in pixels (default: 600)
+    """
     components.html(
         f"""
-        <pre class="mermaid">
-            {code}
-        </pre>
-
+        <div class="mermaid-container">
+            <pre class="mermaid">{code.strip()}</pre>
+        </div>
         <script type="module">
             import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({{ startOnLoad: true }});
+            mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
         </script>
-        """
+        <style>
+            .mermaid-container {{
+                height: {height}px;
+                # border: 1px solid #ccc;
+                padding: 10px;
+                overflow: auto;
+            }}
+        </style>
+        """,
+        height=height + 20,  # Account for container height + border and padding
     )

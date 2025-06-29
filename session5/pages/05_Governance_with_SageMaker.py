@@ -2717,9 +2717,12 @@ print(f"Model monitoring scheduled for endpoint {predictor.endpoint_name}")
 
 # Main execution flow
 if __name__ == "__main__":
-    # First check authentication
-    is_authenticated = authenticate.login()
-    
-    # If authenticated, show the main app content
-    if is_authenticated:
+    if 'localhost' in st.context.headers["host"]:
         main()
+    else:
+        # First check authentication
+        is_authenticated = authenticate.login()
+        
+        # If authenticated, show the main app content
+        if is_authenticated:
+            main()
