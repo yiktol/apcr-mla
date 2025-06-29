@@ -1667,7 +1667,7 @@ def render_shadow_testing_tab():
             class ModelB modelB;
             """
 
-        stmd.st_mermaid(code, height=450)
+        common.mermaid(code, height=550)
     
     # Shadow test comparison results
     st.markdown("### Performance Comparison Results")
