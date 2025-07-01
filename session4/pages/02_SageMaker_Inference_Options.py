@@ -963,7 +963,7 @@ def main():
             class A,B,C,D,E decisionNode
             class F,H endNodeOrange
             class G,I endNodeGreen           
-                       """, height=450)
+                       """,height=900)
         
         # Key metrics comparison
         st.subheader("Performance Comparison")
@@ -1087,6 +1087,7 @@ def main():
         # Real-time inference diagram - NOW USING MERMAID
         st.subheader("How Real-Time Inference Works")
         
+
         common.mermaid("""
         flowchart LR
             Client([Client Application]) 
@@ -1105,8 +1106,8 @@ def main():
             
             class Client clientNode
             class Endpoint endpointNode
-            class Container containerNode
-        """, height=300)
+            class Container containerNode      
+                    """, height="100%")
         
         st.markdown("""
         **Key Characteristics:**
@@ -1282,7 +1283,8 @@ def main():
         
         # Async inference diagram - NOW USING MERMAID
         st.subheader("How Asynchronous Inference Works")
-        
+
+
         common.mermaid("""
         flowchart TD
             Client([Client Application])
@@ -1293,15 +1295,15 @@ def main():
             S3Output[(S3 Output Bucket)]
             SNS[SNS Notification]
             
-            Client -->|1\. Submit Job<br/>Large Payload| Endpoint
-            Endpoint -->|2\. Return Job ID| Client
-            Client -->|3\. Upload Data| S3Input
-            S3Input -->|4\. Queue Request| Queue
-            Queue -->|5\. Process When Available| Container
-            Container -->|6\. Store Results| S3Output
-            S3Output -->|7\. Trigger Notification| SNS
-            SNS -->|8\. Notify Completion| Client
-            Client -.->|9\. Retrieve Results| S3Output
+            Client -->|1. Submit Job<br/>Large Payload| Endpoint
+            Endpoint -->|2. Return Job ID| Client
+            Client -->|3. Upload Data| S3Input
+            S3Input -->|4. Queue Request| Queue
+            Queue -->|5. Process When Available| Container
+            Container -->|6. Store Results| S3Output
+            S3Output -->|7. Trigger Notification| SNS
+            SNS -->|8. Notify Completion| Client
+            Client -.->|9. Retrieve Results| S3Output
             
             %% Styling
             classDef clientNode fill:#232f3e,stroke:#fff,stroke-width:2px,color:#fff
@@ -1317,7 +1319,7 @@ def main():
             class Queue queueNode
             class Container containerNode
             class SNS notificationNode
-        """, height=500)
+        """)
         
         st.markdown("""
         **Key Characteristics:**
@@ -1566,17 +1568,17 @@ def main():
             Worker3[Worker Instance 3]
             S3Output[(S3 Output Results)]
             
-            Client -->|1\. Configure & Start Job| Job
-            Job -->|2\. Read Dataset| S3Input
-            Job -->|3\. Distribute Work| Worker1
-            Job -->|3\. Distribute Work| Worker2
-            Job -->|3\. Distribute Work| Worker3
+            Client -->|1. Configure & Start Job| Job
+            Job -->|2. Read Dataset| S3Input
+            Job -->|3. Distribute Work| Worker1
+            Job -->|3. Distribute Work| Worker2
+            Job -->|3. Distribute Work| Worker3
             
-            Worker1 -->|4\. Process Batch| S3Output
-            Worker2 -->|4\. Process Batch| S3Output
-            Worker3 -->|4\. Process Batch| S3Output
+            Worker1 -->|4. Process Batch| S3Output
+            Worker2 -->|4. Process Batch| S3Output
+            Worker3 -->|4. Process Batch| S3Output
             
-            S3Output -.->|5\. Job Complete<br/>Notification| Client
+            S3Output -.->|5. Job Complete<br/>Notification| Client
             
             %% Styling
             classDef clientNode fill:#232f3e,stroke:#fff,stroke-width:2px,color:#fff
@@ -1588,7 +1590,7 @@ def main():
             class Job jobNode
             class S3Input,S3Output storageNode
             class Worker1,Worker2,Worker3 workerNode
-        """, height=400)
+        """,height="100%")
         
         st.markdown("""
         **Key Characteristics:**
@@ -1602,7 +1604,7 @@ def main():
         
         # Batch transform process - NOW USING MERMAID
         st.subheader("Batch Transform Process")
-        
+
         common.mermaid("""
         flowchart LR
             subgraph Input["📥 Input Phase"]
@@ -1634,7 +1636,7 @@ def main():
             class Upload,Configure inputNode
             class Split,Parallel processNode
             class Combine,Store outputNode
-        """, height=250)
+        """)
         
         # Batch transform strategies
         st.subheader("Data Splitting Strategies")
@@ -1830,7 +1832,7 @@ def main():
             Client([Client Application])
             Endpoint[Serverless Endpoint]
             
-            subgraph AutoScale["🔄 Auto-scaling Container Fleet"]
+            subgraph AutoScale ["🔄 Auto-scaling Container Fleet"]
                 Container1[Container 1]
                 Container2[Container 2]
                 Container3[Container 3]
@@ -1839,12 +1841,12 @@ def main():
             
             CostMeter["💰 Pay per Inference"]
             
-            Client -->|1\. Send Request| Endpoint
-            Endpoint -->|2\. Auto-scale & Route| AutoScale
-            Container1 -->|3\. Process Request| Endpoint
+            Client -->|1 Send Request| Endpoint
+            Endpoint -->|2 Auto-scale & Route| AutoScale
+            Container1 -->|3 Process Request| Endpoint
             Container2 -.->|Available if needed| Endpoint
             Container3 -.->|Available if needed| Endpoint
-            Endpoint -->|4\. Return Response| Client
+            Endpoint -->|4 Return Response| Client
             
             AutoScale -->|Usage-based billing| CostMeter
             
@@ -1860,7 +1862,7 @@ def main():
             class Container1,Container2,Container3 containerNode
             class Scaling scalingNode
             class CostMeter costNode
-        """, height=400)
+        """,height="100%")
         
         st.markdown("""
         **Key Characteristics:**

@@ -497,21 +497,21 @@ def main():
         
         common.mermaid("""
         graph LR
-            A["Register Model"] -->|"Register a model and create a model package group"| B["Version Model"]
-            B -->|"Create versions for each model iteration"| C["Approve/Reject"]
-            C -->|"Review and approve models for production use"| D["Deploy to Production"]
-            D -->|"Deploy approved model versions to endpoints"| E["Monitor Performance"]
+            A[Register Model<br/>Register model & create package group] --> B[Version Model<br/>Create versions per iteration]
+            B --> C[Approve/Reject<br/>Review & approve for production]
+            C --> D[Deploy to Production<br/>Deploy approved versions to endpoints]
+            D --> E[Monitor Performance<br/>Track model performance metrics]
             
-            classDef orange fill:#FF9900,color:black,stroke:black;
-            classDef teal fill:#00A1B9,color:white,stroke:black;
-            classDef green fill:#1E8900,color:white,stroke:black;
-            classDef blue fill:#0073BB,color:white,stroke:black;
+            classDef orange fill:#FF9900,color:#000,stroke:#000
+            classDef teal fill:#00A1B9,color:#FFF,stroke:#000
+            classDef green fill:#1E8900,color:#FFF,stroke:#000
+            classDef blue fill:#0073BB,color:#FFF,stroke:#000
             
-            class A,B orange;
-            class C teal;
-            class D green;
-            class E blue;                       
-        """, height=100)
+            class A,B orange
+            class C teal
+            class D green
+            class E blue                 
+        """,height=80, show_controls=False)
         
         st.markdown("""
         <div class="info-box">
@@ -870,7 +870,7 @@ print(f"Deployed model to endpoint: {predictor.endpoint_name}")
             class A registry;
             class B,C packageGroup;
             class D,E,F,G model;                       
-            """)
+            """,height="100%")
         
         # Model Lineage section
         st.subheader("Model Lineage Tracking")
@@ -968,7 +968,7 @@ print(f"Deployed model to endpoint: {predictor.endpoint_name}")
         col1, col2 = st.columns([1, 1])
         with col1:
             # Render the Mermaid diagram
-            common.mermaid(mermaid_code)
+            common.mermaid(mermaid_code,height=700)
 
         with col2:
             st.markdown("""

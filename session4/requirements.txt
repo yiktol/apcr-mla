@@ -2,6 +2,7 @@ streamlit
 streamlit_lottie
 streamlit_option_menu
 streamlit_mermaid
+streamlit_markdown
 pandas
 matplotlib
 numpy==1.26.1
