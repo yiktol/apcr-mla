@@ -192,236 +192,98 @@ def create_transformation_examples(df: pd.DataFrame) -> Dict:
     }
 
 
-def create_pipeline_graph() -> nx.DiGraph:
+def create_pipeline_mermaid(highlight_path: Optional[str] = None) -> str:
     """
-    Create a directed graph for the SageMaker Pipeline visualization
-    
-    Returns:
-        NetworkX DiGraph object
-    """
-    G = nx.DiGraph()
-    
-    # Add pipeline nodes
-    G.add_node("data_input", label="Data Input", node_type="data", description="S3 data source")
-    G.add_node("processing", label="Data Processing", node_type="processing", 
-              description="Feature engineering, preprocessing, splitting")
-    G.add_node("training", label="Model Training", node_type="training",
-              description="XGBoost model training")
-    G.add_node("evaluation", label="Model Evaluation", node_type="evaluation",
-              description="Model metric calculation")
-    G.add_node("condition", label="Accuracy Check", node_type="condition",
-              description="Min. accuracy threshold check")
-    G.add_node("register_true", label="Register Model", node_type="register",
-              description="Register model in Model Registry")
-    G.add_node("register_false", label="Skip Registration", node_type="skip",
-              description="Model doesn't meet quality bar")
-    G.add_node("clarify", label="Bias & Explainability", node_type="clarify",
-              description="Bias detection and feature importance")
-    
-    # Add edges to show flow
-    G.add_edge("data_input", "processing")
-    G.add_edge("processing", "training")
-    G.add_edge("training", "evaluation")
-    G.add_edge("evaluation", "condition")
-    G.add_edge("condition", "register_true", condition="accuracy >= 0.85")
-    G.add_edge("condition", "register_false", condition="accuracy < 0.85")
-    G.add_edge("register_true", "clarify")
-    
-    return G
-
-
-def draw_pipeline_graph(
-    G: nx.DiGraph, 
-    highlight_path: Optional[List[str]] = None,
-    figsize: Tuple[float, float] = (14, 7)
-) -> plt.Figure:
-    """
-    Draw the pipeline graph using NetworkX and Matplotlib
+    Create a Mermaid diagram for the SageMaker Pipeline visualization
     
     Args:
-        G: NetworkX DiGraph to draw
-        highlight_path: Optional list of node names to highlight
-        figsize: Figure size tuple (width, height)
+        highlight_path: Optional path highlighting type
     
     Returns:
-        Matplotlib Figure object
+        Mermaid diagram as string
     """
-    plt.figure(figsize=figsize)
-    
-    # Define node positions for a clean pipeline view
-    pos = {
-        "data_input": (1, 2),
-        "processing": (3, 2),
-        "training": (5, 2),
-        "evaluation": (7, 2),
-        "condition": (9, 2),
-        "register_true": (11, 3),
-        "register_false": (11, 1),
-        "clarify": (13, 3)
-    }
-    
-    # Define colors based on node type
-    node_colors = {
-        "data": "#3F88C5",      # blue
-        "processing": "#FFA500", # orange
-        "training": "#00A1C9",   # teal
-        "evaluation": "#59BA47", # green
-        "condition": "#FFDB58",  # yellow
-        "register": "#59BA47",   # green
-        "skip": "#D13212",       # red
-        "clarify": "#9D1F63"     # purple
-    }
-    
-    # Define node shapes
-    node_shapes = {
-        "data": "s",       # square
-        "processing": "o",  # circle  
-        "training": "o",    # circle
-        "evaluation": "o",  # circle
-        "condition": "d",   # diamond
-        "register": "o",    # circle
-        "skip": "o",        # circle
-        "clarify": "o"      # circle
-    }
-    
-    # Prepare node lists by type for separate drawing
-    nodes_by_type = {}
-    for node_type in set(nx.get_node_attributes(G, 'node_type').values()):
-        nodes_by_type[node_type] = [node for node in G.nodes() 
-                                   if G.nodes[node].get('node_type') == node_type]
-    
-    # Draw nodes by type
-    for node_type, nodes in nodes_by_type.items():
-        # Skip empty lists
-        if not nodes:
-            continue
+    base_diagram = """
+    graph TB
+        A[Data Input<br/>S3 data source] --> B[Data Processing<br/>Feature engineering, preprocessing, splitting]
+        B --> C[Model Training<br/>XGBoost model training]
+        C --> D[Model Evaluation<br/>Model metric calculation]
+        D --> E{Accuracy Check<br/>Min. accuracy threshold check}
+        E -->|accuracy >= 0.85| F[Register Model<br/>Register model in Model Registry]
+        E -->|accuracy < 0.85| G[Skip Registration<br/>Model doesn't meet quality bar]
+        F --> H[Bias & Explainability<br/>Bias detection and feature importance]
         
-        # Get color for this type
-        color = node_colors.get(node_type, "#CCCCCC")
+        classDef dataNode fill:#3F88C5,stroke:#000,stroke-width:2px,color:#fff
+        classDef processNode fill:#FFA500,stroke:#000,stroke-width:2px,color:#fff
+        classDef trainNode fill:#00A1C9,stroke:#000,stroke-width:2px,color:#fff
+        classDef evalNode fill:#59BA47,stroke:#000,stroke-width:2px,color:#fff
+        classDef conditionNode fill:#FFDB58,stroke:#000,stroke-width:2px,color:#000
+        classDef registerNode fill:#59BA47,stroke:#000,stroke-width:2px,color:#fff
+        classDef skipNode fill:#D13212,stroke:#000,stroke-width:2px,color:#fff
+        classDef clarifyNode fill:#9D1F63,stroke:#000,stroke-width:2px,color:#fff
         
-        # Filter nodes based on highlight path
-        if highlight_path:
-            highlighted_nodes = [n for n in nodes if n in highlight_path]
-            regular_nodes = [n for n in nodes if n not in highlight_path]
-            
-            # Draw highlighted nodes with special formatting
-            if highlighted_nodes:
-                nx.draw_networkx_nodes(
-                    G, pos,
-                    nodelist=highlighted_nodes,
-                    node_shape=node_shapes.get(node_type, 'o'),
-                    node_color=color,
-                    node_size=1800,
-                    edgecolors='black',
-                    linewidths=3
-                )
-            
-            # Draw regular nodes with standard formatting
-            if regular_nodes:
-                nx.draw_networkx_nodes(
-                    G, pos,
-                    nodelist=regular_nodes,
-                    node_shape=node_shapes.get(node_type, 'o'),
-                    node_color=color,
-                    node_size=1500,
-                    alpha=0.5,
-                    edgecolors='black',
-                    linewidths=1
-                )
-        else:
-            # Draw all nodes normally
-            nx.draw_networkx_nodes(
-                G, pos,
-                nodelist=nodes,
-                node_shape=node_shapes.get(node_type, 'o'),
-                node_color=color,
-                node_size=1500,
-                edgecolors='black',
-                linewidths=1
-            )
+        class A dataNode
+        class B processNode
+        class C trainNode
+        class D evalNode
+        class E conditionNode
+        class F registerNode
+        class G skipNode
+        class H clarifyNode
+    """
     
-    # Draw edges with different formatting based on highlight path
-    for edge in G.edges():
-        start_node, end_node = edge
+    # Add highlighting based on selected path
+    if highlight_path == "Complete Workflow":
+        base_diagram += """
+        class A,B,C,D,E,F,H highlighted
+        classDef highlighted stroke:#FF9900,stroke-width:4px
+        """
+    elif highlight_path == "Data Processing Path":
+        base_diagram += """
+        class A,B highlighted
+        classDef highlighted stroke:#FF9900,stroke-width:4px
+        """
+    elif highlight_path == "Model Training & Evaluation":
+        base_diagram += """
+        class B,C,D highlighted
+        classDef highlighted stroke:#FF9900,stroke-width:4px
+        """
+    elif highlight_path == "Successful Model Path":
+        base_diagram += """
+        class D,E,F,H highlighted
+        classDef highlighted stroke:#FF9900,stroke-width:4px
+        """
+    elif highlight_path == "Rejected Model Path":
+        base_diagram += """
+        class D,E,G highlighted
+        classDef highlighted stroke:#FF9900,stroke-width:4px
+        """
+    
+    return base_diagram
+
+
+def create_condition_flow_mermaid() -> str:
+    """
+    Create a Mermaid diagram for the condition flow visualization
+    
+    Returns:
+        Mermaid diagram as string
+    """
+    return """
+    graph TB
+        A[Model Evaluation] --> B{Condition<br/>accuracy >= 0.85}
+        B -->|True| C[Register Model<br/>Add to Model Registry]
+        B -->|False| D[Skip Registration<br/>Model rejected]
         
-        # Check if edge is part of the highlight path
-        is_highlighted = (highlight_path and 
-                          start_node in highlight_path and 
-                          end_node in highlight_path)
+        classDef evalNode fill:#59BA47,stroke:#000,stroke-width:2px,color:#fff
+        classDef conditionNode fill:#FFDB58,stroke:#000,stroke-width:2px,color:#000
+        classDef registerNode fill:#59BA47,stroke:#000,stroke-width:2px,color:#fff
+        classDef skipNode fill:#D13212,stroke:#000,stroke-width:2px,color:#fff
         
-        # Get condition if it exists
-        condition = G.edges[edge].get('condition', '')
-        
-        # Format based on highlighting
-        if is_highlighted:
-            nx.draw_networkx_edges(
-                G, pos,
-                edgelist=[edge],
-                width=3.0,
-                arrowsize=20,
-                arrowstyle='-|>',
-                edge_color='#FF9900'  # AWS orange for highlighted edges
-            )
-        else:
-            nx.draw_networkx_edges(
-                G, pos,
-                edgelist=[edge],
-                width=1.5,
-                arrowsize=15,
-                arrowstyle='-|>',
-                edge_color='gray',
-                alpha=0.7
-            )
-        
-        # Add edge labels for conditions
-        if condition:
-            edge_center = ((pos[start_node][0] + pos[end_node][0]) / 2,
-                          (pos[start_node][1] + pos[end_node][1]) / 2)
-            
-            # Adjust y position for conditional edges
-            if start_node == "condition":
-                if end_node == "register_true":
-                    edge_center = (edge_center[0], edge_center[1] + 0.25)
-                else:  # register_false
-                    edge_center = (edge_center[0], edge_center[1] - 0.25)
-            
-            # Draw the condition text
-            plt.text(
-                edge_center[0], edge_center[1],
-                condition,
-                fontsize=9,
-                bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.2'),
-                horizontalalignment='center',
-                verticalalignment='center'
-            )
-    
-    # Add labels to nodes
-    labels = nx.get_node_attributes(G, 'label')
-    nx.draw_networkx_labels(
-        G, pos,
-        labels=labels,
-        font_size=10,
-        font_weight='bold',
-        verticalalignment='center'
-    )
-    
-    # Add descriptions under nodes
-    descriptions = nx.get_node_attributes(G, 'description')
-    for node, description in descriptions.items():
-        plt.text(
-            pos[node][0], pos[node][1] - 0.3,
-            description,
-            horizontalalignment='center',
-            verticalalignment='center',
-            fontsize=8,
-            color='#444444',
-            wrap=True
-        )
-    
-    plt.title("Amazon SageMaker Pipeline - Model Build Workflow", fontsize=16, pad=20)
-    plt.axis('off')  # Turn off axis
-    
-    return plt.gcf()
+        class A evalNode
+        class B conditionNode
+        class C registerNode
+        class D skipNode
+    """
 
 
 def create_feature_importance_chart(n_features: int = 8) -> alt.Chart:
@@ -1199,9 +1061,6 @@ def initialize_session_state():
     if 'transformation_examples' not in st.session_state:
         st.session_state.transformation_examples = create_transformation_examples(st.session_state.dataset)
         
-    if 'pipeline_graph' not in st.session_state:
-        st.session_state.pipeline_graph = create_pipeline_graph()
-        
     if 'highlight_path' not in st.session_state:
         st.session_state.highlight_path = None
         
@@ -1431,15 +1290,9 @@ def main():
             - **Version and audit** all aspects of the workflow
             """)
             
-        with col2:
-            st.image("https://d1.awsstatic.com/re19/Diagram_Amazon-SageMaker-Pipelines.42b2928acaa3ef5f8e39141ea06189873654a4d0.png",
-                    caption="SageMaker Pipelines Architecture", use_container_width=True)
-        
+              
         # The complete pipeline visualization
         st.subheader("The Complete ML Workflow")
-        
-        # Get graph from session state
-        pipeline_graph = st.session_state.pipeline_graph
         
         # Highlight path selector
         highlight_options = [
@@ -1460,21 +1313,14 @@ def main():
         # Set the highlight path based on selection
         if selected_path == "None":
             st.session_state.highlight_path = None
-        elif selected_path == "Complete Workflow":
-            st.session_state.highlight_path = ["data_input", "processing", "training", "evaluation", 
-                                              "condition", "register_true", "clarify"]
-        elif selected_path == "Data Processing Path":
-            st.session_state.highlight_path = ["data_input", "processing"]
-        elif selected_path == "Model Training & Evaluation":
-            st.session_state.highlight_path = ["processing", "training", "evaluation"]
-        elif selected_path == "Successful Model Path":
-            st.session_state.highlight_path = ["evaluation", "condition", "register_true", "clarify"]
-        elif selected_path == "Rejected Model Path":
-            st.session_state.highlight_path = ["evaluation", "condition", "register_false"]
+        else:
+            st.session_state.highlight_path = selected_path
         
-        # Draw the pipeline graph with the selected highlight path
-        pipeline_fig = draw_pipeline_graph(pipeline_graph, st.session_state.highlight_path)
-        st.pyplot(pipeline_fig, use_container_width=True)
+        # Display the Mermaid diagram
+        mermaid_code = create_pipeline_mermaid(st.session_state.highlight_path)
+        common.mermaid(mermaid_code,height=900)
+        
+        # st.markdown(f"```mermaid\n{mermaid_code}\n```")
         
         # Pipeline components explanation
         st.subheader("Pipeline Components")
@@ -1808,10 +1654,7 @@ preprocessing_step = ProcessingStep(
             - Automatic model artifacts storage
             """)
         
-        with col2:
-            st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/your-algorithms/sagemaker-algo.png",
-                    caption="SageMaker Training", use_container_width=True)
-        
+
         # Algorithm selection
         st.subheader("Algorithm Selection")
         
@@ -2067,9 +1910,6 @@ training_step = TrainingStep(
             - Visualization of results
             """)
         
-        with col2:
-            st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/model-monitor/model-monitor-model-quality-how-it-works.png",
-                    caption="Model Evaluation Process", use_container_width=True)
         
         # Model metrics
         st.subheader("Performance Metrics")
@@ -2268,9 +2108,7 @@ evaluation_report = PropertyFile(
             - Seamless CI/CD integration
             """)
         
-        with col2:
-            st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/model_registry_block_diagram.png",
-                    caption="SageMaker Model Registry", use_container_width=True)
+
         
         # Condition step explanation
         st.subheader("How Conditional Steps Work")
@@ -2293,35 +2131,12 @@ evaluation_report = PropertyFile(
             """)
         
         with col2:
-            # Create visualization of condition flow
-            cond_fig, ax = plt.subplots(figsize=(8, 6))
-            ax.set_xlim(0, 10)
-            ax.set_ylim(0, 10)
-            ax.axis('off')
+            # Display the condition flow Mermaid diagram
+            st.markdown("#### Condition Flow Diagram")
+            condition_mermaid = create_condition_flow_mermaid()
+            common.mermaid(condition_mermaid, height=400)
             
-            # Draw condition node
-            condition = plt.Rectangle((4, 5), 2, 2, fc='#FFDB58', ec='#000000')
-            ax.add_patch(condition)
-            ax.text(5, 6, "Condition\naccuracy >= 0.85", ha='center', va='center')
-            
-            # Draw true/false paths
-            ax.arrow(6, 6, 2, 1, head_width=0.3, head_length=0.3, fc='#59BA47', ec='#59BA47')
-            ax.arrow(4, 5, -2, -1, head_width=0.3, head_length=0.3, fc='#D13212', ec='#D13212')
-            
-            # Draw result nodes
-            register = plt.Rectangle((8, 6.5), 2, 1, fc='#59BA47', ec='#000000')
-            ax.add_patch(register)
-            ax.text(9, 7, "Register Model", ha='center', va='center')
-            
-            skip = plt.Rectangle((1, 3.5), 2, 1, fc='#D13212', ec='#000000')
-            ax.add_patch(skip)
-            ax.text(2, 4, "Skip Registration", ha='center', va='center')
-            
-            # Add true/false labels
-            ax.text(7, 7, "True", ha='center', va='center')
-            ax.text(3, 4, "False", ha='center', va='center')
-            
-            st.pyplot(cond_fig)
+            # st.markdown(f"```mermaid\n{condition_mermaid}\n```")
         
         # Condition configuration
         st.subheader("Condition Configuration")
@@ -2462,9 +2277,7 @@ evaluation_report = PropertyFile(
             - **Continuous monitoring**: Ongoing bias and drift detection
             """)
         
-        with col2:
-            st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/clarify/clarify-pipeline.png",
-                    caption="SageMaker Clarify in Pipelines", use_container_width=True)
+
         
         # Bias detection
         st.subheader("Bias Detection")

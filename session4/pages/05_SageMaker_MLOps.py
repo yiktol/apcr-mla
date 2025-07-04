@@ -214,9 +214,6 @@ def home_page():
         
         st.markdown('<div class="info-box">MLOps helps organizations deliver ML-enabled software with increased velocity, quality, and consistency.</div>', unsafe_allow_html=True)
     
-    with col2:
-        lottie_ml = load_lottie_url("https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json")
-        st_lottie(lottie_ml, height=300, key="ml_animation")
     
     st.markdown('<div class="sub-header">MLOps Workflow Stages</div>', unsafe_allow_html=True)
     
@@ -310,9 +307,6 @@ def data_preparation_page():
         - Create reproducible data pipelines
         """)
     
-    with col2:
-        st.image("https://d1.awsstatic.com/SageMaker/sagemaker-components.39fa1212c238f72187485e3961a9cb20af6415b6.png", 
-                caption="SageMaker Data Processing Components")
     
    
     tab1, tab2, tab3 = st.tabs(["Data Wrangler", "Processing Jobs", "Feature Store"])
@@ -4705,10 +4699,7 @@ print(f"Model prediction: {result}")
                 - Simplified operations without managing infrastructure
                 """)
             
-            with col2:
-                # Load serverless animation
-                lottie_serverless = load_lottie_url("https://assets1.lottiefiles.com/packages/lf20_g7xmvi61.json")
-                st_lottie(lottie_serverless, height=200, key="serverless_animation")
+
             
             # Serverless inference example
             st.markdown('<div class="info-box">Example: Creating a Serverless Endpoint</div>', unsafe_allow_html=True)
@@ -7144,9 +7135,6 @@ def about_page():
         - **Monitoring**: Data Quality, Model Quality, Bias Drift, Explainability
         """)
     
-    # with col2:
-        # lottie_about = load_lottie_url("https://assets8.lottiefiles.com/packages/lf20_l4ny0jb8.json")
-        # st_lottie(lottie_about, height=300, key="about_animation")
     
     st.markdown('<div class="sub-header">Learning Resources</div>', unsafe_allow_html=True)
     
