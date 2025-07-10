@@ -816,80 +816,54 @@ def create_model_card_visualization(model_card):
     
     # Lineage tab
     with tabs[4]:
-        # Create a graph visualization of the model lineage
-        G = nx.DiGraph()
-        
-        # Add nodes
-        G.add_node(model_card["lineage"]["base_model"], type="model", color="#00A1C9")
-        G.add_node(model_card["name"], type="model", color="#FF9900")
-        G.add_node(model_card["lineage"]["training_job"], type="job", color="#59BA47")
-        G.add_node(model_card["lineage"]["git_repository"], type="repo", color="#232F3E")
-        G.add_node(model_card["lineage"]["container"], type="container", color="#545B64")
-        G.add_node(model_card["training_data"]["source"], type="data", color="#D13212")
-        
-        # Add edges
-        G.add_edge(model_card["lineage"]["base_model"], model_card["name"])
-        G.add_edge(model_card["lineage"]["training_job"], model_card["name"])
-        G.add_edge(model_card["lineage"]["git_repository"], model_card["lineage"]["training_job"])
-        G.add_edge(model_card["lineage"]["container"], model_card["lineage"]["training_job"])
-        G.add_edge(model_card["training_data"]["source"], model_card["lineage"]["training_job"])
-        
-        # Create position layout
-        pos = {
-            model_card["lineage"]["base_model"]: (0, 1),
-            model_card["name"]: (2, 1),
-            model_card["lineage"]["training_job"]: (1, 0),
-            model_card["lineage"]["git_repository"]: (0, -1),
-            model_card["lineage"]["container"]: (1, -1),
-            model_card["training_data"]["source"]: (2, -1)
-        }
-        
-        # Draw the graph
-        plt.figure(figsize=(10, 6))
-        
-        # Node colors
-        node_colors = [G.nodes[n]['color'] for n in G.nodes()]
-        
-        # Draw nodes
-        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=2000, alpha=0.8)
-        
-        # Draw edges
-        nx.draw_networkx_edges(G, pos, width=1.5, alpha=0.7, edge_color='gray', arrowsize=20)
-        
-        # Draw labels
-        nx.draw_networkx_labels(G, pos, font_size=10, font_weight="bold", font_color="white")
-        
-        # Add a legend
-        legend_labels = {
-            "model": "Model Version", 
-            "job": "Training Job",
-            "repo": "Git Repository",
-            "container": "Container Image",
-            "data": "Training Data"
-        }
-        
-        # Create legend patches
-        patches = []
-        for node_type, color in [
-            ("model", "#00A1C9"), 
-            ("model (current)", "#FF9900"),
-            ("job", "#59BA47"), 
-            ("repo", "#232F3E"),
-            ("container", "#545B64"), 
-            ("data", "#D13212")
-        ]:
-            patches.append(plt.Line2D([0], [0], marker='o', color='w', 
-                                     markerfacecolor=color, markersize=10, 
-                                     label=legend_labels.get(node_type.split()[0], node_type)))
+        def create_model_lineage_mermaid():
+            """
+            Create a Mermaid visualization of model lineage
+            """
+            mermaid_code = f"""
+            flowchart TD
+                %% Define nodes with styling
+                BM["{model_card["lineage"]["base_model"]}"]:::basemodel
+                CM["{model_card["name"]}"]:::currentmodel
+                TJ["{model_card["lineage"]["training_job"]}"]:::job
+                GR["{model_card["lineage"]["git_repository"]}"]:::repo
+                CT["{model_card["lineage"]["container"]}"]:::container
+                TD["{model_card["training_data"]["source"]}"]:::data
+                
+                %% Define flows
+                BM --> CM
+                TJ --> CM
+                GR --> TJ
+                CT --> TJ
+                TD --> TJ
+                
+                %% Style definitions
+                classDef basemodel fill:#00A1C9,stroke:#ffffff,stroke-width:2px,color:#ffffff
+                classDef currentmodel fill:#FF9900,stroke:#ffffff,stroke-width:2px,color:#ffffff
+                classDef job fill:#59BA47,stroke:#ffffff,stroke-width:2px,color:#ffffff
+                classDef repo fill:#232F3E,stroke:#ffffff,stroke-width:2px,color:#ffffff
+                classDef container fill:#545B64,stroke:#ffffff,stroke-width:2px,color:#ffffff
+                classDef data fill:#D13212,stroke:#ffffff,stroke-width:2px,color:#ffffff
+            """
             
-        plt.legend(handles=patches, loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=3)
-        
-        # Remove axis
-        plt.axis('off')
-        plt.tight_layout()
-        
-        # Display the graph
-        st.pyplot(plt)
+            return mermaid_code.strip()
+
+        # Create and display the Mermaid diagram
+        mermaid_code = create_model_lineage_mermaid()
+        common.mermaid(mermaid_code, height=300)
+
+        # Add legend information
+        st.markdown("""
+        **Model Lineage Legend:**
+        - 🔵 **Base Model**: Source model used as starting point
+        - 🟠 **Current Model**: Resulting trained model
+        - 🟢 **Training Job**: SageMaker training job execution
+        - ⚫ **Git Repository**: Source code repository
+        - ⚪ **Container**: Training container image
+        - 🔴 **Training Data**: Dataset used for training
+        """)
+
+        st.caption("Model Lineage and Dependencies")
         
         # Additional lineage information
         st.markdown(f"**Base Model:** {model_card['lineage']['base_model']}")
@@ -2031,9 +2005,6 @@ def main():
             """, unsafe_allow_html=True)
         
         with col2:
-            # Governance diagram
-            st.image("https://d1.awsstatic.com/aws-mls-platform/SageMaker%20assets/mlops-infinity-loop.485d11146c76f95123a2def677139b8d23e5c247.png", 
-                    caption="ML Governance within the ML lifecycle", use_container_width=True)
             
             # Add a key metrics card
             st.markdown("""
@@ -2232,7 +2203,7 @@ def main():
         
         with col2:
             # Role Manager diagram
-            st.image("https://d1.awsstatic.com/ml-governance/persona-mgmt.daf5b956b050647c2c6b7ef6b5fc7e3c35c61651.png", 
+            st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2022/11/15/ml-11871-ml-11871-image001.png", 
                     use_container_width=True)
             st.caption("SageMaker Role Manager supports different ML personas")
         
@@ -2380,7 +2351,7 @@ aws sagemaker create-role-from-persona \\
         
         with col2:
             # Model Card diagram
-            st.image("https://d1.awsstatic.com/ml-governance/governance_model-cards_how-it-works-diagram.3df069ff7225d3a0ffadf524a87c84dcb88c097d.png", 
+            st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2023/07/12/ML-14808-image001.png", 
                     caption="SageMaker Model Cards provide standardized documentation", use_container_width=True)
         
         st.subheader("Select a Model Card")
@@ -2457,6 +2428,10 @@ aws sagemaker create-role-from-persona \\
         st.divider()
         
         # Display the selected model card
+        # Safety check to ensure selected model exists
+        if st.session_state.selected_model not in model_cards:
+            st.session_state.selected_model = "fraud_detection_model"
+        
         st.subheader(f"Model Card: {model_cards[st.session_state.selected_model]['name']}")
         
         # Create model card visualization
@@ -2573,7 +2548,7 @@ print(f"Created model card: {{response['ModelCardArn']}}")
         
         with col2:
             # Model Dashboard diagram
-            st.image("https://d1.awsstatic.com/ml-governance/governance_model-dashboard_how-it-works-diagram.6ede2e9669f88c29eb59e6c66b9f3a28516e3fe9.png", 
+            st.image("https://d1.awsstatic.com/products/sagemaker/ml-governance/feature-3-model-cards-capture-model-info.e873b601999865b2d5ac21f42167bd1eddc1498b.png", 
                     use_container_width=True)
             st.caption("SageMaker Model Dashboard provides centralized model monitoring")
         
@@ -2625,6 +2600,10 @@ print(f"Created model card: {{response['ModelCardArn']}}")
         st.divider()
         
         # Display detailed dashboard for the selected model
+        # Safety check to ensure selected model exists
+        if st.session_state.selected_model not in model_data:
+            st.session_state.selected_model = "fraud_detection_model"
+        
         st.subheader(f"Model Dashboard: {model_data[st.session_state.selected_model]['info']['name']}")
         
         # Create dashboard visualization

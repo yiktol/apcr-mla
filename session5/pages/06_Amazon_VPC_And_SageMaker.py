@@ -178,219 +178,6 @@ if __name__ == "__main__":
     create_sagemaker_studio_domain_vpc_only()
     '''
 
-# Create diagrams for visualization
-def generate_vpc_diagram():
-    # Create a Plotly diagram showing VPC interaction with SageMaker
-    nodes = [
-        dict(name="Your VPC", x=0, y=0),
-        dict(name="Private Subnet", x=1, y=0),
-        dict(name="SageMaker API", x=2, y=0.5),
-        dict(name="SageMaker Runtime", x=2, y=-0.5),
-        dict(name="Interface Endpoint", x=1, y=0.5),
-        dict(name="EC2 Instance", x=0.5, y=-0.5)
-    ]
-    
-    edges = [
-        dict(source=0, target=1, value=1),
-        dict(source=1, target=4, value=1),
-        dict(source=4, target=2, value=1),
-        dict(source=1, target=5, value=1),
-        dict(source=5, target=4, value=1),
-        dict(source=4, target=3, value=1)
-    ]
-    
-    # Create figure
-    fig = go.Figure()
-    
-    # Add nodes
-    for node in nodes:
-        fig.add_trace(go.Scatter(
-            x=[node["x"]], 
-            y=[node["y"]],
-            mode="markers+text",
-            marker=dict(size=30, color="#FF9900", line=dict(width=2, color="#232F3E")),
-            text=[node["name"]],
-            textposition="bottom center",
-            name=node["name"]
-        ))
-    
-    # Add edges
-    for edge in edges:
-        source = nodes[edge["source"]]
-        target = nodes[edge["target"]]
-        fig.add_trace(go.Scatter(
-            x=[source["x"], target["x"]],
-            y=[source["y"], target["y"]],
-            mode="lines",
-            line=dict(width=2, color="#232F3E"),
-            showlegend=False
-        ))
-    
-    # Update layout
-    fig.update_layout(
-        title="SageMaker VPC Network Connection",
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        showlegend=True,
-        height=500,
-        plot_bgcolor='#F8F9FA'
-    )
-    
-    return fig
-
-# Create SageMaker endpoint diagram
-def generate_endpoint_diagram():
-    # Create a flow diagram showing VPC endpoint connections
-    nodes = [
-        dict(name="Your Application", x=0, y=0),
-        dict(name="VPC Boundary", x=1, y=0),
-        dict(name="Interface\nEndpoint", x=2, y=0),
-        dict(name="AWS\nPrivateLink", x=3, y=0),
-        dict(name="SageMaker\nEndpoint", x=4, y=0)
-    ]
-    
-    # Create figure
-    fig = go.Figure()
-    
-    # Add nodes with different shapes/colors
-    colors = ["#FF9900", "#232F3E", "#00A1C9", "#1D8102", "#C94700"]
-    
-    for i, node in enumerate(nodes):
-        fig.add_trace(go.Scatter(
-            x=[node["x"]], 
-            y=[node["y"]],
-            mode="markers+text",
-            marker=dict(size=40, color=colors[i], symbol="circle"),
-            text=[node["name"]],
-            textposition="bottom center",
-            name=node["name"]
-        ))
-    
-    # Add arrows between nodes
-    for i in range(len(nodes)-1):
-        fig.add_trace(go.Scatter(
-            x=[nodes[i]["x"], nodes[i+1]["x"]],
-            y=[nodes[i]["y"], nodes[i+1]["y"]],
-            mode="lines+markers",
-            marker=dict(size=10, color="#232F3E", symbol="arrow-right"),
-            line=dict(width=2, color="#232F3E"),
-            showlegend=False
-        ))
-    
-    # Add annotations for security features
-    annotations = [
-        dict(x=1.5, y=0.3, text="Secure Connection", showarrow=False,
-             font=dict(color="#1D8102", size=12)),
-        dict(x=3.5, y=0.3, text="AWS Network Only", showarrow=False,
-             font=dict(color="#1D8102", size=12)),
-        dict(x=2.5, y=-0.3, text="No Internet Exposure", showarrow=False,
-             font=dict(color="#1D8102", size=12))
-    ]
-    
-    # Update layout
-    fig.update_layout(
-        title="SageMaker VPC Interface Endpoint Architecture",
-        annotations=annotations,
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        showlegend=False,
-        height=400,
-        plot_bgcolor='#F8F9FA'
-    )
-    
-    return fig
-
-# Create SageMaker Studio VPC diagram
-def generate_studio_vpc_diagram():
-    # Create a diagram showing Studio in private VPC
-    
-    # Simplified architecture for visualization
-    fig = go.Figure()
-    
-    # Define the components
-    components = [
-        {"name": "User", "x": 0, "y": 0, "color": "#232F3E"},
-        {"name": "VPC Boundary", "x": 2, "y": 0, "color": "#232F3E", "width": 4, "height": 4},
-        {"name": "Private Subnet", "x": 2.5, "y": 0, "color": "#FF9900", "width": 3, "height": 3},
-        {"name": "SageMaker Studio", "x": 2.5, "y": 0, "color": "#00A1C9"},
-        {"name": "Amazon EFS", "x": 4, "y": 1, "color": "#C94700"},
-        {"name": "VPC Endpoint (S3)", "x": 1.5, "y": 1.5, "color": "#1D8102"},
-        {"name": "VPC Endpoint (API)", "x": 1.5, "y": 0.5, "color": "#1D8102"},
-        {"name": "VPC Endpoint (Runtime)", "x": 1.5, "y": -0.5, "color": "#1D8102"}
-    ]
-    
-    # Draw boxes for VPC and subnet
-    fig.add_shape(
-        type="rect",
-        x0=0.5, y0=-2, x1=4.5, y1=2,
-        line=dict(color="#232F3E", width=2),
-        fillcolor="rgba(35, 47, 62, 0.1)",
-        layer="below"
-    )
-    
-    fig.add_shape(
-        type="rect",
-        x0=1, y0=-1.5, x1=4, y1=1.5,
-        line=dict(color="#FF9900", width=2),
-        fillcolor="rgba(255, 153, 0, 0.1)",
-        layer="below"
-    )
-    
-    # Add components as nodes
-    for comp in components:
-        if comp["name"] in ["VPC Boundary", "Private Subnet"]:
-            continue
-            
-        fig.add_trace(go.Scatter(
-            x=[comp["x"]], 
-            y=[comp["y"]],
-            mode="markers+text",
-            marker=dict(size=30, color=comp["color"]),
-            text=[comp["name"]],
-            textposition="bottom center",
-            name=comp["name"]
-        ))
-    
-    # Add connections
-    connections = [
-        (0, 6), (6, 3), (0, 5), (5, 3), (0, 7), (7, 3), (3, 4)
-    ]
-    
-    for source, target in connections:
-        fig.add_trace(go.Scatter(
-            x=[components[source]["x"], components[target]["x"]],
-            y=[components[source]["y"], components[target]["y"]],
-            mode="lines",
-            line=dict(width=1.5, color="#232F3E", dash="dot"),
-            showlegend=False
-        ))
-    
-    # Add labels
-    fig.add_annotation(
-        x=0.75, y=2.1,
-        text="Customer VPC",
-        showarrow=False,
-        font=dict(size=14, color="#232F3E")
-    )
-    
-    fig.add_annotation(
-        x=1.25, y=1.6,
-        text="Private Subnet",
-        showarrow=False,
-        font=dict(size=12, color="#FF9900")
-    )
-    
-    # Update layout
-    fig.update_layout(
-        title="SageMaker Studio in Private VPC Architecture",
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 5]),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-2.5, 2.5]),
-        showlegend=False,
-        height=600,
-        plot_bgcolor='#F8F9FA'
-    )
-    
-    return fig
 
 # Questions for the knowledge check
 def get_knowledge_check_questions():
@@ -507,8 +294,7 @@ def render_home():
     st.markdown("### Amazon VPC and SageMaker Architecture")
     
     # Display a simplified VPC diagram
-    vpc_diagram = generate_vpc_diagram()
-    st.plotly_chart(vpc_diagram, use_container_width=True)
+    st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2020/10/21/2-studio-architecture-vpc.jpg")
     
     st.markdown("""
     ### Setting up VPC for SageMaker - Basic Configuration
@@ -587,8 +373,7 @@ def render_endpoints():
     
     # Display the endpoint connectivity diagram
     st.subheader("SageMaker VPC Endpoint Architecture")
-    endpoint_diagram = generate_endpoint_diagram()
-    st.plotly_chart(endpoint_diagram, use_container_width=True)
+    st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2023/08/29/sagemaker_domain_vpc_only.png")
     
     # Create columns for required endpoints
     st.subheader("Required SageMaker VPC Endpoints")
@@ -727,8 +512,7 @@ def render_studio():
     
     # Display architecture diagram
     st.subheader("Architecture: SageMaker Studio in Private VPC")
-    studio_vpc_diagram = generate_studio_vpc_diagram()
-    st.plotly_chart(studio_vpc_diagram, use_container_width=True)
+    st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2020/10/21/7-Final_Deployment.jpg")
     
     # Required VPC endpoints for Studio
     st.subheader("Required VPC Endpoints for SageMaker Studio")

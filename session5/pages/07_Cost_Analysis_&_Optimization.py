@@ -184,7 +184,7 @@ for result in response['ResultsByTime']:
         
         with col2:
             # Example Cost Explorer visualization
-            st.image("https://d1.awsstatic.com/products/costmanagement/ce-sample-dash.cc87ee2076b1b631f8a207804204bc728ae691b0.png", 
+            st.image("https://media.amazonwebservices.com/blog/2017/ce_default_view_1.png", 
                     caption="AWS Cost Explorer Dashboard", 
                     use_container_width=True)
     
@@ -192,7 +192,7 @@ for result in response['ResultsByTime']:
     with cost_tools_tabs[1]:
         st.subheader("AWS Budgets")
         
-        col1, col2 = st.columns([3, 2])
+        col1, col2 = st.columns([2, 2])
         
         with col1:
             st.markdown("""
@@ -253,7 +253,7 @@ response = budgets_client.create_budget(
         
         with col2:
             # Example Budgets visualization
-            st.image("https://docs.aws.amazon.com/images/cost-management/latest/userguide/images/AWSBudgets_Dashboard.png", 
+            st.image("https://d2908q01vomqb2.cloudfront.net/2e01e17467891f7c933dbaa00e1459d23db3fe4f/2019/07/05/2-aws-budgets-dashboard-1024x278.png", 
                     caption="AWS Budgets Dashboard", 
                     use_container_width=True)
     
@@ -303,7 +303,7 @@ ORDER BY
         
         with col2:
             # Example CUR visualization
-            st.image("https://d2908q01vomqb2.cloudfront.net/77de68daecd823babbb58edb1c8e14d7106e83bb/2018/05/02/LakeFormationCosts-2_1.gif", 
+            st.image("https://d2908q01vomqb2.cloudfront.net/cb7a1d775e800fd1ee4049f7dca9e041eb9ba083/2019/02/17/cost-and-usage-reports-1024x581.png", 
                     caption="AWS Cost & Usage Report Analysis", 
                     use_container_width=True)
     
@@ -352,7 +352,7 @@ for resource in response['result']['flaggedResources']:
         
         with col2:
             # Example Trusted Advisor dashboard
-            st.image("https://d1.awsstatic.com/product-marketing/AWS%20Support/Trusted-Advisor-screenshot.321d0a3a729b9d4468f24a005d53a0142998c952.png", 
+            st.image("https://s3.cn-north-1.amazonaws.com.cn/aws-dam-prod/Image_Thumbs/TrustedAdvisor/ConsoleVersion/Trusted%20Advisor%20Dasboard-china-rebranded.a9f4596fa4bb944ab63b3bb81702ad707d8f11a9.png", 
                     caption="AWS Trusted Advisor Dashboard", 
                     use_container_width=True)
     
@@ -465,7 +465,7 @@ response = mme.predict(
         
         with col2:
             # Visualization of Multi-Model Endpoints
-            st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2019/11/07/sagemaker-multimodel-2.gif", 
+            st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2021/05/11/1-2888-Architecture.jpg", 
                     caption="Multi-Model Endpoint Architecture", 
                     use_container_width=True)
             
@@ -554,7 +554,7 @@ response = predictor.predict(
         
         with col2:
             # Visualization of Multi-Container Endpoints
-            st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2021/10/13/Picture4-2.png", 
+            st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2022/10/21/ML-9275-image003.png", 
                     caption="Multi-Container Endpoint Architecture", 
                     use_container_width=True)
             
@@ -636,7 +636,7 @@ output_path = response["OutputPath"]
             
             with col2:
                 # Visualization of Asynchronous Inference
-                st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2021/01/05/1-Architecture.jpg", 
+                st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/async-architecture.png", 
                         caption="Asynchronous Inference Architecture", 
                         use_container_width=True)
                 
@@ -699,7 +699,7 @@ response = serverless_predictor.predict(
             
             with col2:
                 # Visualization of Serverless Inference
-                st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2021/12/08/ML-4337-image001.png", 
+                st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2022/10/21/image001-9-1024x468.png", 
                         caption="Serverless Inference Architecture", 
                         use_container_width=True)
                 
@@ -785,7 +785,7 @@ predictor = model.deploy(
         
         with col2:
             # Visualization of AWS Inferentia
-            st.image("https://d2908q01vomqb2.cloudfront.net/77de68daecd823babbb58edb1c8e14d7106e83bb/2019/12/03/Untitled-5.png", 
+            st.image("https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2023/04/02/inf1_vs_inf2_updated2.png", 
                     caption="AWS Inferentia Workflow", 
                     use_container_width=True)
             
@@ -874,7 +874,7 @@ predictor = model.deploy(
         
         with col2:
             # Visualization of SageMaker Neo
-            st.image("https://d1.awsstatic.com/diagrams/product-page-diagrams_Amazon-Sagemaker-Neo_How-it-Works.4a484c26d8712b2a25a7fe1c17f02e01197c8dd9.png", 
+            st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/neo/neo_how_it_works.png", 
                     caption="SageMaker Neo Workflow", 
                     use_container_width=True)
             

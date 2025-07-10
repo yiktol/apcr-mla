@@ -985,81 +985,57 @@ def create_recommendation_visualization(results):
         "weights_chart": weights_fig
     }
 
-
-def create_inference_recommender_architecture():
+def create_inference_recommender_architecture_mermaid():
     """
-    Create a visualization of SageMaker Inference Recommender architecture
+    Create a Mermaid visualization of SageMaker Inference Recommender architecture
     """
-    G = nx.DiGraph()
-    
-    # Add nodes
-    G.add_node("Model", type="model", color="#00A1C9")
-    G.add_node("Inference Recommender", type="service", color="#FF9900")
-    G.add_node("Instance Recommendations", type="recommendations", color="#59BA47")
-    G.add_node("Default Job", type="job", color="#232F3E")
-    G.add_node("Advanced Job", type="job", color="#232F3E")
-    G.add_node("Model Registry", type="registry", color="#D13212")
-    G.add_node("CPU Instances", type="instances", color="#545B64")
-    G.add_node("GPU Instances", type="instances", color="#545B64")
-    G.add_node("Inferentia", type="instances", color="#545B64")
-    G.add_node("Load Tests", type="test", color="#8C51A5")
-    G.add_node("Traffic Patterns", type="patterns", color="#8C51A5")
-    
-    # Add edges
-    G.add_edge("Model", "Inference Recommender")
-    G.add_edge("Model Registry", "Inference Recommender")
-    G.add_edge("Inference Recommender", "Default Job")
-    G.add_edge("Inference Recommender", "Advanced Job")
-    G.add_edge("Default Job", "Instance Recommendations")
-    G.add_edge("Advanced Job", "Instance Recommendations")
-    G.add_edge("CPU Instances", "Default Job")
-    G.add_edge("GPU Instances", "Default Job")
-    G.add_edge("Inferentia", "Default Job")
-    G.add_edge("CPU Instances", "Advanced Job")
-    G.add_edge("GPU Instances", "Advanced Job")
-    G.add_edge("Inferentia", "Advanced Job")
-    G.add_edge("Load Tests", "Advanced Job")
-    G.add_edge("Traffic Patterns", "Advanced Job")
-    
-    # Define position layout
-    pos = {
-        "Model": (0, 6),
-        "Model Registry": (0, 4),
-        "Inference Recommender": (3, 5),
-        "Default Job": (6, 6),
-        "Advanced Job": (6, 4),
-        "Instance Recommendations": (9, 5),
-        "CPU Instances": (3, 8),
-        "GPU Instances": (5, 8),
-        "Inferentia": (7, 8),
-        "Load Tests": (3, 2),
-        "Traffic Patterns": (7, 2)
-    }
-    
-    return G, pos
-
-
-def draw_architecture_diagram(G, pos):
+    mermaid_code = """
+    flowchart TD
+        %% Define nodes with styling
+        M[Model]:::model
+        MR[Model Registry]:::registry
+        IR[Inference Recommender]:::service
+        DJ[Default Job]:::job
+        AJ[Advanced Job]:::job
+        REC[Instance Recommendations]:::recommendations
+        CPU[CPU Instances]:::instances
+        GPU[GPU Instances]:::instances
+        INF[Inferentia]:::instances
+        LT[Load Tests]:::test
+        TP[Traffic Patterns]:::patterns
+        
+        %% Define flows
+        M --> IR
+        MR --> IR
+        IR --> DJ
+        IR --> AJ
+        DJ --> REC
+        AJ --> REC
+        
+        %% Instance types to jobs
+        CPU --> DJ
+        GPU --> DJ
+        INF --> DJ
+        CPU --> AJ
+        GPU --> AJ
+        INF --> AJ
+        
+        %% Advanced job inputs
+        LT --> AJ
+        TP --> AJ
+        
+        %% Style definitions
+        classDef model fill:#00A1C9,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef service fill:#FF9900,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef recommendations fill:#59BA47,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef job fill:#232F3E,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef registry fill:#D13212,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef instances fill:#545B64,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef test fill:#8C51A5,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef patterns fill:#8C51A5,stroke:#ffffff,stroke-width:2px,color:#ffffff
     """
-    Draw the architecture diagram
-    """
-    plt.figure(figsize=(12, 8))
     
-    # Draw nodes
-    node_colors = [G.nodes[n]['color'] for n in G.nodes()]
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=1500, alpha=0.8)
-    
-    # Draw edges
-    nx.draw_networkx_edges(G, pos, arrows=True, arrowsize=20, width=2.0, alpha=0.7, arrowstyle='->', edge_color='#aaaaaa')
-    
-    # Draw labels
-    nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold', font_color='white')
-    
-    plt.axis('off')
-    plt.tight_layout()
-    
-    return plt.gcf()
-
+    return mermaid_code.strip()
 
 # Main application
 def main():
@@ -1362,16 +1338,16 @@ def main():
         
         with col2:
             # Load graphics illustrating the concept
-            st.image("https://d1.awsstatic.com/re19/Sagemaker/SageMaker-Inference-Recommender.ef2fbd5b3a1ff4672318b215fc501d0a962741f9.png", 
+            st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/inference-workflow-flowchart.png", 
                      use_container_width=True)
             st.caption("Amazon SageMaker Inference Recommender workflow")
         
         st.subheader("How It Works")
         
-        # Architecture diagram
-        G, pos = create_inference_recommender_architecture()
-        fig = draw_architecture_diagram(G, pos)
-        st.pyplot(fig)
+        # Create and display the Mermaid diagram
+        st.caption("SageMaker Inference Recommender Architecture")
+        mermaid_code = create_inference_recommender_architecture_mermaid()
+        common.mermaid(mermaid_code, height=300)
         
         # Three columns for three steps
         col1, col2, col3 = st.columns(3)
@@ -1760,7 +1736,7 @@ def main():
         
         with col2:
             # Illustration of recommendation workflow
-            st.image("https://d1.awsstatic.com/products/sagemaker/inference-recommender-architecture.5225972a3c9ca5a2a58bd2229f145f0b0d96c2e6.png", 
+            st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/inference-workflow-flowchart.png", 
                      caption="SageMaker Inference Recommender Workflow", use_container_width=True)
         
         # Job types comparison

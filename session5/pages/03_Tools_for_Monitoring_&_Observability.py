@@ -643,7 +643,7 @@ def render_cloudwatch_tab():
     st.markdown("## Amazon CloudWatch")
     
     # CloudWatch description
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown("""
@@ -658,7 +658,7 @@ def render_cloudwatch_tab():
         """)
     
     with col2:
-        st.image("https://d1.awsstatic.com/products/CloudWatch/product-page-diagram-CloudWatch_v4.1f8e6d166d0c53a44bfcb8b827dde4e00.jpg", caption="CloudWatch Overview")
+        st.image("https://a.b.cdn.console.awsstatic.com/a/v1/SFDY4PQTWRNTJQ5KTW6VW6Z6THSOLCLPHS7NO6OFRDSGBZD4GGYA/5e63dd42cb2b2b50e66e.svg", caption="CloudWatch Overview")
     
     # CloudWatch key features
     st.markdown("""
@@ -823,7 +823,7 @@ def render_xray_tab():
     st.markdown("## AWS X-Ray")
     
     # X-Ray description
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown("""
@@ -837,7 +837,7 @@ def render_xray_tab():
         """)
     
     with col2:
-        st.image("https://d1.awsstatic.com/products/xray/product-page-diagram_aws-xray_how-it-works.70b62a58e646ae3c7b97292aa9243c385e43262d.png", caption="X-Ray Overview")
+        st.image("https://docs.aws.amazon.com/images/xray/latest/devguide/images/xray-how-it-works.png", caption="X-Ray Overview")
     
     # X-Ray key features
     st.markdown("""
@@ -1068,7 +1068,7 @@ def render_cloudtrail_tab():
     st.markdown("## AWS CloudTrail")
     
     # CloudTrail description
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown("""
@@ -1083,7 +1083,7 @@ def render_cloudtrail_tab():
         """)
     
     with col2:
-        st.image("https://d1.awsstatic.com/products/cloudtrail/product-page-diagram_AWS-CloudTrail_how-it-works.d314964834a3ff50b50b29940469b2a1f7fca23d.png", caption="CloudTrail Overview")
+        st.image("https://maturitymodel.security.aws.dev/en/CloudTrail.png", caption="CloudTrail Overview")
     
     # CloudTrail key features
     st.markdown("""
@@ -1241,7 +1241,7 @@ def render_eventbridge_tab():
     st.markdown("## Amazon EventBridge")
     
     # EventBridge description
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown("""
@@ -1256,7 +1256,7 @@ def render_eventbridge_tab():
         """)
     
     with col2:
-        st.image("https://d1.awsstatic.com/products/eventbridge/Product-Page-Diagram_Amazon-EventBridge_How-it-Works.67b72c0e5467ce55a82e45ca9b2b318a64e9fcb6.png", caption="EventBridge Overview")
+        st.image("https://d2908q01vomqb2.cloudfront.net/1b6453892473a467d07372d45eb05abc2031647a/2020/01/31/eventbridge-content-filtering-1.png", caption="EventBridge Overview")
     
     # EventBridge key features
     st.markdown("""
@@ -1509,7 +1509,7 @@ def render_quicksight_tab():
     st.markdown("## Amazon QuickSight")
     
     # QuickSight description
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown("""
@@ -1524,7 +1524,7 @@ def render_quicksight_tab():
         """)
     
     with col2:
-        st.image("https://d1.awsstatic.com/products/quicksight/product-page-diagram_Amazon-QuickSight-Enterprise-Edition_How-it-Works.b89003855f32dbcf4a124b298b935a9293227ab5.png", caption="QuickSight Overview")
+        st.image("https://docs.aws.amazon.com/images/quicksight/latest/user/images/quicksight-workflow-overview.png", caption="QuickSight Overview")
     
     # QuickSight key features
     st.markdown("""

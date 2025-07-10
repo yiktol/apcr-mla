@@ -644,150 +644,60 @@ def create_monitor_dashboard(test_results):
     }
 
 
-def create_monitor_architecture():
+def create_monitor_architecture_mermaid():
     """
-    Create a visualization of SageMaker Model Monitor architecture
+    Create a Mermaid visualization of SageMaker Model Monitor architecture
     """
-    G = nx.DiGraph()
-    
-    # Add nodes
-    G.add_node("Training Data", type="data", color="#00A1C9")
-    G.add_node("Model Training", type="process", color="#FF9900")
-    G.add_node("Baseline Statistics", type="data", color="#00A1C9")
-    G.add_node("Constraints", type="data", color="#00A1C9")
-    G.add_node("Trained Model", type="model", color="#59BA47")
-    G.add_node("SageMaker Endpoint", type="endpoint", color="#232F3E")
-    G.add_node("Inference Requests", type="data", color="#00A1C9")
-    G.add_node("Inference Responses", type="data", color="#00A1C9")
-    G.add_node("Captured Data", type="data", color="#00A1C9")
-    G.add_node("Model Monitor", type="monitor", color="#D13212")
-    G.add_node("Data Quality", type="metric", color="#545B64")
-    G.add_node("Model Quality", type="metric", color="#545B64")
-    G.add_node("Bias Drift", type="metric", color="#545B64")
-    G.add_node("Feature Attribution", type="metric", color="#545B64")
-    G.add_node("CloudWatch Alerts", type="alert", color="#FF9900")
-    
-    # Add edges
-    G.add_edge("Training Data", "Model Training")
-    G.add_edge("Model Training", "Trained Model")
-    G.add_edge("Training Data", "Baseline Statistics")
-    G.add_edge("Baseline Statistics", "Constraints")
-    G.add_edge("Trained Model", "SageMaker Endpoint")
-    G.add_edge("Inference Requests", "SageMaker Endpoint")
-    G.add_edge("SageMaker Endpoint", "Inference Responses")
-    G.add_edge("SageMaker Endpoint", "Captured Data")
-    G.add_edge("Captured Data", "Model Monitor")
-    G.add_edge("Constraints", "Model Monitor")
-    G.add_edge("Model Monitor", "Data Quality")
-    G.add_edge("Model Monitor", "Model Quality")
-    G.add_edge("Model Monitor", "Bias Drift")
-    G.add_edge("Model Monitor", "Feature Attribution")
-    G.add_edge("Data Quality", "CloudWatch Alerts")
-    G.add_edge("Model Quality", "CloudWatch Alerts")
-    G.add_edge("Bias Drift", "CloudWatch Alerts")
-    G.add_edge("Feature Attribution", "CloudWatch Alerts")
-    
-    return G
-
-
-def draw_monitor_architecture(G):
-    """
-    Draw the SageMaker Model Monitor architecture
-    """
-    plt.figure(figsize=(14, 10))
-    
-    # Define positions for nodes
-    pos = {
-        "Training Data": (1, 8),
-        "Model Training": (3, 8),
-        "Trained Model": (5, 8),
-        "SageMaker Endpoint": (7, 8),
-        "Baseline Statistics": (1, 6),
-        "Constraints": (3, 6),
-        "Inference Requests": (7, 10),
-        "Inference Responses": (9, 8),
-        "Captured Data": (7, 6),
-        "Model Monitor": (5, 4),
-        "Data Quality": (3, 2),
-        "Model Quality": (5, 2),
-        "Bias Drift": (7, 2),
-        "Feature Attribution": (9, 2),
-        "CloudWatch Alerts": (6, 0),
-    }
-    
-    # Get node types and colors
-    node_colors = [G.nodes[n]['color'] for n in G.nodes()]
-    
-    # Create node shapes dictionary
-    node_shapes = {
-        "data": "s",  # square
-        "process": "o",  # circle
-        "model": "h",  # hexagon
-        "endpoint": "d",  # diamond
-        "monitor": "^",  # triangle up
-        "metric": "p",  # pentagon
-        "alert": "*",  # star
-    }
-    
-    # Draw the graph components grouped by node type
-    for node_type, shape in node_shapes.items():
-        # Filter nodes of this type
-        nodes = [n for n in G.nodes() if G.nodes[n]['type'] == node_type]
-        if not nodes:
-            continue
-            
-        # Get positions and colors for this node type
-        pos_subset = {n: pos[n] for n in nodes}
-        color_subset = [G.nodes[n]['color'] for n in nodes]
+    mermaid_code = """
+    flowchart TD
+        %% Define nodes with styling
+        TD[Training Data]:::data
+        MT[Model Training]:::process
+        TM[Trained Model]:::model
+        SE[SageMaker Endpoint]:::endpoint
+        BS[Baseline Statistics]:::data
+        CO[Constraints]:::data
+        IR[Inference Requests]:::data
+        IRP[Inference Responses]:::data
+        CD[Captured Data]:::data
+        MM[Model Monitor]:::monitor
+        DQ[Data Quality]:::metric
+        MQ[Model Quality]:::metric
+        BD[Bias Drift]:::metric
+        FA[Feature Attribution]:::metric
+        CW[CloudWatch Alerts]:::alert
         
-        # Draw nodes of this type
-        nx.draw_networkx_nodes(
-            G, pos_subset, 
-            nodelist=nodes,
-            node_color=color_subset, 
-            node_shape=shape,
-            node_size=2000
-        )
+        %% Define flows
+        TD --> MT
+        MT --> TM
+        TD --> BS
+        BS --> CO
+        TM --> SE
+        IR --> SE
+        SE --> IRP
+        SE --> CD
+        CD --> MM
+        CO --> MM
+        MM --> DQ
+        MM --> MQ
+        MM --> BD
+        MM --> FA
+        DQ --> CW
+        MQ --> CW
+        BD --> CW
+        FA --> CW
+        
+        %% Style definitions
+        classDef data fill:#00A1C9,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef process fill:#FF9900,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef model fill:#59BA47,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef endpoint fill:#232F3E,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef monitor fill:#D13212,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef metric fill:#545B64,stroke:#ffffff,stroke-width:2px,color:#ffffff
+        classDef alert fill:#FF9900,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    """
     
-    # Draw edges
-    nx.draw_networkx_edges(
-        G, pos, 
-        edge_color='#aaaaaa', 
-        width=1.5,
-        arrowsize=20,
-        arrowstyle='->'
-    )
-    
-    # Draw node labels
-    nx.draw_networkx_labels(
-        G, pos, 
-        font_size=12, 
-        font_weight='bold',
-        font_color='white'
-    )
-    
-    # Add a legend for node types
-    legend_shapes = []
-    legend_labels = []
-    
-    for node_type, shape in node_shapes.items():
-        # Check if this node type exists in the graph
-        if any(G.nodes[n]['type'] == node_type for n in G.nodes()):
-            # Find a color for this node type
-            color = next((G.nodes[n]['color'] for n in G.nodes() if G.nodes[n]['type'] == node_type), '#000000')
-            
-            legend_shapes.append(
-                plt.Line2D([0], [0], marker=shape, color='w', markerfacecolor=color, markersize=15, label=node_type.title())
-            )
-            legend_labels.append(node_type.title())
-    
-    plt.legend(legend_shapes, legend_labels, loc='upper right', fontsize=12)
-    
-    plt.title("Amazon SageMaker Model Monitor Architecture", fontsize=18)
-    plt.axis('off')
-    plt.tight_layout()
-    
-    return plt.gcf()
+    return mermaid_code.strip()
 
 
 # Main application
@@ -1053,11 +963,11 @@ def main():
             """, unsafe_allow_html=True)
         
         with col2:
-            # Monitoring diagram
-            monitoring_architecture = create_monitor_architecture()
-            fig = draw_monitor_architecture(monitoring_architecture)
-            st.pyplot(fig)
+            # Create and display the Mermaid diagram
+            mermaid_code = create_monitor_architecture_mermaid()
             st.caption("SageMaker Model Monitor Architecture")
+            common.mermaid(mermaid_code, height=500)
+            
         
         st.subheader("How SageMaker Model Monitor Works")
         
