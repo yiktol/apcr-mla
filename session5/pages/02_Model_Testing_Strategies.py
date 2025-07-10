@@ -230,7 +230,6 @@ def render_sidebar():
 
 def render_introduction_tab(aws_colors):
     """Render the Introduction tab content."""
-    st.title("Model Testing Strategies")
     
     col1, col2 = st.columns([2,1])
     
@@ -302,7 +301,6 @@ def render_introduction_tab(aws_colors):
 
 def render_challenger_shadow_tab(aws_colors):
     """Render the Challenger/Shadow Testing tab content."""
-    st.title("Challenger/Shadow Testing")
     
     col1, col2 = st.columns([3,2])
     
@@ -498,8 +496,7 @@ def log_model_comparison(input_data, prod_result, shadow_result):
 
 def render_ab_testing_tab(aws_colors):
     """Render the A/B Testing tab content."""
-    st.title("A/B Testing")
-    
+
     col1, col2 = st.columns([3,2])
     
     with col1:
@@ -689,7 +686,6 @@ def render_ab_testing_tab(aws_colors):
 
 def render_implementation_tab():
     """Render the Implementation tab content."""
-    st.title("Implementation in AWS SageMaker")
     
     st.markdown("""
     ## Setting Up Model Testing in AWS SageMaker
@@ -1131,7 +1127,6 @@ if __name__ == "__main__":
 
 def render_visualization_tab(aws_colors):
     """Render the Visualization tab content."""
-    st.title("Visualizing Model Performance")
     
     st.markdown("""
     ## Performance Visualization for Model Testing
@@ -1778,6 +1773,9 @@ def main():
     # Configure page and styling
     aws_colors = configure_page()
     
+    st.title("Model Testing Strategies")
+
+
     # Initialize session
     initialize_session()
     
@@ -1817,5 +1815,14 @@ def main():
     render_footer()
 
 
+# Main execution flow
 if __name__ == "__main__":
-    main()
+    if 'localhost' in st.context.headers["host"]:
+        main()
+    else:
+        # First check authentication
+        is_authenticated = authenticate.login()
+        
+        # If authenticated, show the main app content
+        if is_authenticated:
+            main()

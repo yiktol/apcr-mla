@@ -247,7 +247,7 @@ def show_home_page():
     </div>
     """, unsafe_allow_html=True)
     
-    st.image("https://d1.awsstatic.com/sagemaker/sagemaker-technical-overview.2dc4c5bf8883e2dc408ab8511661bf0ecc8a1cbe.png", 
+    st.image("images/ml-infra.png", 
              caption="AWS ML Infrastructure Overview")
 
 def generate_sagemaker_endpoint_metrics(days=7):
@@ -426,7 +426,7 @@ def show_sagemaker_autoscaling():
     # SageMaker Autoscaling Architecture
     st.markdown("### SageMaker Autoscaling Architecture")
     
-    st.image("https://d1.awsstatic.com/re19/Diagram_SageMaker-Training-and-Deployment_How-it-Works.c7f95757a12c97eff12edef1a5dc25b82abc186e.png", 
+    st.image("https://d2908q01vomqb2.cloudfront.net/f1f836cb4ea6efb2a0b1b99f41ad8b103eff4b59/2020/11/26/Configuring-autoscaling-inference-1.jpg", 
              caption="SageMaker Endpoint Architecture with Autoscaling")
     
     col1, col2 = st.columns(2)
@@ -744,7 +744,7 @@ def show_aws_container_services():
     # Overview of container components
     st.markdown("### AWS Container Service Components")
     
-    st.image("https://d1.awsstatic.com/diagrams/product-page-diagrams/product-page-diagram_ECS-EC2-DevOps_2x.0e5251c0c32a936fb19c9842bb030ce46492bd38.png",
+    st.image("https://docs.aws.amazon.com/images/decision-guides/latest/containers-on-aws-how-to-choose/images/container-options-on-aws.png",
              caption="AWS Container Services Overview")
     
     # Service selection
@@ -1242,7 +1242,7 @@ def show_iac_for_ml():
         - Stack sets for multi-account/multi-region deployments
         """)
         
-        st.image("https://d1.awsstatic.com/Products/product-name/diagrams/cloudformation-how-it-works-diagram.040048a9ba773d3a8b6dd9a90dbdcfaea2be45ef.png",
+        st.image("https://docs.aws.amazon.com/images/AWSCloudFormation/latest/UserGuide/images/create-stack-diagram.png",
                 caption="AWS CloudFormation Workflow")
         
         st.markdown("#### Example CloudFormation Template for SageMaker Endpoint")
@@ -1363,7 +1363,7 @@ Outputs:
         - Integration with AWS best practices
         """)
         
-        st.image("https://d2908q01vomqb2.cloudfront.net/7719a1c782a1ba91c031a682a0a2f8658209adbf/2020/11/04/Mapping-the-path-image-1.png",
+        st.image("https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2Fau2qktn71vp13wf3bjuv.png",
                 caption="AWS CDK Architecture Workflow")
         
         st.markdown("#### Example AWS CDK Code for SageMaker Endpoint (Python)")

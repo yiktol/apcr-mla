@@ -80,7 +80,7 @@ if [ "$(id -u)" -eq 0 ] && [ -n "$APP_USER" ]; then
 fi
 
 # Derived values
-VENV_PATH="${DIRECTORY}/.env"
+VENV_PATH="${DIRECTORY}/.venv"
 REQUIREMENTS_PATH="${DIRECTORY}/${REQUIREMENTS_FILE}"
 PID_FILE="${DIRECTORY}/pid"
 LOG_DIR="${DIRECTORY}/log"

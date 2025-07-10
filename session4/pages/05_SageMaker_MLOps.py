@@ -217,48 +217,29 @@ def home_page():
     
     st.markdown('<div class="sub-header">MLOps Workflow Stages</div>', unsafe_allow_html=True)
     
-    # Create a timeline of the MLOps stages
-    timeline_data = pd.DataFrame({
-        "Stage": ["Data Preparation", "Model Build", "Model Evaluation", "Model Selection", "Deployment", "Monitoring"],
-        "Description": [
-            "Prepare and transform data for training",
-            "Build and train machine learning models",
-            "Evaluate model performance with metrics",
-            "Select the best-performing model",
-            "Deploy models to production environments",
-            "Monitor model performance and data drift"
-        ],
-        "Order": [1, 2, 3, 4, 5, 6]
-    })
-    
-    # Create horizontal timeline with Altair
-    timeline_chart = alt.Chart(timeline_data).mark_circle(size=300).encode(
-        x=alt.X('Order:O', axis=alt.Axis(title=None, labelAngle=0, grid=False),
-               scale=alt.Scale(domain=list(range(1, 7)))),
-        y=alt.Y('Stage:N', axis=None),
-        color=alt.Color('Stage:N', scale=alt.Scale(
-            domain=timeline_data['Stage'].tolist(),
-            range=[AWS_COLORS['orange'], AWS_COLORS['light_blue'], AWS_COLORS['teal'], 
-                  AWS_COLORS['green'], AWS_COLORS['purple'], AWS_COLORS['red']]
-        ), legend=None),
-        tooltip=['Stage', 'Description']
-    ).properties(height=100)
-    
-    # Add text labels
-    text_chart = alt.Chart(timeline_data).mark_text(dy=20, fontSize=14).encode(
-        x=alt.X('Order:O'),
-        y=alt.Y('Stage:N'),
-        text='Stage:N'
-    )
-    
-    # Combine the charts
-    complete_chart = (timeline_chart + text_chart).properties(
-        title='MLOps Workflow Stages'
-    ).configure_view(
-        strokeWidth=0
-    )
-    
-    st.altair_chart(complete_chart, use_container_width=True)
+    common.mermaid("""
+    graph LR
+        A[Data Preparation<br/>Prepare and transform data for training] --> B[Model Build<br/>Build and train machine learning models]
+        B --> C[Model Evaluation<br/>Evaluate model performance with metrics]
+        C --> D[Model Selection<br/>Select the best-performing model]
+        D --> E[Deployment<br/>Deploy models to production environments]
+        E --> F[Monitoring<br/>Monitor model performance and data drift]
+        
+        %% Styling
+        classDef stage1 fill:#ff9900,stroke:#333,stroke-width:2px,color:#fff
+        classDef stage2 fill:#87ceeb,stroke:#333,stroke-width:2px,color:#000
+        classDef stage3 fill:#20b2aa,stroke:#333,stroke-width:2px,color:#fff
+        classDef stage4 fill:#32cd32,stroke:#333,stroke-width:2px,color:#000
+        classDef stage5 fill:#9370db,stroke:#333,stroke-width:2px,color:#fff
+        classDef stage6 fill:#dc143c,stroke:#333,stroke-width:2px,color:#fff
+        
+        class A stage1
+        class B stage2
+        class C stage3
+        class D stage4
+        class E stage5
+        class F stage6
+                   """, height=100, show_controls=False)
     
     # MLOps benefits section
     st.markdown('<div class="sub-header">Benefits of MLOps with Amazon SageMaker</div>', unsafe_allow_html=True)
@@ -637,7 +618,7 @@ if __name__ == '__main__':
         """)
         
         # Feature store architecture diagram
-        st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/feature-store-architecture.png",
+        st.image("images/feature-store-intro-diagram.png",
                 caption="SageMaker Feature Store Architecture")
         
         st.markdown("### Creating a Feature Group")
@@ -1399,7 +1380,7 @@ deepar_estimator.fit({"train": "s3://my-bucket/data/train",
         - Reproduce past experiments with exact configurations
         """)
         
-        st.image("https://docs.aws.amazon.com/images/sagemaker/latest/dg/images/experiments/experiments-components.png",
+        st.image("images/sagemaker-experiment.png",
                 caption="SageMaker Experiments Structure", width=700)
         
         # Experiment tracking example
