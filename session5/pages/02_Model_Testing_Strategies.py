@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,6 +12,10 @@ import plotly.graph_objects as go
 import io
 import base64
 import json
+import utils.common as common
+import utils.authenticate as authenticate
+from scipy.stats import norm
+
 
 # Set page configuration
 st.set_page_config(
@@ -22,140 +25,211 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# AWS Color Scheme
-AWS_COLORS = {
-    "orange": "#FF9900",
-    "dark_blue": "#232F3E",
-    "light_blue": "#1A73E8",
-    "teal": "#00A1C9",
-    "light_gray": "#F2F3F3",
-    "medium_gray": "#D5DBDB",
-    "dark_gray": "#545B64",
-    "green": "#3B7A57",
-    "red": "#D13212"
-}
+def configure_page():
+    """Configure Streamlit page settings and custom CSS styling."""
 
-# Custom CSS
-def apply_custom_css():
+    # AWS Color Scheme
+    aws_colors = {
+        "orange": "#FF9900",
+        "teal": "#00A1C9", 
+        "blue": "#232F3E",
+        "gray": "#E9ECEF",
+        "light_gray": "#F8F9FA",
+        "white": "#FFFFFF",
+        "dark_gray": "#545B64",
+        "green": "#59BA47",
+        "red": "#D13212"
+    }
+
+    # Custom CSS for styling
     st.markdown("""
     <style>
-    .main {
-        background-color: #FFFFFF;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #F2F3F3;
-        border-radius: 4px 4px 0px 0px;
-        padding: 10px 16px;
-        font-weight: 500;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FF9900 !important;
-        color: white !important;
-    }
-    h1, h2, h3, h4 {
-        color: #232F3E;
-    }
-    .stButton>button {
-        background-color: #FF9900;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 8px 16px;
-    }
-    .stButton>button:hover {
-        background-color: #EC7211;
-    }
-    .highlight {
-        background-color: #F2F3F3;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #FF9900;
-    }
-    .aws-card {
-        border: 1px solid #D5DBDB;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .success-box {
-        background-color: rgba(59, 122, 87, 0.1);
-        border-left: 5px solid #3B7A57;
-        padding: 10px;
-        border-radius: 5px;
-    }
-    .error-box {
-        background-color: rgba(209, 50, 18, 0.1);
-        border-left: 5px solid #D13212;
-        padding: 10px;
-        border-radius: 5px;
-    }
-    .code-box {
-        background-color: #232F3E;
-        color: white;
-        padding: 10px;
-        border-radius: 5px;
-        font-family: monospace;
-        overflow-x: auto;
-    }
+        .main {
+            background-color: #F8F9FA;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: #F8F9FA;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 60px;
+            white-space: pre-wrap;
+            border-radius: 6px;
+            font-weight: 600;
+            background-color: #FFFFFF;
+            color: #232F3E;
+            border: 1px solid #E9ECEF;
+            padding: 5px 15px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #FF9900 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #FF9900 !important;
+        }
+        .stButton button {
+            background-color: #FF9900;
+            color: white;
+            border-radius: 4px;
+            border: none;
+            padding: 8px 16px;
+        }
+        .stButton button:hover {
+            background-color: #EC7211;
+        }
+        .info-box {
+            background-color: #E6F2FF;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #00A1C9;
+        }
+        .warning-box {
+            background-color: #FFF8E6;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #FF9900;
+        }
+        .code-box {
+            background-color: #232F3E;
+            color: #FFFFFF;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .metric-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            background-color: #232F3E;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+        }
+        h1, h2, h3 {
+            color: #232F3E;
+        }
+        .status-card {
+            border: 1px solid #E9ECEF;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #FFFFFF;
+            transition: transform 0.2s;
+        }
+        .status-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-1 {
+            border-left: 5px solid #59BA47;
+        }
+        .status-2 {
+            border-left: 5px solid #D13212;
+        }
+        .status-3 {
+            border-left: 5px solid #FF9900;
+        }
+        .metrics-table th {
+            font-weight: normal;
+            color: #545B64;
+        }
+        .metrics-table td {
+            font-weight: bold;
+        }
+        .stSlider [data-baseweb=slider] {
+            margin-top: 3rem;
+        }
+        .monitor-column {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .tooltip-header {
+            font-weight: bold;
+            text-decoration: underline;
+            display: inline-block;
+            color: #00A1C9;
+            cursor: help;
+        }
+        .main-header {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #FF9900;
+            margin-bottom: 1rem;
+        }
+        .sub-header {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #232F3E;
+            margin-top: 0.8rem;
+            margin-bottom: 0.3rem;
+        }
     </style>
     """, unsafe_allow_html=True)
+    
+    return aws_colors
+
 
 def initialize_session():
-    if 'session_id' not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())
-    
+    """Initialize session state variables."""
+    common.initialize_session_state()
+        
     if 'questions_answered' not in st.session_state:
         st.session_state.questions_answered = [False] * 5
         
     if 'show_answers' not in st.session_state:
         st.session_state.show_answers = False
 
-def reset_session():
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    initialize_session()
-    st.experimental_rerun()
 
-# Initialize session
-initialize_session()
+def render_sidebar():
+    """Render the sidebar with navigation and information."""
+    with st.sidebar:
+        common.render_sidebar()
+            
+        with st.expander("About this App", expanded=False):
+            st.markdown("""
+            This interactive learning application teaches model testing strategies in machine learning, 
+            focusing on AWS SageMaker implementations. Explore challenger/shadow deployment models and A/B testing 
+            with practical examples and visualizations. Test your knowledge with the built-in assessment.
+            
+            """)
 
-# Sidebar
-with st.sidebar:
-    st.image("https://d1.awsstatic.com/training-and-certification/certification-badges/AWS-Certified-Machine-Learning-Specialty_badge.69c72eb6587c05b613fe7ef896f79b3ce2918f90.png", width=100)
-    st.title("ML Testing Strategies")
-    
-    st.markdown(f"**Session ID**: {st.session_state.session_id[:8]}...")
-    
-    if st.button("Reset Session"):
-        reset_session()
-        
-    with st.expander("About this App", expanded=False):
-        st.markdown("""
-        This interactive learning application teaches model testing strategies in machine learning, 
-        focusing on AWS SageMaker implementations. Explore challenger/shadow deployment models and A/B testing 
-        with practical examples and visualizations. Test your knowledge with the built-in assessment.
-        
-        Created for AWS Partner Certification Readiness training.
-        """)
 
-# Create tabs for navigation
-tabs = st.tabs([
-    "🏠 Introduction", 
-    "🥊 Challenger/Shadow", 
-    "🔄 A/B Testing", 
-    "💻 Implementation", 
-    "📊 Visualization", 
-    "✅ Knowledge Check"
-])
-
-# Introduction tab
-with tabs[0]:
+def render_introduction_tab(aws_colors):
+    """Render the Introduction tab content."""
     st.title("Model Testing Strategies")
     
     col1, col2 = st.columns([2,1])
@@ -203,11 +277,7 @@ with tabs[0]:
             H --> B
         """
         
-        st.markdown(f"""
-        ```mermaid
-        {testing_flow}
-        ```
-        """)
+        common.mermaid(testing_flow)
         
         st.markdown("""
         ### Testing Flow
@@ -229,8 +299,9 @@ with tabs[0]:
     # Interactive element
     st.info("Navigate through the tabs above to learn about each testing strategy in detail!")
 
-# Challenger/Shadow Model tab
-with tabs[1]:
+
+def render_challenger_shadow_tab(aws_colors):
+    """Render the Challenger/Shadow Testing tab content."""
     st.title("Challenger/Shadow Testing")
     
     col1, col2 = st.columns([3,2])
@@ -275,11 +346,7 @@ with tabs[1]:
             E --> F
         """
         
-        st.markdown(f"""
-        ```mermaid
-        {shadow_diagram}
-        ```
-        """)
+        common.mermaid(shadow_diagram)
         
         st.markdown("""
         ### Shadow Model Flow
@@ -327,8 +394,8 @@ with tabs[1]:
     fig, ax = plt.subplots(figsize=(10, 6))
     
     ax.scatter(x, true_y, alpha=0.6, label='Ground Truth', color='black')
-    ax.plot(x, production_y, label='Production Model', color=AWS_COLORS['orange'], linewidth=2)
-    ax.plot(x, shadow_y, label='Shadow Model', color=AWS_COLORS['teal'], linewidth=2)
+    ax.plot(x, production_y, label='Production Model', color=aws_colors['orange'], linewidth=2)
+    ax.plot(x, shadow_y, label='Shadow Model', color=aws_colors['teal'], linewidth=2)
     
     ax.set_xlabel('Input Feature')
     ax.set_ylabel('Prediction')
@@ -428,8 +495,9 @@ def log_model_comparison(input_data, prod_result, shadow_result):
         )
         """, language="python")
 
-# A/B Testing tab
-with tabs[2]:
+
+def render_ab_testing_tab(aws_colors):
+    """Render the A/B Testing tab content."""
     st.title("A/B Testing")
     
     col1, col2 = st.columns([3,2])
@@ -478,12 +546,7 @@ with tabs[2]:
             H --> I[Deployment Decision]
         """
         
-        st.markdown(f"""
-        ```mermaid
-        {ab_diagram}
-        ```
-        """)
-        
+        common.mermaid(ab_diagram)
         st.markdown("""
         ### A/B Testing Flow
         
@@ -539,7 +602,7 @@ with tabs[2]:
             y=alt.Y('Conversion Rate:Q', title='Conversion Rate (%)'),
             color=alt.Color('Model:N', scale=alt.Scale(
                 domain=['Model A', 'Model B'],
-                range=[AWS_COLORS['orange'], AWS_COLORS['teal']]
+                range=[aws_colors['orange'], aws_colors['teal']]
             )),
             strokeWidth=alt.value(3),
             tooltip=['Day', 'Model', 'Conversion Rate', 'Traffic']
@@ -623,8 +686,9 @@ with tabs[2]:
             - You need to debug model differences
             """)
 
-# Implementation tab
-with tabs[3]:
+
+def render_implementation_tab():
+    """Render the Implementation tab content."""
     st.title("Implementation in AWS SageMaker")
     
     st.markdown("""
@@ -1064,8 +1128,9 @@ if __name__ == "__main__":
         print(f"Production result: {result}")
         """, language="python")
 
-# Visualization tab
-with tabs[4]:
+
+def render_visualization_tab(aws_colors):
+    """Render the Visualization tab content."""
     st.title("Visualizing Model Performance")
     
     st.markdown("""
@@ -1157,7 +1222,7 @@ with tabs[4]:
         fig = go.Figure()
         
         # Add traces for each model
-        colors = [AWS_COLORS['orange'], AWS_COLORS['teal'], AWS_COLORS['green']]
+        colors = [aws_colors['orange'], aws_colors['teal'], aws_colors['green']]
         
         for i, model in enumerate(models):
             model_df = df_norm[df_norm['Model'] == model]
@@ -1224,7 +1289,7 @@ with tabs[4]:
             y=stages,
             x=model_a_funnel,
             textinfo="value+percent initial",
-            marker={"color": AWS_COLORS['orange']}
+            marker={"color": aws_colors['orange']}
         ))
         
         fig.add_trace(go.Funnel(
@@ -1232,7 +1297,7 @@ with tabs[4]:
             y=stages,
             x=model_b_funnel,
             textinfo="value+percent initial",
-            marker={"color": AWS_COLORS['teal']}
+            marker={"color": aws_colors['teal']}
         ))
         
         fig.update_layout(
@@ -1321,7 +1386,7 @@ with tabs[4]:
             y=alt.Y('Accuracy:Q', scale=alt.Scale(domain=[0.75, 0.95])),
             color=alt.Color('Model:N', scale=alt.Scale(
                 domain=['Model A', 'Model B'],
-                range=[AWS_COLORS['orange'], AWS_COLORS['teal']]
+                range=[aws_colors['orange'], aws_colors['teal']]
             )),
             strokeWidth=alt.value(3),
             tooltip=['Date', 'Model', 'Accuracy']
@@ -1340,7 +1405,7 @@ with tabs[4]:
             y='Rolling_Avg:Q',
             color=alt.Color('Model:N', scale=alt.Scale(
                 domain=['Model A', 'Model B'],
-                range=[AWS_COLORS['orange'], AWS_COLORS['teal']]
+                range=[aws_colors['orange'], aws_colors['teal']]
             )),
             strokeWidth=alt.value(4),
             strokeDash=alt.value([5, 5]),
@@ -1431,7 +1496,6 @@ with tabs[4]:
             z_score = (p_b - p_a) / se_pooled
         
         # Calculate p-value (approximation)
-        from scipy.stats import norm
         p_value = (1 - norm.cdf(abs(z_score))) * 2
         
         # Calculate confidence intervals
@@ -1464,9 +1528,9 @@ with tabs[4]:
         # Create confidence interval visualization
         fig, ax = plt.subplots(figsize=(10, 5))
         
-        ax.errorbar([0], [p_a * 100], yerr=[(p_a - ci_a_lower) * 100], fmt='o', color=AWS_COLORS['orange'], 
+        ax.errorbar([0], [p_a * 100], yerr=[(p_a - ci_a_lower) * 100], fmt='o', color=aws_colors['orange'], 
                    capsize=10, markersize=10, label='Model A')
-        ax.errorbar([1], [p_b * 100], yerr=[(p_b - ci_b_lower) * 100], fmt='o', color=AWS_COLORS['teal'], 
+        ax.errorbar([1], [p_b * 100], yerr=[(p_b - ci_b_lower) * 100], fmt='o', color=aws_colors['teal'], 
                    capsize=10, markersize=10, label='Model B')
         
         ax.set_xticks([0, 1])
@@ -1515,8 +1579,9 @@ with tabs[4]:
         you might want to use more robust statistical methods like Bayesian analysis or sequential testing.
         """)
 
-# Knowledge Check tab
-with tabs[5]:
+
+def render_knowledge_check_tab():
+    """Render the Knowledge Check tab content."""
     st.title("Knowledge Check")
     st.markdown("Test your understanding of model testing strategies with these questions:")
     
@@ -1694,33 +1759,63 @@ with tabs[5]:
         else:
             st.warning("You might want to review the material on model testing strategies.")
 
-# Apply custom CSS
-apply_custom_css()
 
-# ```
+def render_footer():
+    """Render the footer."""
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style='text-align: center; color: #545B64; padding: 20px;'>
+            © 2025, Amazon Web Services, Inc. or its affiliates. All rights reserved.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-# ## Requirements.txt
 
-# ```
-# streamlit==1.28.0
-# pandas==2.1.1
-# numpy==1.25.2
-# matplotlib==3.8.0
-# altair==5.1.2
-# seaborn==0.13.0
-# plotly==5.17.0
-# pillow==10.0.1
-# scipy==1.11.3
-# uuid==1.30
-# ```
+def main():
+    """Main function to run the Streamlit application."""
+    # Configure page and styling
+    aws_colors = configure_page()
+    
+    # Initialize session
+    initialize_session()
+    
+    # Render sidebar
+    render_sidebar()
+    
+    # Create tabs for navigation
+    tabs = st.tabs([
+        "🏠 Introduction", 
+        "🥊 Challenger/Shadow", 
+        "🔄 A/B Testing", 
+        "💻 Implementation", 
+        "📊 Visualization", 
+        "✅ Knowledge Check"
+    ])
+    
+    # Render tab content
+    with tabs[0]:
+        render_introduction_tab(aws_colors)
+    
+    with tabs[1]:
+        render_challenger_shadow_tab(aws_colors)
+    
+    with tabs[2]:
+        render_ab_testing_tab(aws_colors)
+    
+    with tabs[3]:
+        render_implementation_tab()
+    
+    with tabs[4]:
+        render_visualization_tab(aws_colors)
+    
+    with tabs[5]:
+        render_knowledge_check_tab()
+    
+    # Render footer
+    render_footer()
 
-# This enhanced Streamlit application provides a comprehensive interactive learning experience for model testing strategies. It includes:
 
-# 1. **Introduction Tab**: Explains the importance of model testing strategies
-# 2. **Challenger/Shadow Tab**: Detailed explanation with interactive visualization 
-# 3. **A/B Testing Tab**: Simulation with dynamic traffic allocation
-# 4. **Implementation Tab**: Code samples and integration details with AWS services
-# 5. **Visualization Tab**: Advanced analytics for comparing model performance
-# 6. **Knowledge Check Tab**: Quiz questions to test understanding
-
-# The application follows modern UI/UX design principles with AWS color schemes and has a responsive layout. It includes session management, interactive visualizations, and comprehensive explanations of model testing strategies.
+if __name__ == "__main__":
+    main()

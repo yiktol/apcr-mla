@@ -917,7 +917,7 @@ def main():
             """)
     
     # Main app header
-    st.title("Amazon SageMaker Model Monitor Learning Hub")
+    st.title("Amazon SageMaker Model Monitor")
     st.markdown("Explore how to detect, visualize, and mitigate model drift in production machine learning models.")
     
     # Tab-based navigation with emoji
