@@ -1,9 +1,12 @@
 import streamlit as st
+import streamlit.components.v1 as components
+from typing import Optional
+import time
+import hashlib
 import uuid
 from datetime import datetime
 from typing import Optional
-import utils.authenticate as authenticate
-import streamlit.components.v1 as components
+
 
 
 def reset_session():
@@ -249,6 +252,44 @@ def apply_styles():
     </style>
     """, unsafe_allow_html=True)
 
+def initialize_mermaid() -> None:
+    """Initialize Mermaid library once per Streamlit session.
+    
+    This should be called once at the start of your Streamlit app.
+    The initialization is cached per session to avoid reloading.
+    """
+    # Use session state to ensure we only initialize once per session
+    if 'mermaid_initialized' not in st.session_state:
+        st.session_state.mermaid_initialized = True
+
+def _estimate_diagram_height(mermaid_code: str) -> int:
+    """Quick estimation for initial render when height is auto."""
+    lines = [line.strip() for line in mermaid_code.strip().split('\n') if line.strip()]
+    
+    # Count meaningful lines (exclude comments and styling)
+    content_lines = [line for line in lines 
+                    if not line.startswith('%%') 
+                    and not line.startswith('classDef') 
+                    and not line.startswith('class')]
+    
+    diagram_type = lines[0].lower() if lines else ""
+    node_count = len([line for line in content_lines if '-->' in line or '{' in line or '->' in line])
+    
+    if 'flowchart' in diagram_type and ('td' in diagram_type or 'tb' in diagram_type):
+        return max(300, min(800, 200 + node_count * 60))
+    else:
+        return max(250, min(600, 150 + node_count * 50))
+
+def _generate_unique_id(code: str, key: Optional[str] = None) -> str:
+    """Generate a unique ID for the mermaid diagram."""
+    if key:
+        return f"mermaid_{key}_{int(time.time() * 1000) % 10000}"
+    else:
+        # Use hash of code + timestamp for uniqueness
+        code_hash = hashlib.md5(code.encode()).hexdigest()[:8]
+        timestamp = int(time.time() * 1000) % 10000
+        return f"mermaid_{code_hash}_{timestamp}"
+
 def mermaid(
     code: str, 
     width: str = "auto", 
@@ -258,7 +299,7 @@ def mermaid(
     show_controls: bool = True, 
     key: Optional[str] = None
 ) -> None:
-    """Render Mermaid diagrams in Streamlit with configurable dimensions and interactive controls.
+    """Render a Mermaid diagram in Streamlit with configurable dimensions and interactive controls.
     
     Args:
         code: The Mermaid diagram code to render
@@ -270,60 +311,52 @@ def mermaid(
         key: Optional unique key for the component
     """
     
-    def estimate_diagram_height(mermaid_code: str) -> int:
-        """Quick estimation for initial render when height is auto."""
-        lines = [line.strip() for line in mermaid_code.strip().split('\n') if line.strip()]
-        
-        # Count meaningful lines (exclude comments and styling)
-        content_lines = [line for line in lines 
-                        if not line.startswith('%%') 
-                        and not line.startswith('classDef') 
-                        and not line.startswith('class')]
-        
-        diagram_type = lines[0].lower() if lines else ""
-        node_count = len([line for line in content_lines if '-->' in line or '{' in line])
-        
-        if 'flowchart' in diagram_type and ('td' in diagram_type or 'tb' in diagram_type):
-            return max(300, min(800, 200 + node_count * 60))
-        else:
-            return max(250, min(600, 150 + node_count * 50))
+    # Auto-initialize if not done
+    if 'mermaid_initialized' not in st.session_state:
+        initialize_mermaid()
     
-    # Generate unique ID using key, code hash, and timestamp to ensure uniqueness
-    import time
-    unique_id = key if key else f"{abs(hash(code))}{int(time.time() * 1000) % 10000}"
+    # Generate unique ID
+    unique_id = _generate_unique_id(code, key)
     
-    # Handle height calculation
+    # Handle dimensions
+    container_width = width if width != "auto" else "100%"
+    
+    # Calculate height
     if height == "auto":
-        calculated_height = estimate_diagram_height(code)
+        calculated_height = _estimate_diagram_height(code)
         container_height = f"{calculated_height + (60 if show_controls else 20)}px"
         content_height = calculated_height
     else:
-        # Parse height value
         height_str = str(height)
         if height_str.endswith('px'):
             content_height = int(height_str.replace('px', ''))
         elif height_str.endswith('%'):
-            content_height = 400  # Default fallback for percentage
+            content_height = 400
         else:
             try:
                 content_height = int(height_str)
+                height_str = f"{content_height}px"
             except ValueError:
                 content_height = 400
+                height_str = "400px"
         container_height = height_str
     
-    # Handle width
-    container_width = width if width != "auto" else "100%"
+    # Escape the mermaid code for JavaScript
+    escaped_code = code.replace('`', '\\`').replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '')
     
-    # Build CSS classes and styles based on parameters
+    # Build styles and controls
     container_cursor = "grab" if pan else "default"
     container_overflow = "auto" if pan else "hidden"
-    
-    # Zoom control visibility
     zoom_controls_display = "flex" if show_controls and zoom else "none"
     
-    components.html(
-        f"""
-        <div class="mermaid-wrapper" id="mermaid-wrapper-{unique_id}">
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    </head>
+    <body>
+        <div class="mermaid-wrapper" id="wrapper-{unique_id}">
             <!-- Zoom Controls -->
             <div class="zoom-controls" id="zoom-controls-{unique_id}" style="display: {zoom_controls_display};">
                 <button id="zoom-in-{unique_id}" class="zoom-btn" title="Zoom In">
@@ -352,188 +385,14 @@ def mermaid(
             </div>
             
             <!-- Mermaid Container -->
-            <div class="mermaid-container" id="mermaid-container-{unique_id}">
-                <div class="mermaid-content" id="mermaid-content-{unique_id}">
-                    <!-- Mermaid will render here -->
-                    <div id="mermaid-diagram-{unique_id}"></div>
+            <div class="mermaid-container" id="container-{unique_id}">
+                <div class="mermaid-content" id="content-{unique_id}">
+                    <div class="mermaid" id="diagram-{unique_id}">
+                        {code}
+                    </div>
                 </div>
             </div>
         </div>
-
-        <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            
-            // Initialize mermaid with unique configuration
-            mermaid.initialize({{ 
-                startOnLoad: false,  // We'll manually trigger rendering
-                theme: 'default',
-                flowchart: {{ useMaxWidth: true }},
-                themeVariables: {{ primaryColor: '#ff0000' }}
-            }});
-            
-            const containerId = 'mermaid-container-{unique_id}';
-            const contentId = 'mermaid-content-{unique_id}';
-            const diagramId = 'mermaid-diagram-{unique_id}';
-            const container = document.getElementById(containerId);
-            const content = document.getElementById(contentId);
-            const diagramElement = document.getElementById(diagramId);
-            
-            // Feature flags
-            const zoomEnabled = {str(zoom).lower()};
-            const panEnabled = {str(pan).lower()};
-            const showControls = {str(show_controls).lower()};
-            
-            // Function to render mermaid diagram
-            async function renderMermaidDiagram() {{
-                try {{
-                    // Clear any existing content
-                    diagramElement.innerHTML = '';
-                    
-                    // Generate a unique ID for this specific render
-                    const renderingId = `mermaid-{unique_id}-${{Date.now()}}`;
-                    
-                    // Use mermaid.render() for explicit rendering
-                    const {{ svg }} = await mermaid.render(renderingId, `{code.strip()}`);
-                    
-                    // Insert the rendered SVG
-                    diagramElement.innerHTML = svg;
-                    
-                    // Adjust height if auto after rendering
-                    if ("{height}" === "auto") {{
-                        setTimeout(() => {{
-                            const svgElement = diagramElement.querySelector('svg');
-                            if (svgElement) {{
-                                const rect = svgElement.getBoundingClientRect();
-                                const newHeight = Math.max(rect.height + 60, {content_height});
-                                container.style.minHeight = newHeight + 'px';
-                                
-                                // Trigger a resize event for Streamlit
-                                if (window.parent) {{
-                                    window.parent.postMessage({{
-                                        type: 'streamlit:componentReady',
-                                        height: newHeight + (showControls ? 60 : 20)
-                                    }}, '*');
-                                }}
-                            }}
-                        }}, 100);
-                    }}
-                    
-                }} catch (error) {{
-                    console.error('Error rendering Mermaid diagram:', error);
-                    diagramElement.innerHTML = `<div style="color: red; padding: 20px;">Error rendering diagram: ${{error.message}}</div>`;
-                }}
-            }}
-            
-            // Zoom functionality
-            if (zoomEnabled) {{
-                const zoomInBtn = document.getElementById('zoom-in-{unique_id}');
-                const zoomOutBtn = document.getElementById('zoom-out-{unique_id}');
-                const zoomResetBtn = document.getElementById('zoom-reset-{unique_id}');
-                const zoomLevelSpan = document.getElementById('zoom-level-{unique_id}');
-                
-                let currentZoom = 1.0;
-                const minZoom = 0.5;
-                const maxZoom = 5.0;
-                const zoomStep = 0.2;
-                
-                function updateZoom(newZoom) {{
-                    currentZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
-                    content.style.transform = `scale(${{currentZoom}})`;
-                    
-                    if (showControls && zoomLevelSpan) {{
-                        zoomLevelSpan.textContent = Math.round(currentZoom * 100) + '%';
-                    }}
-                    
-                    // Update button states
-                    if (showControls) {{
-                        if (zoomInBtn) zoomInBtn.disabled = currentZoom >= maxZoom;
-                        if (zoomOutBtn) zoomOutBtn.disabled = currentZoom <= minZoom;
-                    }}
-                }}
-                
-                // Zoom control event listeners
-                if (showControls) {{
-                    if (zoomInBtn) zoomInBtn.addEventListener('click', () => updateZoom(currentZoom + zoomStep));
-                    if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => updateZoom(currentZoom - zoomStep));
-                    if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => updateZoom(1.0));
-                }}
-                
-                // Mouse wheel zoom
-                container.addEventListener('wheel', (e) => {{
-                    if (e.ctrlKey || e.metaKey) {{
-                        e.preventDefault();
-                        const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
-                        updateZoom(currentZoom + delta);
-                    }}
-                }});
-                
-                // Keyboard zoom
-                container.addEventListener('keydown', (e) => {{
-                    if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) {{
-                        e.preventDefault();
-                        if (e.key === '+') updateZoom(currentZoom + zoomStep);
-                        else if (e.key === '-') updateZoom(currentZoom - zoomStep);
-                        else if (e.key === '0') updateZoom(1.0);
-                    }}
-                }});
-                
-                // Initialize zoom
-                updateZoom(1.0);
-            }}
-            
-            // Pan functionality
-            if (panEnabled) {{
-                let isPanning = false;
-                let startX, startY, scrollLeft, scrollTop;
-                
-                container.addEventListener('mousedown', (e) => {{
-                    if (e.button === 0) {{ // Left mouse button
-                        isPanning = true;
-                        startX = e.pageX - container.offsetLeft;
-                        startY = e.pageY - container.offsetTop;
-                        scrollLeft = container.scrollLeft;
-                        scrollTop = container.scrollTop;
-                        container.style.cursor = 'grabbing';
-                    }}
-                }});
-                
-                container.addEventListener('mouseleave', () => {{
-                    isPanning = false;
-                    container.style.cursor = '{container_cursor}';
-                }});
-                
-                container.addEventListener('mouseup', () => {{
-                    isPanning = false;
-                    container.style.cursor = '{container_cursor}';
-                }});
-                
-                container.addEventListener('mousemove', (e) => {{
-                    if (!isPanning) return;
-                    e.preventDefault();
-                    const x = e.pageX - container.offsetLeft;
-                    const y = e.pageY - container.offsetTop;
-                    const walkX = (x - startX) * 1;
-                    const walkY = (y - startY) * 1;
-                    container.scrollLeft = scrollLeft - walkX;
-                    container.scrollTop = scrollTop - walkY;
-                }});
-            }}
-            
-            // Make container focusable for keyboard events
-            if (zoomEnabled) {{
-                container.setAttribute('tabindex', '0');
-            }}
-            
-            // Initialize and render the diagram
-            document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
-            
-            // Also render immediately if DOM is already loaded
-            if (document.readyState === 'loading') {{
-                document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
-            }} else {{
-                renderMermaidDiagram();
-            }}
-        </script>
 
         <style>
             .mermaid-wrapper {{
@@ -543,6 +402,7 @@ def mermaid(
                 border: 1px solid #e1e5e9;
                 border-radius: 6px;
                 background: #fafafa;
+                font-family: Arial, sans-serif;
             }}
             
             .zoom-controls {{
@@ -555,7 +415,7 @@ def mermaid(
                 padding: 5px 8px;
                 border-radius: 20px;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                z-index: 10;
+                z-index: 1000;
                 backdrop-filter: blur(4px);
             }}
             
@@ -620,30 +480,30 @@ def mermaid(
                 justify-content: center;
             }}
             
-            #mermaid-diagram-{unique_id} {{
+            .mermaid {{
                 width: 100%;
                 display: flex;
                 justify-content: center;
                 align-items: center;
             }}
             
-            /* Scrollbar styling - only show if panning is enabled */
-            {".mermaid-container::-webkit-scrollbar" if pan else ".mermaid-container-hidden-scroll::-webkit-scrollbar"} {{
+            /* Scrollbar styling */
+            .mermaid-container::-webkit-scrollbar {{
                 width: 8px;
                 height: 8px;
             }}
             
-            {".mermaid-container::-webkit-scrollbar-track" if pan else ".mermaid-container-hidden-scroll::-webkit-scrollbar-track"} {{
+            .mermaid-container::-webkit-scrollbar-track {{
                 background: #f1f1f1;
                 border-radius: 4px;
             }}
             
-            {".mermaid-container::-webkit-scrollbar-thumb" if pan else ".mermaid-container-hidden-scroll::-webkit-scrollbar-thumb"} {{
+            .mermaid-container::-webkit-scrollbar-thumb {{
                 background: #c1c1c1;
                 border-radius: 4px;
             }}
             
-            {".mermaid-container::-webkit-scrollbar-thumb:hover" if pan else ".mermaid-container-hidden-scroll::-webkit-scrollbar-thumb:hover"} {{
+            .mermaid-container::-webkit-scrollbar-thumb:hover {{
                 background: #a8a8a8;
             }}
             
@@ -665,8 +525,166 @@ def mermaid(
                 }}
             }}
         </style>
-        """,
-        height=content_height + (80 if show_controls else 40),  # Dynamic height based on controls
+
+        <script>
+            // Initialize Mermaid
+            mermaid.initialize({{ 
+                startOnLoad: false,
+                theme: 'default',
+                flowchart: {{ useMaxWidth: false, htmlLabels: true }},
+                sequence: {{ useMaxWidth: false }},
+                gantt: {{ useMaxWidth: false }},
+                journey: {{ useMaxWidth: false }},
+                timeline: {{ useMaxWidth: false }}
+            }});
+            
+            // Function to render the diagram
+            async function renderDiagram() {{
+                try {{
+                    const diagramElement = document.getElementById('diagram-{unique_id}');
+                    if (!diagramElement) {{
+                        console.error('Diagram element not found');
+                        return;
+                    }}
+                    
+                    // Render the diagram
+                    await mermaid.run({{
+                        nodes: [diagramElement]
+                    }});
+                    
+                    console.log('Diagram rendered successfully');
+                    
+                    // Initialize interactions after rendering
+                    initializeInteractions();
+                    
+                }} catch (error) {{
+                    console.error('Error rendering Mermaid diagram:', error);
+                    const diagramElement = document.getElementById('diagram-{unique_id}');
+                    if (diagramElement) {{
+                        diagramElement.innerHTML = '<div style="color: red; padding: 20px;">Error rendering diagram: ' + error.message + '</div>';
+                    }}
+                }}
+            }}
+            
+            function initializeInteractions() {{
+                const container = document.getElementById('container-{unique_id}');
+                const content = document.getElementById('content-{unique_id}');
+                
+                if (!container || !content) return;
+                
+                // Zoom functionality
+                if ({str(zoom).lower()}) {{
+                    const zoomInBtn = document.getElementById('zoom-in-{unique_id}');
+                    const zoomOutBtn = document.getElementById('zoom-out-{unique_id}');
+                    const zoomResetBtn = document.getElementById('zoom-reset-{unique_id}');
+                    const zoomLevelSpan = document.getElementById('zoom-level-{unique_id}');
+                    
+                    let currentZoom = 1.0;
+                    const minZoom = 0.5;
+                    const maxZoom = 3.0;
+                    const zoomStep = 0.2;
+                    
+                    function updateZoom(newZoom) {{
+                        currentZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
+                        content.style.transform = 'scale(' + currentZoom + ')';
+                        
+                        if ({str(show_controls).lower()} && zoomLevelSpan) {{
+                            zoomLevelSpan.textContent = Math.round(currentZoom * 100) + '%';
+                        }}
+                        
+                        if ({str(show_controls).lower()}) {{
+                            if (zoomInBtn) zoomInBtn.disabled = currentZoom >= maxZoom;
+                            if (zoomOutBtn) zoomOutBtn.disabled = currentZoom <= minZoom;
+                        }}
+                    }}
+                    
+                    // Zoom control event listeners
+                    if ({str(show_controls).lower()}) {{
+                        if (zoomInBtn) {{
+                            zoomInBtn.addEventListener('click', function() {{
+                                updateZoom(currentZoom + zoomStep);
+                            }});
+                        }}
+                        if (zoomOutBtn) {{
+                            zoomOutBtn.addEventListener('click', function() {{
+                                updateZoom(currentZoom - zoomStep);
+                            }});
+                        }}
+                        if (zoomResetBtn) {{
+                            zoomResetBtn.addEventListener('click', function() {{
+                                updateZoom(1.0);
+                            }});
+                        }}
+                    }}
+                    
+                    // Mouse wheel zoom
+                    container.addEventListener('wheel', function(e) {{
+                        if (e.ctrlKey || e.metaKey) {{
+                            e.preventDefault();
+                            const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
+                            updateZoom(currentZoom + delta);
+                        }}
+                    }});
+                    
+                    // Initialize zoom
+                    updateZoom(1.0);
+                    
+                    // Make container focusable for keyboard events
+                    container.setAttribute('tabindex', '0');
+                }}
+                
+                // Pan functionality
+                if ({str(pan).lower()}) {{
+                    let isPanning = false;
+                    let startX, startY, scrollLeft, scrollTop;
+                    
+                    container.addEventListener('mousedown', function(e) {{
+                        if (e.button === 0) {{
+                            isPanning = true;
+                            startX = e.pageX - container.offsetLeft;
+                            startY = e.pageY - container.offsetTop;
+                            scrollLeft = container.scrollLeft;
+                            scrollTop = container.scrollTop;
+                            container.style.cursor = 'grabbing';
+                        }}
+                    }});
+                    
+                    container.addEventListener('mouseleave', function() {{
+                        isPanning = false;
+                        container.style.cursor = 'grab';
+                    }});
+                    
+                    container.addEventListener('mouseup', function() {{
+                        isPanning = false;
+                        container.style.cursor = 'grab';
+                    }});
+                    
+                    container.addEventListener('mousemove', function(e) {{
+                        if (!isPanning) return;
+                        e.preventDefault();
+                        const x = e.pageX - container.offsetLeft;
+                        const y = e.pageY - container.offsetTop;
+                        const walkX = (x - startX) * 1;
+                        const walkY = (y - startY) * 1;
+                        container.scrollLeft = scrollLeft - walkX;
+                        container.scrollTop = scrollTop - walkY;
+                    }});
+                }}
+            }}
+            
+            // Wait for DOM to be ready and then render
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', renderDiagram);
+            }} else {{
+                // DOM is already ready, render immediately
+                setTimeout(renderDiagram, 100);
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
+    components.html(
+        html_content,
+        height=content_height + (80 if show_controls else 40),
     )
-
-
