@@ -1,0 +1,342 @@
+{
+  "Version": "2020-12-01",
+  "Metadata": {},
+  "Parameters": [
+    {
+      "Name": "RawDataUri",
+      "Type": "String",
+      "DefaultValue": "s3://churnguard-data-875692608981-us-east-1/raw/Telco-Customer-Churn.csv"
+    },
+    {
+      "Name": "ProcessedUri",
+      "Type": "String",
+      "DefaultValue": "s3://churnguard-data-875692608981-us-east-1/processed"
+    }
+  ],
+  "PipelineExperimentConfig": {
+    "ExperimentName": {
+      "Get": "Execution.PipelineName"
+    },
+    "TrialName": {
+      "Get": "Execution.PipelineExecutionId"
+    }
+  },
+  "Steps": [
+    {
+      "Name": "DataProcessing",
+      "Type": "Processing",
+      "Arguments": {
+        "ProcessingResources": {
+          "ClusterConfig": {
+            "InstanceType": "ml.m5.large",
+            "InstanceCount": 1,
+            "VolumeSizeInGB": 30
+          }
+        },
+        "AppSpecification": {
+          "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
+          "ContainerArguments": [
+            "--input-dir",
+            "/opt/ml/processing/input",
+            "--output-dir",
+            "/opt/ml/processing/output"
+          ],
+          "ContainerEntrypoint": [
+            "python3",
+            "/opt/ml/processing/input/code/preprocessing.py"
+          ]
+        },
+        "RoleArn": "arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole",
+        "ProcessingInputs": [
+          {
+            "InputName": "input-1",
+            "AppManaged": false,
+            "S3Input": {
+              "S3Uri": {
+                "Get": "Parameters.RawDataUri"
+              },
+              "LocalPath": "/opt/ml/processing/input",
+              "S3DataType": "S3Prefix",
+              "S3InputMode": "File",
+              "S3DataDistributionType": "FullyReplicated",
+              "S3CompressionType": "None"
+            }
+          },
+          {
+            "InputName": "code",
+            "AppManaged": false,
+            "S3Input": {
+              "S3Uri": "s3://churnguard-data-875692608981-us-east-1/code/preprocessing.py",
+              "LocalPath": "/opt/ml/processing/input/code",
+              "S3DataType": "S3Prefix",
+              "S3InputMode": "File",
+              "S3DataDistributionType": "FullyReplicated",
+              "S3CompressionType": "None"
+            }
+          }
+        ],
+        "ProcessingOutputConfig": {
+          "Outputs": [
+            {
+              "OutputName": "train",
+              "AppManaged": false,
+              "S3Output": {
+                "S3Uri": "s3://churnguard-data-875692608981-us-east-1/processed/train",
+                "LocalPath": "/opt/ml/processing/output/train",
+                "S3UploadMode": "EndOfJob"
+              }
+            },
+            {
+              "OutputName": "validation",
+              "AppManaged": false,
+              "S3Output": {
+                "S3Uri": "s3://churnguard-data-875692608981-us-east-1/processed/validation",
+                "LocalPath": "/opt/ml/processing/output/validation",
+                "S3UploadMode": "EndOfJob"
+              }
+            },
+            {
+              "OutputName": "test",
+              "AppManaged": false,
+              "S3Output": {
+                "S3Uri": "s3://churnguard-data-875692608981-us-east-1/processed/test",
+                "LocalPath": "/opt/ml/processing/output/test",
+                "S3UploadMode": "EndOfJob"
+              }
+            },
+            {
+              "OutputName": "processed",
+              "AppManaged": false,
+              "S3Output": {
+                "S3Uri": "s3://churnguard-data-875692608981-us-east-1/processed/processed",
+                "LocalPath": "/opt/ml/processing/output/processed",
+                "S3UploadMode": "EndOfJob"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "Name": "ModelTraining",
+      "Type": "Training",
+      "Arguments": {
+        "AlgorithmSpecification": {
+          "TrainingInputMode": "File",
+          "TrainingImage": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1"
+        },
+        "OutputDataConfig": {
+          "S3OutputPath": "s3://churnguard-data-875692608981-us-east-1/pipeline/training-output"
+        },
+        "StoppingCondition": {
+          "MaxRuntimeInSeconds": 86400
+        },
+        "ResourceConfig": {
+          "VolumeSizeInGB": 30,
+          "InstanceCount": 1,
+          "InstanceType": "ml.m5.large"
+        },
+        "RoleArn": "arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole",
+        "InputDataConfig": [
+          {
+            "DataSource": {
+              "S3DataSource": {
+                "S3DataType": "S3Prefix",
+                "S3Uri": {
+                  "Get": "Steps.DataProcessing.ProcessingOutputConfig.Outputs['train'].S3Output.S3Uri"
+                },
+                "S3DataDistributionType": "FullyReplicated"
+              }
+            },
+            "ContentType": "text/csv",
+            "ChannelName": "train"
+          },
+          {
+            "DataSource": {
+              "S3DataSource": {
+                "S3DataType": "S3Prefix",
+                "S3Uri": {
+                  "Get": "Steps.DataProcessing.ProcessingOutputConfig.Outputs['validation'].S3Output.S3Uri"
+                },
+                "S3DataDistributionType": "FullyReplicated"
+              }
+            },
+            "ContentType": "text/csv",
+            "ChannelName": "validation"
+          }
+        ],
+        "HyperParameters": {
+          "objective": "binary:logistic",
+          "num_round": "150",
+          "max_depth": "5",
+          "eta": "0.2",
+          "subsample": "0.8",
+          "eval_metric": "auc"
+        },
+        "DebugHookConfig": {
+          "S3OutputPath": "s3://churnguard-data-875692608981-us-east-1/pipeline/training-output",
+          "CollectionConfigurations": []
+        },
+        "ProfilerConfig": {
+          "S3OutputPath": "s3://churnguard-data-875692608981-us-east-1/pipeline/training-output",
+          "DisableProfiler": false
+        }
+      }
+    },
+    {
+      "Name": "ModelEvaluation",
+      "Type": "Processing",
+      "Arguments": {
+        "ProcessingResources": {
+          "ClusterConfig": {
+            "InstanceType": "ml.m5.large",
+            "InstanceCount": 1,
+            "VolumeSizeInGB": 30
+          }
+        },
+        "AppSpecification": {
+          "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1",
+          "ContainerArguments": [
+            "--model-dir",
+            "/opt/ml/processing/model",
+            "--test-dir",
+            "/opt/ml/processing/test",
+            "--output-dir",
+            "/opt/ml/processing/evaluation"
+          ],
+          "ContainerEntrypoint": [
+            "python3",
+            "/opt/ml/processing/input/code/evaluation.py"
+          ]
+        },
+        "RoleArn": "arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole",
+        "ProcessingInputs": [
+          {
+            "InputName": "input-1",
+            "AppManaged": false,
+            "S3Input": {
+              "S3Uri": {
+                "Get": "Steps.ModelTraining.ModelArtifacts.S3ModelArtifacts"
+              },
+              "LocalPath": "/opt/ml/processing/model",
+              "S3DataType": "S3Prefix",
+              "S3InputMode": "File",
+              "S3DataDistributionType": "FullyReplicated",
+              "S3CompressionType": "None"
+            }
+          },
+          {
+            "InputName": "input-2",
+            "AppManaged": false,
+            "S3Input": {
+              "S3Uri": {
+                "Get": "Steps.DataProcessing.ProcessingOutputConfig.Outputs['test'].S3Output.S3Uri"
+              },
+              "LocalPath": "/opt/ml/processing/test",
+              "S3DataType": "S3Prefix",
+              "S3InputMode": "File",
+              "S3DataDistributionType": "FullyReplicated",
+              "S3CompressionType": "None"
+            }
+          },
+          {
+            "InputName": "code",
+            "AppManaged": false,
+            "S3Input": {
+              "S3Uri": "s3://churnguard-data-875692608981-us-east-1/code/evaluation.py",
+              "LocalPath": "/opt/ml/processing/input/code",
+              "S3DataType": "S3Prefix",
+              "S3InputMode": "File",
+              "S3DataDistributionType": "FullyReplicated",
+              "S3CompressionType": "None"
+            }
+          }
+        ],
+        "ProcessingOutputConfig": {
+          "Outputs": [
+            {
+              "OutputName": "evaluation",
+              "AppManaged": false,
+              "S3Output": {
+                "S3Uri": "s3://churnguard-data-875692608981-us-east-1/pipeline/evaluation",
+                "LocalPath": "/opt/ml/processing/evaluation",
+                "S3UploadMode": "EndOfJob"
+              }
+            }
+          ]
+        }
+      },
+      "PropertyFiles": [
+        {
+          "PropertyFileName": "EvaluationReport",
+          "OutputName": "evaluation",
+          "FilePath": "evaluation.json"
+        }
+      ]
+    },
+    {
+      "Name": "CheckAccuracy",
+      "Type": "Condition",
+      "Arguments": {
+        "Conditions": [
+          {
+            "Type": "GreaterThanOrEqualTo",
+            "LeftValue": {
+              "Std:JsonGet": {
+                "PropertyFile": {
+                  "Get": "Steps.ModelEvaluation.PropertyFiles.EvaluationReport"
+                },
+                "Path": "metrics.accuracy.value"
+              }
+            },
+            "RightValue": 0.78
+          }
+        ],
+        "IfSteps": [
+          {
+            "Name": "RegisterChurnModel-RegisterModel",
+            "Type": "RegisterModel",
+            "Arguments": {
+              "ModelPackageGroupName": "churnguard-churn",
+              "ModelMetrics": {
+                "ModelQuality": {
+                  "Statistics": {
+                    "ContentType": "application/json",
+                    "S3Uri": "s3://churnguard-data-875692608981-us-east-1/pipeline/evaluation/evaluation.json"
+                  }
+                },
+                "Bias": {},
+                "Explainability": {}
+              },
+              "InferenceSpecification": {
+                "Containers": [
+                  {
+                    "Image": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1",
+                    "ModelDataUrl": {
+                      "Get": "Steps.ModelTraining.ModelArtifacts.S3ModelArtifacts"
+                    }
+                  }
+                ],
+                "SupportedContentTypes": [
+                  "text/csv"
+                ],
+                "SupportedResponseMIMETypes": [
+                  "text/csv"
+                ],
+                "SupportedRealtimeInferenceInstanceTypes": [
+                  "ml.m5.large"
+                ],
+                "SupportedTransformInstanceTypes": [
+                  "ml.m5.large"
+                ]
+              },
+              "ModelApprovalStatus": "PendingManualApproval",
+              "SkipModelValidation": "None"
+            }
+          }
+        ],
+        "ElseSteps": []
+      }
+    }
+  ]
+}

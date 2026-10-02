@@ -1,0 +1,6 @@
+sagemaker>=2.200,<3
+boto3>=1.34
+pandas>=2.0
+scikit-learn>=1.2
+xgboost>=1.7
+numpy>=1.24
