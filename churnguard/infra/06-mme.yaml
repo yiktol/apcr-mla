@@ -3,10 +3,15 @@ Description: >-
   ChurnGuard multi-model endpoint stack: Model with Mode MultiModel pointing at
   the mme/ prefix (hosts churn-v1.tar.gz and churn-v2.tar.gz) + EndpointConfig
   (ProductionVariant AllTraffic, ml.m5.large, 1 instance) + Endpoint
-  churnguard-mme. No autoscaling target. The container image defaults to the
-  built-in sagemaker-xgboost:1.7-1; if ml/verify_mme_capability.py's probe
-  reports the built-in image is NOT MME-capable, deploy.sh overrides ImageUri
-  with the resolved open-source XGBoost framework inference URI. Region us-east-1.
+  churnguard-mme. No autoscaling target. The container image is pinned to the
+  built-in sagemaker-xgboost:1.7-1. CONFIRMED by the real MME-capability probe
+  (ml/verify_mme_capability.py) on 2026-10-02 against us-east-1:
+  MME_BUILTIN_SUPPORTED=true, MME_IMAGE_URI=683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1
+  (a throwaway Mode=MultiModel endpoint served invoke_endpoint(TargetModel=churn-v1.tar.gz)
+  and returned a real probability). deploy.sh re-runs the probe and passes the
+  resolved URI as the ImageUri override; it would resolve the open-source XGBoost
+  framework inference URI only if the built-in image were ever reported not
+  multi-model-capable. Region us-east-1.
 
 Parameters:
   ExecutionRoleArn:

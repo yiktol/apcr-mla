@@ -7,9 +7,10 @@
 #   2. ml/upload_dataset.py  (raw Telco CSV -> data bucket)
 #   3. ml/build_pipeline.py  (author + upload pipeline definition + code/)
 #   4. registry-pipeline     (ModelPackageGroup + Pipeline via S3 location)
-#   5. ml/verify_mme_capability.py  (real MME probe -> resolves the MME image)
-#   6. ml/run_training.py    (5a preprocess -> 5b train, writes SSM artifact uri)
-#   7. ml/build_mme_models.py (mme/churn-v1.tar.gz + churn-v2.tar.gz)
+#   5. ml/run_training.py    (5a preprocess -> 5b train, writes SSM artifact uri)
+#   6. ml/build_mme_models.py (mme/churn-v1.tar.gz + churn-v2.tar.gz)
+#   7. ml/verify_mme_capability.py  (real MME probe -> resolves the MME image;
+#      runs after the mme/ artifacts exist so the probe can download churn-v1)
 #   8. realtime, serverless, async, mme, events (pass ModelArtifactUri)
 #
 # Every aws call is pinned to us-east-1 (the machine default region differs).
@@ -101,17 +102,6 @@ deploy_stack churnguard-registry-pipeline "$INFRA_DIR/02-registry-pipeline.yaml"
     "PipelineDefinitionBucket=${DATA_BUCKET}" \
     "PipelineDefinitionKey=${PIPELINE_DEF_KEY}"
 
-# --- 5. MME capability probe (resolves the MME serving image) -------------
-log "probe MME capability (ml/verify_mme_capability.py)"
-MME_PROBE_OUT="$("$VENV_PY" "$ML_DIR/verify_mme_capability.py")"
-echo "$MME_PROBE_OUT"
-MME_IMAGE_URI="$(printf '%s\n' "$MME_PROBE_OUT" | sed -n 's/^MME_IMAGE_URI=//p' | tail -n1)"
-if [[ -z "$MME_IMAGE_URI" ]]; then
-  echo "ERROR: MME probe did not emit MME_IMAGE_URI" >&2
-  exit 1
-fi
-echo "resolved MME image: $MME_IMAGE_URI"
-
 # --- 6. baseline training (5a preprocess -> 5b train) ---------------------
 log "baseline preprocess + train (ml/run_training.py)"
 "$VENV_PY" "$ML_DIR/run_training.py"
@@ -130,6 +120,21 @@ echo "model artifact: $MODEL_ARTIFACT_URI"
 # --- 7. MME artifacts (v1 copy + v2 retrain) ------------------------------
 log "build MME artifacts (ml/build_mme_models.py)"
 "$VENV_PY" "$ML_DIR/build_mme_models.py"
+
+# --- 7b. MME capability probe (resolves the MME serving image) ------------
+# Runs AFTER the mme/ artifacts exist (build_mme_models.py above) because the
+# real probe invoke_endpoint(TargetModel="churn-v1.tar.gz") must be able to
+# download that object; the resolved image is only needed by the mme stack
+# (deployed below), so this ordering satisfies both.
+log "probe MME capability (ml/verify_mme_capability.py)"
+MME_PROBE_OUT="$("$VENV_PY" "$ML_DIR/verify_mme_capability.py")"
+echo "$MME_PROBE_OUT"
+MME_IMAGE_URI="$(printf '%s\n' "$MME_PROBE_OUT" | sed -n 's/^MME_IMAGE_URI=//p' | tail -n1)"
+if [[ -z "$MME_IMAGE_URI" ]]; then
+  echo "ERROR: MME probe did not emit MME_IMAGE_URI" >&2
+  exit 1
+fi
+echo "resolved MME image: $MME_IMAGE_URI"
 
 # --- 8. endpoint + events stacks ------------------------------------------
 deploy_stack churnguard-realtime "$INFRA_DIR/03-realtime.yaml" \

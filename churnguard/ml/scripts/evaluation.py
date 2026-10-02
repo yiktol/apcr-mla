@@ -49,17 +49,28 @@ def _extract_model_tar(model_dir):
 def _load_booster(model_dir):
     """Load an XGBoost booster from the extracted artifact directory.
 
-    The built-in XGBoost container writes the serialized booster as
-    `xgboost-model` (pickle). We support both that and a plain .json/.model
-    dump for local test artifacts.
+    The built-in XGBoost 1.7-1 container writes the serialized booster to a file
+    named ``xgboost-model``. Depending on the container version that file is
+    EITHER XGBoost's own native binary/UBJSON format (loadable via
+    ``Booster.load_model``) OR a Python pickle of the booster. We try the native
+    loader first and fall back to pickle, so both encodings work. Local test
+    artifacts may instead be a plain ``*.json``/``*.model`` dump.
     """
     _extract_model_tar(model_dir)
 
-    # Built-in XGBoost artifact: a pickled booster named `xgboost-model`.
-    pickled = os.path.join(model_dir, "xgboost-model")
-    if os.path.exists(pickled):
+    # Built-in XGBoost artifact: a booster serialized to `xgboost-model`.
+    artifact = os.path.join(model_dir, "xgboost-model")
+    if os.path.exists(artifact):
+        # 1) Try XGBoost's native loader (handles binary/UBJSON dumps).
+        try:
+            booster = xgb.Booster()
+            booster.load_model(artifact)
+            return booster
+        except xgb.core.XGBoostError:
+            pass
+        # 2) Fall back to a pickled booster.
         import pickle
-        with open(pickled, "rb") as fh:
+        with open(artifact, "rb") as fh:
             return pickle.load(fh)
 
     # Fall back to any xgboost-native model file in the dir.

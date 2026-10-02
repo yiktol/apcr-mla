@@ -82,7 +82,10 @@ class Config:
     pipeline_name: str = DEFAULT_PIPELINE_NAME
     events_log_group: str = DEFAULT_EVENTS_LOG_GROUP
     rollback_alarm: str = DEFAULT_ROLLBACK_ALARM
-    feature_columns_key: str = "processed/feature_columns.json"
+    # The ProcessingStep 'processed' output destination nests under a second
+    # 'processed/' prefix, so the real S3 key is doubled (confirmed by the live
+    # deploy: s3://<data-bucket>/processed/processed/feature_columns.json).
+    feature_columns_key: str = "processed/processed/feature_columns.json"
 
     def endpoint_names(self) -> Dict[str, str]:
         return {
@@ -111,13 +114,17 @@ def _resolve_from_ssm() -> Dict[str, str]:
         return resolved
 
     names = [ssm_name for (_env, ssm_name, _default) in _SPEC.values()]
-    try:
-        page = ssm.get_parameters(Names=names)
-    except (ClientError, BotoCoreError) as exc:
-        log.warning("SSM get_parameters failed, using defaults/env only: %s", exc)
-        return resolved
-
-    by_name = {p["Name"]: p["Value"] for p in page.get("Parameters", [])}
+    # SSM get_parameters accepts at most 10 names per call; batch accordingly.
+    by_name: Dict[str, str] = {}
+    for i in range(0, len(names), 10):
+        batch = names[i : i + 10]
+        try:
+            page = ssm.get_parameters(Names=batch)
+        except (ClientError, BotoCoreError) as exc:
+            log.warning("SSM get_parameters failed, using defaults/env only: %s", exc)
+            return resolved
+        for p in page.get("Parameters", []):
+            by_name[p["Name"]] = p["Value"]
     for field_name, (_env, ssm_name, _default) in _SPEC.items():
         if ssm_name in by_name:
             resolved[field_name] = by_name[ssm_name]

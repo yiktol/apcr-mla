@@ -122,26 +122,37 @@ def predict_async(
     csv_body = records_to_csv([r.model_dump() for r in records], schema.columns())
     inference_id = str(uuid.uuid4())
     input_key = f"input/{inference_id}.csv"
-    output_key = f"output/{inference_id}.out"
 
     s3 = boto_client("s3")
     s3.put_object(Bucket=cfg.async_bucket, Key=input_key, Body=csv_body.encode("utf-8"))
     input_location = f"s3://{cfg.async_bucket}/{input_key}"
-    output_location = f"s3://{cfg.async_bucket}/{output_key}"
 
     runtime = boto_client("sagemaker-runtime")
     sm = boto_client("sagemaker")
     ensure_endpoint_in_service(sm, cfg.async_endpoint)
-    runtime.invoke_endpoint_async(
+    # Pass our InferenceId so SageMaker names the output deterministically under
+    # the endpoint's configured S3OutputPath: <S3OutputPath>/<InferenceId>.out.
+    # The response's OutputLocation is authoritative, so we use that for the
+    # result key rather than reconstructing it.
+    invoke_resp = runtime.invoke_endpoint_async(
         EndpointName=cfg.async_endpoint,
         InputLocation=input_location,
         ContentType="text/csv",
         Accept="text/csv",
+        InferenceId=inference_id,
     )
+    output_location = invoke_resp["OutputLocation"]
 
-    # Record the row count so the result route can gate Completed on it.
-    get_rowcounts(request)[inference_id] = len(records)
-    log.info("async submitted %d rows id=%s", len(records), inference_id)
+    # Record the row count keyed by BOTH our inference id and the real output
+    # object name so the result route (which keys off the output key) can gate
+    # Completed on the row count.
+    rowcounts = get_rowcounts(request)
+    rowcounts[inference_id] = len(records)
+    out_name = output_location.rstrip("/").split("/")[-1]
+    if out_name.endswith(".out"):
+        out_name = out_name[: -len(".out")]
+    rowcounts[out_name] = len(records)
+    log.info("async submitted %d rows id=%s out=%s", len(records), inference_id, output_location)
     return {
         "endpoint": cfg.async_endpoint,
         "inferenceId": inference_id,

@@ -197,7 +197,7 @@ def test_async_submit_and_result_completed(client):
         "invoke_endpoint_async",
         {"OutputLocation": "s3://async-bucket/output/x.out"},
         {"EndpointName": "churnguard-async", "InputLocation": _any_str(),
-         "ContentType": "text/csv", "Accept": "text/csv"},
+         "ContentType": "text/csv", "Accept": "text/csv", "InferenceId": _any_str()},
     )
     submit = tc.post("/api/predict/async", json={"records": [valid_record(), valid_record()]})
     assert submit.status_code == 200, submit.text
@@ -229,7 +229,7 @@ def test_async_result_failure_checked_first(client):
     rt.add_response("invoke_endpoint_async",
                     {"OutputLocation": "s3://async-bucket/output/x.out"},
                     {"EndpointName": "churnguard-async", "InputLocation": _any_str(),
-                     "ContentType": "text/csv", "Accept": "text/csv"})
+                     "ContentType": "text/csv", "Accept": "text/csv", "InferenceId": _any_str()})
     submit = tc.post("/api/predict/async", json={"records": [valid_record()]})
     out_loc = submit.json()["outputLocation"]
     # .out.failure present -> Failed (checked before .out)
@@ -252,7 +252,7 @@ def test_async_result_short_parse_stays_inprogress(client):
     rt.add_response("invoke_endpoint_async",
                     {"OutputLocation": "s3://async-bucket/output/x.out"},
                     {"EndpointName": "churnguard-async", "InputLocation": _any_str(),
-                     "ContentType": "text/csv", "Accept": "text/csv"})
+                     "ContentType": "text/csv", "Accept": "text/csv", "InferenceId": _any_str()})
     submit = tc.post("/api/predict/async", json={"records": [valid_record(), valid_record()]})
     out_loc = submit.json()["outputLocation"]
     _, out_key = out_loc.replace("s3://", "").split("/", 1)
