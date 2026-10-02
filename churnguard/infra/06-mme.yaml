@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard multi-model endpoint stack: Model with Mode MultiModel pointing at
+  the mme/ prefix (hosts churn-v1.tar.gz and churn-v2.tar.gz) + EndpointConfig
+  (ProductionVariant AllTraffic, ml.m5.large, 1 instance) + Endpoint
+  churnguard-mme. No autoscaling target. The container image defaults to the
+  built-in sagemaker-xgboost:1.7-1; if ml/verify_mme_capability.py's probe
+  reports the built-in image is NOT MME-capable, deploy.sh overrides ImageUri
+  with the resolved open-source XGBoost framework inference URI. Region us-east-1.
+
+Parameters:
+  ExecutionRoleArn:
+    Type: String
+    Default: arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole
+    Description: SageMaker execution role ARN.
+  ModelsBucket:
+    Type: String
+    Default: churnguard-models-875692608981-us-east-1
+    Description: Models bucket holding the mme/ prefix artifacts.
+  ImageUri:
+    Type: String
+    Default: 683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1
+    Description: >-
+      MME serving image. Defaults to the built-in XGBoost 1.7-1; deploy.sh
+      overrides this with the probe-resolved MME_IMAGE_URI when the built-in
+      image is not multi-model-capable.
+
+Resources:
+  Model:
+    Type: AWS::SageMaker::Model
+    Properties:
+      ModelName: churnguard-mme-model
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      PrimaryContainer:
+        Image: !Ref ImageUri
+        Mode: MultiModel
+        ModelDataUrl: !Sub s3://${ModelsBucket}/mme/
+
+  EndpointConfig:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      EndpointConfigName: churnguard-mme-config
+      ProductionVariants:
+        - VariantName: AllTraffic
+          ModelName: !GetAtt Model.ModelName
+          InstanceType: ml.m5.large
+          InitialInstanceCount: 1
+          InitialVariantWeight: 1.0
+
+  Endpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointName: churnguard-mme
+      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+
+Outputs:
+  EndpointName:
+    Description: Multi-model endpoint name
+    Value: !GetAtt Endpoint.EndpointName
+    Export:
+      Name: churnguard-mme-endpoint
+  ModelName:
+    Description: Multi-model model name
+    Value: !GetAtt Model.ModelName
+    Export:
+      Name: churnguard-mme-model

@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard async stack: Model + EndpointConfig (ProductionVariant AllTraffic,
+  AsyncInferenceConfig writing to the async bucket output/ with BOTH SuccessTopic
+  AND ErrorTopic set to the async SNS topic) + Endpoint churnguard-async
+  (ml.m5.large, 1 instance). ApplicationAutoScaling target Min 0 / Max 2 carries
+  BOTH a TargetTracking policy (ApproximateBacklogSizePerInstance -> scale-in to
+  0) AND a StepScaling policy (scale-up-from-0) driven by a CloudWatch alarm on
+  HasBacklogWithoutCapacity. Both policies are mandatory for slide-15
+  scale-to-0-and-back to survive repeated invocations. Region us-east-1.
+
+Parameters:
+  ExecutionRoleArn:
+    Type: String
+    Default: arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole
+    Description: SageMaker execution role ARN.
+  ModelArtifactUri:
+    Type: String
+    Description: >-
+      S3 URI of the baseline model.tar.gz produced by ml/run_training.py
+      (passed by deploy.sh from SSM /churnguard/model-artifact-uri).
+  ImageUri:
+    Type: String
+    Default: 683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1
+    Description: XGBoost 1.7-1 serving image (literal tag, used verbatim).
+  InstanceType:
+    Type: String
+    Default: ml.m5.large
+    Description: Async endpoint instance type.
+  AsyncBucket:
+    Type: String
+    Default: churnguard-async-875692608981-us-east-1
+    Description: Async inference input/output bucket.
+  AsyncTopicArn:
+    Type: String
+    Default: arn:aws:sns:us-east-1:875692608981:churnguard-async-notifications
+    Description: SNS topic ARN for success/error notifications (both set to it).
+
+Resources:
+  Model:
+    Type: AWS::SageMaker::Model
+    Properties:
+      ModelName: churnguard-async-model
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      PrimaryContainer:
+        Image: !Ref ImageUri
+        Mode: SingleModel
+        ModelDataUrl: !Ref ModelArtifactUri
+
+  EndpointConfig:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      EndpointConfigName: churnguard-async-config
+      ProductionVariants:
+        - VariantName: AllTraffic
+          ModelName: !GetAtt Model.ModelName
+          InstanceType: !Ref InstanceType
+          InitialInstanceCount: 1
+          InitialVariantWeight: 1.0
+      AsyncInferenceConfig:
+        OutputConfig:
+          S3OutputPath: !Sub s3://${AsyncBucket}/output/
+          NotificationConfig:
+            SuccessTopic: !Ref AsyncTopicArn
+            ErrorTopic: !Ref AsyncTopicArn
+
+  Endpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointName: churnguard-async
+      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+
+  ScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      ServiceNamespace: sagemaker
+      ResourceId: endpoint/churnguard-async/variant/AllTraffic
+      ScalableDimension: sagemaker:variant:DesiredInstanceCount
+      MinCapacity: 0
+      MaxCapacity: 2
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint
+    DependsOn: Endpoint
+
+  # Scale-in to 0 (target-tracking on backlog-per-instance). Cannot scale up
+  # from 0 (no instance emits the metric at 0) -- that is the step policy below.
+  ScaleInPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: churnguard-async-scale-in
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 5.0
+        CustomizedMetricSpecification:
+          MetricName: ApproximateBacklogSizePerInstance
+          Namespace: AWS/SageMaker
+          Dimensions:
+            - Name: EndpointName
+              Value: churnguard-async
+          Statistic: Average
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 300
+
+  # Scale-up-from-0 (step scaling). The ONLY metric available at 0 instances is
+  # HasBacklogWithoutCapacity; the alarm below triggers this policy to add 1.
+  ScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: churnguard-async-scale-up-from-zero
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref ScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        Cooldown: 300
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 1
+
+  HasBacklogAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: churnguard-async-HasBacklogWithoutCapacity
+      AlarmDescription: >-
+        Fires when the async fleet is at 0 instances but has queued requests,
+        triggering the step policy to scale up from 0 (slide-15 scale-back).
+      Namespace: AWS/SageMaker
+      MetricName: HasBacklogWithoutCapacity
+      Dimensions:
+        - Name: EndpointName
+          Value: churnguard-async
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref ScaleUpPolicy
+
+Outputs:
+  EndpointName:
+    Description: Async endpoint name
+    Value: !GetAtt Endpoint.EndpointName
+    Export:
+      Name: churnguard-async-endpoint
+  ModelName:
+    Description: Async model name
+    Value: !GetAtt Model.ModelName
+    Export:
+      Name: churnguard-async-model

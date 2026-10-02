@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard registry + pipeline stack: the Model Registry package group
+  (churnguard-churn) and the SageMaker Pipeline (churnguard-pipeline). The
+  pipeline definition is authored and uploaded to S3 by ml/build_pipeline.py
+  BEFORE this stack is deployed; the Pipeline resource references it via
+  PipelineDefinitionS3Location (NEVER an inline PipelineDefinitionBody, which
+  cannot hold a 6-15 KB DAG). Region us-east-1.
+
+Parameters:
+  ExecutionRoleArn:
+    Type: String
+    Default: arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole
+    Description: SageMaker execution role ARN used by the pipeline.
+  PipelineDefinitionBucket:
+    Type: String
+    Description: >-
+      S3 bucket holding the uploaded pipeline definition JSON
+      (the data bucket; ml/build_pipeline.py uploads it there).
+    Default: churnguard-data-875692608981-us-east-1
+  PipelineDefinitionKey:
+    Type: String
+    Description: S3 key of the uploaded pipeline definition JSON.
+    Default: pipeline/pipeline-definition.json
+
+Resources:
+  ModelPackageGroup:
+    Type: AWS::SageMaker::ModelPackageGroup
+    Properties:
+      ModelPackageGroupName: churnguard-churn
+      ModelPackageGroupDescription: >-
+        ChurnGuard customer-churn model versions registered by the pipeline's
+        RegisterModel step (PendingManualApproval by default).
+
+  Pipeline:
+    Type: AWS::SageMaker::Pipeline
+    Properties:
+      PipelineName: churnguard-pipeline
+      PipelineDisplayName: churnguard-pipeline
+      PipelineDescription: >-
+        slide-33 DAG: DataProcessing -> ModelTraining -> ModelEvaluation ->
+        CheckAccuracy (JsonGet metrics.accuracy.value >= 0.78) ->
+        RegisterChurnModel.
+      RoleArn: !Ref ExecutionRoleArn
+      PipelineDefinition:
+        PipelineDefinitionS3Location:
+          Bucket: !Ref PipelineDefinitionBucket
+          Key: !Ref PipelineDefinitionKey
+
+Outputs:
+  ModelPackageGroupName:
+    Description: Model Registry package group name
+    Value: !Ref ModelPackageGroup
+    Export:
+      Name: churnguard-model-package-group
+  PipelineName:
+    Description: SageMaker Pipeline name
+    Value: !Ref Pipeline
+    Export:
+      Name: churnguard-pipeline-name

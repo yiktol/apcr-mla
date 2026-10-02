@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard foundation stack: four S3 buckets (TLS-only, versioning off,
+  DeletionPolicy Delete), the async SNS topic (optional email subscription),
+  and SSM parameters publishing bucket names / execution role ARN / topic ARN
+  for the other stacks and the backend to read. Region us-east-1.
+
+Parameters:
+  ExecutionRoleArn:
+    Type: String
+    Default: arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole
+    Description: >-
+      SageMaker execution role ARN. Published to SSM for the ml/ scripts and the
+      backend. No new IAM role is created by these stacks.
+  NotificationEmail:
+    Type: String
+    Default: ""
+    Description: >-
+      Optional email address subscribed to the async notifications SNS topic.
+      Leave blank to skip the subscription (SNS still fires; the UI reads the
+      async .out / .out.failure objects as the authoritative result).
+
+Conditions:
+  HasNotificationEmail: !Not [!Equals [!Ref NotificationEmail, ""]]
+
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub churnguard-data-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  ModelsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub churnguard-models-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  AsyncBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub churnguard-async-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  BatchBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub churnguard-batch-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  DataBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DataBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyNonTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt DataBucket.Arn
+              - !Sub ${DataBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  ModelsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ModelsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyNonTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt ModelsBucket.Arn
+              - !Sub ${ModelsBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  AsyncBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AsyncBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyNonTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt AsyncBucket.Arn
+              - !Sub ${AsyncBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  BatchBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BatchBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyNonTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt BatchBucket.Arn
+              - !Sub ${BatchBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  AsyncNotificationsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: churnguard-async-notifications
+      DisplayName: ChurnGuard async inference notifications
+
+  AsyncNotificationsEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasNotificationEmail
+    Properties:
+      TopicArn: !Ref AsyncNotificationsTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+  # --- SSM parameters publishing names/ARNs for the other stacks + backend ---
+  DataBucketParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /churnguard/data-bucket
+      Type: String
+      Value: !Ref DataBucket
+
+  ModelsBucketParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /churnguard/models-bucket
+      Type: String
+      Value: !Ref ModelsBucket
+
+  AsyncBucketParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /churnguard/async-bucket
+      Type: String
+      Value: !Ref AsyncBucket
+
+  BatchBucketParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /churnguard/batch-bucket
+      Type: String
+      Value: !Ref BatchBucket
+
+  ExecutionRoleArnParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /churnguard/execution-role-arn
+      Type: String
+      Value: !Ref ExecutionRoleArn
+
+  AsyncTopicArnParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /churnguard/async-topic-arn
+      Type: String
+      Value: !Ref AsyncNotificationsTopic
+
+Outputs:
+  DataBucketName:
+    Description: Data bucket (raw dataset, processed splits, pipeline def, code)
+    Value: !Ref DataBucket
+    Export:
+      Name: churnguard-data-bucket
+  ModelsBucketName:
+    Description: Model artifacts bucket (training output, mme/ prefix)
+    Value: !Ref ModelsBucket
+    Export:
+      Name: churnguard-models-bucket
+  AsyncBucketName:
+    Description: Async inference input/output bucket
+    Value: !Ref AsyncBucket
+    Export:
+      Name: churnguard-async-bucket
+  BatchBucketName:
+    Description: Batch transform input/output bucket
+    Value: !Ref BatchBucket
+    Export:
+      Name: churnguard-batch-bucket
+  AsyncTopicArn:
+    Description: SNS topic ARN for async success/error notifications
+    Value: !Ref AsyncNotificationsTopic
+    Export:
+      Name: churnguard-async-topic-arn
+  ExecutionRoleArn:
+    Description: SageMaker execution role ARN
+    Value: !Ref ExecutionRoleArn
+    Export:
+      Name: churnguard-execution-role-arn

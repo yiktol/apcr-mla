@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard events stack: EventBridge rule churnguard-model-approved matching
+  SageMaker Model Package State Change -> Approved for group churnguard-churn,
+  an inline Python 3.12 Lambda churnguard-model-approved-handler that logs the
+  approved package ARN and publishes to the async SNS topic, the EventBridge
+  invoke permission, the rule Target, and the explicit /churnguard/events log
+  group the backend's GET /api/events/recent reads. Region us-east-1.
+
+Parameters:
+  AsyncTopicArn:
+    Type: String
+    Default: arn:aws:sns:us-east-1:875692608981:churnguard-async-notifications
+    Description: SNS topic ARN the handler publishes approvals to.
+  LogRetentionInDays:
+    Type: Number
+    Default: 14
+    Description: Retention for the /churnguard/events log group.
+
+Resources:
+  EventsLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /churnguard/events
+      RetentionInDays: !Ref LogRetentionInDays
+
+  HandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: churnguard-model-approved-handler-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: churnguard-handler-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/churnguard-model-approved-handler:*
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/churnguard/events:*
+              - Sid: PublishApproval
+                Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref AsyncTopicArn
+
+  HandlerFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: EventsLogGroup
+    Properties:
+      FunctionName: churnguard-model-approved-handler
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Role: !GetAtt HandlerRole.Arn
+      Environment:
+        Variables:
+          TOPIC_ARN: !Ref AsyncTopicArn
+          EVENTS_LOG_GROUP: /churnguard/events
+      Code:
+        ZipFile: |
+          import datetime
+          import json
+          import os
+
+          import boto3
+
+          REGION = "us-east-1"
+          TOPIC_ARN = os.environ["TOPIC_ARN"]
+          EVENTS_LOG_GROUP = os.environ.get("EVENTS_LOG_GROUP", "/churnguard/events")
+
+          sns = boto3.client("sns", region_name=REGION)
+          logs = boto3.client("logs", region_name=REGION)
+
+
+          def _write_events_log(record):
+              """Write a structured record to /churnguard/events so the backend's
+              GET /api/events/recent surfaces the real approval handoff."""
+              stream = datetime.datetime.utcnow().strftime("%Y/%m/%d/[$LATEST]handler")
+              try:
+                  logs.create_log_stream(
+                      logGroupName=EVENTS_LOG_GROUP, logStreamName=stream
+                  )
+              except logs.exceptions.ResourceAlreadyExistsException:
+                  pass
+              logs.put_log_events(
+                  logGroupName=EVENTS_LOG_GROUP,
+                  logStreamName=stream,
+                  logEvents=[
+                      {
+                          "timestamp": int(datetime.datetime.utcnow().timestamp() * 1000),
+                          "message": json.dumps(record),
+                      }
+                  ],
+              )
+
+
+          def handler(event, context):
+              detail = event.get("detail", {}) or {}
+              arn = detail.get("ModelPackageArn", "unknown")
+              status = detail.get("ModelApprovalStatus", "unknown")
+              group = detail.get("ModelPackageGroupName", "unknown")
+              record = {
+                  "modelPackageArn": arn,
+                  "approvalStatus": status,
+                  "modelPackageGroupName": group,
+                  "message": f"model package {arn} is {status}",
+              }
+              print(json.dumps(record))
+              _write_events_log(record)
+              sns.publish(
+                  TopicArn=TOPIC_ARN,
+                  Subject="ChurnGuard model approved",
+                  Message=json.dumps(record),
+              )
+              return {"ok": True, "modelPackageArn": arn}
+
+  ModelApprovedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: churnguard-model-approved
+      Description: >-
+        Fires when a churnguard-churn model package is Approved, invoking the
+        handler (registry -> deployment handoff).
+      EventPattern:
+        source:
+          - aws.sagemaker
+        detail-type:
+          - SageMaker Model Package State Change
+        detail:
+          ModelPackageGroupName:
+            - churnguard-churn
+          ModelApprovalStatus:
+            - Approved
+      State: ENABLED
+      Targets:
+        - Id: churnguard-model-approved-handler
+          Arn: !GetAtt HandlerFunction.Arn
+
+  HandlerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref HandlerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ModelApprovedRule.Arn
+
+Outputs:
+  RuleName:
+    Description: EventBridge rule name
+    Value: !Ref ModelApprovedRule
+    Export:
+      Name: churnguard-model-approved-rule
+  HandlerFunctionName:
+    Description: Lambda handler function name
+    Value: !Ref HandlerFunction
+    Export:
+      Name: churnguard-model-approved-handler
+  EventsLogGroupName:
+    Description: CloudWatch log group the backend reads for recent approvals
+    Value: !Ref EventsLogGroup
+    Export:
+      Name: churnguard-events-log-group

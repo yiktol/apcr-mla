@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard serverless stack: Model + EndpointConfig with a ServerlessConfig
+  (MemorySizeInMB 2048, MaxConcurrency 5) + Endpoint churnguard-serverless.
+  No instance billing when idle. Region us-east-1.
+
+Parameters:
+  ExecutionRoleArn:
+    Type: String
+    Default: arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole
+    Description: SageMaker execution role ARN.
+  ModelArtifactUri:
+    Type: String
+    Description: >-
+      S3 URI of the baseline model.tar.gz produced by ml/run_training.py
+      (passed by deploy.sh from SSM /churnguard/model-artifact-uri).
+  ImageUri:
+    Type: String
+    Default: 683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1
+    Description: XGBoost 1.7-1 serving image (literal tag, used verbatim).
+
+Resources:
+  Model:
+    Type: AWS::SageMaker::Model
+    Properties:
+      ModelName: churnguard-serverless-model
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      PrimaryContainer:
+        Image: !Ref ImageUri
+        Mode: SingleModel
+        ModelDataUrl: !Ref ModelArtifactUri
+
+  EndpointConfig:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      EndpointConfigName: churnguard-serverless-config
+      ProductionVariants:
+        - VariantName: AllTraffic
+          ModelName: !GetAtt Model.ModelName
+          ServerlessConfig:
+            MemorySizeInMB: 2048
+            MaxConcurrency: 5
+
+  Endpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointName: churnguard-serverless
+      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+
+Outputs:
+  EndpointName:
+    Description: Serverless endpoint name
+    Value: !GetAtt Endpoint.EndpointName
+    Export:
+      Name: churnguard-serverless-endpoint
+  ModelName:
+    Description: Serverless model name
+    Value: !GetAtt Model.ModelName
+    Export:
+      Name: churnguard-serverless-model

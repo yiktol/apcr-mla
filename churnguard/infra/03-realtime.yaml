@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard realtime stack: Model + EndpointConfig (single ProductionVariant
+  AllTraffic, ml.m5.large, InitialInstanceCount 3) + Endpoint churnguard-realtime,
+  plus ApplicationAutoScaling (Min 3 / Max 6, TargetTracking on
+  SageMakerVariantInvocationsPerInstance) and the fully-specified
+  churnguard-realtime-ModelError alarm consumed by blue/green auto-rollback.
+  InitialInstanceCount is 3 so blue/green canary/linear shifts resolve to whole
+  instances (slide-36). Region us-east-1.
+
+Parameters:
+  ExecutionRoleArn:
+    Type: String
+    Default: arn:aws:iam::875692608981:role/AmazonSageMaker-ExecutionRole
+    Description: SageMaker execution role ARN.
+  ModelArtifactUri:
+    Type: String
+    Description: >-
+      S3 URI of the baseline model.tar.gz produced by ml/run_training.py
+      (passed by deploy.sh from SSM /churnguard/model-artifact-uri).
+  ImageUri:
+    Type: String
+    Default: 683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-xgboost:1.7-1
+    Description: XGBoost 1.7-1 serving image (literal tag, used verbatim).
+  InstanceType:
+    Type: String
+    Default: ml.m5.large
+    Description: Realtime endpoint instance type.
+
+Resources:
+  Model:
+    Type: AWS::SageMaker::Model
+    Properties:
+      ModelName: churnguard-realtime-model
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      PrimaryContainer:
+        Image: !Ref ImageUri
+        Mode: SingleModel
+        ModelDataUrl: !Ref ModelArtifactUri
+
+  EndpointConfig:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      EndpointConfigName: churnguard-realtime-config
+      ProductionVariants:
+        - VariantName: AllTraffic
+          ModelName: !GetAtt Model.ModelName
+          InstanceType: !Ref InstanceType
+          InitialInstanceCount: 3
+          InitialVariantWeight: 1.0
+
+  Endpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointName: churnguard-realtime
+      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+
+  ScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      ServiceNamespace: sagemaker
+      ResourceId: endpoint/churnguard-realtime/variant/AllTraffic
+      ScalableDimension: sagemaker:variant:DesiredInstanceCount
+      MinCapacity: 3
+      MaxCapacity: 6
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint
+    DependsOn: Endpoint
+
+  ScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: churnguard-realtime-target-tracking
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 750.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: SageMakerVariantInvocationsPerInstance
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  RealtimeModelErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: churnguard-realtime-ModelError
+      AlarmDescription: >-
+        Blue/green auto-rollback guardrail. Fires on any 5XX invocation error
+        on the churnguard-realtime AllTraffic variant during a deployment bake
+        window. notBreaching keeps a quiet/fresh fleet out of alarm.
+      Namespace: AWS/SageMaker
+      MetricName: Invocation5XXErrors
+      Dimensions:
+        - Name: EndpointName
+          Value: churnguard-realtime
+        - Name: VariantName
+          Value: AllTraffic
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  EndpointName:
+    Description: Realtime endpoint name
+    Value: !GetAtt Endpoint.EndpointName
+    Export:
+      Name: churnguard-realtime-endpoint
+  ModelName:
+    Description: Realtime model name (reused by batch transform)
+    Value: !GetAtt Model.ModelName
+    Export:
+      Name: churnguard-realtime-model
+  ModelErrorAlarmName:
+    Description: Auto-rollback alarm name consumed by POST /api/deploy/bluegreen
+    Value: !Ref RealtimeModelErrorAlarm
+    Export:
+      Name: churnguard-realtime-model-error-alarm
