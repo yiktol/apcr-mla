@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  ChurnGuard frontend hosting stack (Option 2, same-origin). Serves the Vite SPA
+  from a PRIVATE S3 bucket exposed only through CloudFront via Origin Access
+  Control (OAC) as the default origin, and routes /api/* on the SAME CloudFront
+  domain to the backend as a second custom origin so the browser makes
+  same-origin calls (the SPA must be built with the relative VITE_API_BASE=/api,
+  see deploy-frontend.sh). The backend endpoint is NOT hardcoded: it is supplied
+  at deploy time via the BackendOriginDomain parameter. SPA deep links are handled
+  by mapping 403/404 to /index.html with a 200 response. Region us-east-1.
+
+Parameters:
+  BackendOriginDomain:
+    Type: String
+    # NOTE: the backend endpoint is intentionally NOT hardcoded in this template.
+    # The operator passes the backend's public domain at deploy time (see
+    # deploy-frontend.sh, which forwards --parameter-overrides BackendOriginDomain=...).
+    Description: >-
+      Public DNS domain name (host only, no scheme or path) of the backend origin
+      that serves /api/* — for example an ALB or API Gateway domain. Must be
+      reachable over HTTPS. Passed by deploy-frontend.sh; never hardcoded here.
+
+Resources:
+  AssetBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub churnguard-frontend-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub churnguard-frontend-oac-${AWS::AccountId}
+        Description: OAC for the ChurnGuard SPA private S3 origin
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: ChurnGuard SPA (same-origin, S3 via OAC + /api/* to backend)
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        IPV6Enabled: true
+        Origins:
+          # Origin 1: private S3 bucket reached via OAC (default behavior / SPA).
+          - Id: s3-spa-origin
+            DomainName: !GetAtt AssetBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+          # Origin 2: backend custom origin for /api/* (domain is a parameter).
+          - Id: backend-api-origin
+            DomainName: !Ref BackendOriginDomain
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              HTTPSPort: 443
+              OriginSSLProtocols:
+                - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: s3-spa-origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          # Managed CachingOptimized policy for static SPA assets.
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+        CacheBehaviors:
+          # /api/* goes to the backend origin with caching disabled so every
+          # request (including mutating GET/POST/OPTIONS) reaches the backend.
+          - PathPattern: /api/*
+            TargetOriginId: backend-api-origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            # Managed CachingDisabled policy — no caching for API traffic.
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            # Managed AllViewer origin request policy — forward all headers,
+            # cookies and query strings to the backend.
+            OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eb8d9882
+        CustomErrorResponses:
+          # SPA client-side routing: private-bucket misses surface as 403, and
+          # missing keys as 404; both return index.html with a 200 so the SPA
+          # router can resolve the path.
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 0
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+  AssetBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AssetBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # OAC least-privilege: only the CloudFront service, and only this
+          # distribution (AWS:SourceArn), may read objects from the bucket.
+          - Sid: AllowCloudFrontOACRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${AssetBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution.Id}
+
+Outputs:
+  DistributionDomainName:
+    Description: CloudFront domain serving the SPA and /api/* (same-origin)
+    Value: !GetAtt Distribution.DomainName
+    Export:
+      Name: churnguard-frontend-distribution-domain
+  AssetBucketName:
+    Description: Private S3 bucket holding the built SPA assets (sync target)
+    Value: !Ref AssetBucket
+    Export:
+      Name: churnguard-frontend-bucket
+  DistributionId:
+    Description: CloudFront distribution id (used for cache invalidation)
+    Value: !Ref Distribution
+    Export:
+      Name: churnguard-frontend-distribution-id
