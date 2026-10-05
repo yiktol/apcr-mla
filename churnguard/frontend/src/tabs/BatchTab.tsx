@@ -10,6 +10,7 @@ import type { BatchStatusResponse } from "../api/types";
 import Identifier from "../components/Identifier";
 import PredictionTable from "../components/PredictionTable";
 import ErrorAlert from "../components/ErrorAlert";
+import { isReadOnly } from "../config/deployment";
 
 const TERMINAL = ["Completed", "Failed", "Stopped"];
 
@@ -67,6 +68,11 @@ export default function BatchTab() {
 
   return (
     <SpaceBetween size="l">
+      {isReadOnly && (
+        <Alert type="info" header="Read-only demo">
+          Actions are disabled in the hosted deployment. Run locally to execute.
+        </Alert>
+      )}
       <Container
         header={
           <Header
@@ -77,7 +83,7 @@ export default function BatchTab() {
           </Header>
         }
       >
-        <Button variant="primary" onClick={start} loading={loading}>
+        <Button variant="primary" onClick={start} loading={loading} disabled={isReadOnly}>
           Start batch transform
         </Button>
       </Container>

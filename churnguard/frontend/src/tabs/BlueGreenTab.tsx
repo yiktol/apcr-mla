@@ -19,6 +19,7 @@ import type {
 } from "../api/types";
 import Identifier from "../components/Identifier";
 import ErrorAlert from "../components/ErrorAlert";
+import { isReadOnly } from "../config/deployment";
 
 interface Props {
   registry: RegistryResponse | null;
@@ -91,6 +92,11 @@ export default function BlueGreenTab({ registry }: Props) {
 
   return (
     <SpaceBetween size="l">
+      {isReadOnly && (
+        <Alert type="info" header="Read-only demo">
+          Actions are disabled in the hosted deployment. Run locally to execute.
+        </Alert>
+      )}
       <Container
         header={
           <Header
@@ -148,7 +154,12 @@ export default function BlueGreenTab({ registry }: Props) {
             />
           </FormField>
 
-          <Button variant="primary" onClick={deploy} loading={loading} disabled={!greenArn}>
+          <Button
+            variant="primary"
+            onClick={deploy}
+            loading={loading}
+            disabled={isReadOnly || !greenArn}
+          >
             Start blue/green deployment
           </Button>
         </SpaceBetween>

@@ -7,6 +7,7 @@ import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Table from "@cloudscape-design/components/table";
 import Box from "@cloudscape-design/components/box";
 import Badge from "@cloudscape-design/components/badge";
+import Alert from "@cloudscape-design/components/alert";
 import { api } from "../api/client";
 import type {
   EventRecord,
@@ -17,6 +18,7 @@ import type {
 } from "../api/types";
 import Identifier from "../components/Identifier";
 import ErrorAlert from "../components/ErrorAlert";
+import { isReadOnly } from "../config/deployment";
 
 interface Props {
   registry: RegistryResponse | null;
@@ -112,13 +114,18 @@ export default function PipelineRegistryTab({ registry, refreshRegistry }: Props
 
   return (
     <SpaceBetween size="l">
+      {isReadOnly && (
+        <Alert type="info" header="Read-only demo">
+          Actions are disabled in the hosted deployment. Run locally to execute.
+        </Alert>
+      )}
       <Container
         header={
           <Header
             variant="h2"
             description="Processing → Training → Evaluation → Condition → RegisterModel. Each step status comes from describe_pipeline_execution."
             actions={
-              <Button variant="primary" onClick={runPipeline} loading={runLoading}>
+              <Button variant="primary" onClick={runPipeline} loading={runLoading} disabled={isReadOnly}>
                 Run pipeline
               </Button>
             }
@@ -214,7 +221,7 @@ export default function PipelineRegistryTab({ registry, refreshRegistry }: Props
                     <Button
                       onClick={() => approve(v.arn)}
                       loading={approveArn === v.arn}
-                      disabled={approveArn !== null}
+                      disabled={isReadOnly || approveArn !== null}
                     >
                       Approve
                     </Button>
